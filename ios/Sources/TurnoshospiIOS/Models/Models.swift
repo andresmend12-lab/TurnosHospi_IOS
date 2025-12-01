@@ -120,6 +120,32 @@ struct Shift: Identifiable, Equatable, Hashable {
         }
     }
 
+    enum Segment: String, Codable, CaseIterable, Identifiable {
+        case fullDay = "FULL_DAY"
+        case halfDay = "HALF_DAY"
+        case vacation = "VACATION"
+        case onCall = "ON_CALL"
+
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .fullDay: return "Jornada completa"
+            case .halfDay: return "Media jornada"
+            case .vacation: return "Vacaciones"
+            case .onCall: return "Turno extra"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .fullDay: return "clock.fill"
+            case .halfDay: return "clock.badge.exclamationmark"
+            case .vacation: return "beach.umbrella.fill"
+            case .onCall: return "bolt.heart.fill"
+            }
+        }
+    }
+
     let id: UUID
     var date: Date
     var name: String
@@ -127,8 +153,10 @@ struct Shift: Identifiable, Equatable, Hashable {
     var status: Status
     var isNight: Bool
     var notes: String
+    var segment: Segment
+    var hours: Double
 
-    static func demo(date: Date, name: String, status: Status, isNight: Bool = false) -> Shift {
+    static func demo(date: Date, name: String, status: Status, isNight: Bool = false, segment: Segment = .fullDay, hours: Double = 12) -> Shift {
         Shift(
             id: UUID(),
             date: date,
@@ -136,7 +164,9 @@ struct Shift: Identifiable, Equatable, Hashable {
             location: "Pabellón A",
             status: status,
             isNight: isNight,
-            notes: isNight ? "Entrega a las 08:00" : "Entrega 19:00"
+            notes: isNight ? "Entrega a las 08:00" : "Entrega 19:00",
+            segment: segment,
+            hours: hours
         )
     }
 
@@ -144,12 +174,41 @@ struct Shift: Identifiable, Equatable, Hashable {
         let calendar = Calendar.current
         let now = Date()
         return [
-            demo(date: now, name: "Diurno", status: .assigned),
-            demo(date: calendar.date(byAdding: .day, value: 1, to: now)!, name: "Nocturno", status: .assigned, isNight: true),
-            demo(date: calendar.date(byAdding: .day, value: 3, to: now)!, name: "Diurno", status: .offered),
-            demo(date: calendar.date(byAdding: .day, value: 4, to: now)!, name: "Nocturno", status: .swapped, isNight: true)
+            demo(date: now, name: "Diurno", status: .assigned, segment: .fullDay, hours: 12),
+            demo(date: calendar.date(byAdding: .day, value: 1, to: now)!, name: "Nocturno", status: .assigned, isNight: true, segment: .fullDay, hours: 12),
+            demo(date: calendar.date(byAdding: .day, value: 2, to: now)!, name: "Media jornada", status: .assigned, segment: .halfDay, hours: 6),
+            demo(date: calendar.date(byAdding: .day, value: 3, to: now)!, name: "Diurno", status: .offered, segment: .fullDay, hours: 12),
+            demo(date: calendar.date(byAdding: .day, value: 4, to: now)!, name: "Vacaciones", status: .unavailable, isNight: false, segment: .vacation, hours: 0)
         ]
     }
+}
+
+struct VacationRecord: Identifiable, Equatable, Codable {
+    enum Status: String, Codable, CaseIterable { case pending = "PENDING", approved = "APPROVED", rejected = "REJECTED" }
+
+    let id: String
+    var userId: String
+    var startDate: Date
+    var endDate: Date
+    var status: Status
+    var notes: String
+}
+
+struct Suggestion: Identifiable, Equatable, Codable {
+    let id: String
+    var userId: String
+    var message: String
+    var createdAt: Date
+    var status: String
+}
+
+struct ShiftStats: Equatable {
+    var totalHours: Double
+    var nightCount: Int
+    var halfDays: Int
+    var vacations: Int
+    var swapsCompleted: Int
+    var suggestionsSent: Int
 }
 
 struct ShiftOffer: Identifiable, Equatable {

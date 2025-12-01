@@ -8,45 +8,55 @@ struct LoginView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
-                VStack(spacing: 8) {
-                    Image(systemName: "cross.case.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 72)
-                        .foregroundColor(.blue)
-                    Text("Turnoshospi")
-                        .font(.largeTitle.bold())
-                    Text("Gestión de turnos y comunicación clínica")
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
-                }
-                VStack(spacing: 12) {
-                    TextField("Correo corporativo", text: $email)
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .padding()
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                    SecureField("Contraseña", text: $password)
-                        .padding()
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                    Button {
-                        auth.login(email: email, password: password)
-                    } label: {
-                        Label(auth.isLoading ? "Conectando..." : "Ingresar", systemImage: "arrow.right.circle.fill")
-                            .frame(maxWidth: .infinity)
+            ZStack {
+                LinearGradient(colors: [.black, Color(red: 0.09, green: 0.11, blue: 0.16)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .ignoresSafeArea()
+                VStack(spacing: 24) {
+                    Spacer()
+                    VStack(spacing: 12) {
+                        Image(systemName: "cross.case.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 82)
+                            .foregroundStyle(.cyan)
+                            .shadow(color: .cyan.opacity(0.4), radius: 12, x: 0, y: 8)
+                        Text("Turnoshospi")
+                            .font(.largeTitle.bold())
+                        Text("Gestión de turnos y comunicación clínica")
+                            .font(.subheadline)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(auth.isLoading)
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+                    GlassCard(title: "Ingreso", icon: "lock.fill") {
+                        VStack(spacing: 12) {
+                            TextField("Correo corporativo", text: $email)
+                                .textContentType(.emailAddress)
+                                .keyboardType(.emailAddress)
+                                .padding()
+                                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                            SecureField("Contraseña", text: $password)
+                                .padding()
+                                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                            Button {
+                                auth.login(email: email, password: password)
+                            } label: {
+                                Label(auth.isLoading ? "Conectando..." : "Ingresar", systemImage: "arrow.right.circle.fill")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.large)
+                            .disabled(auth.isLoading)
+                        }
+                    }
+                    .padding(.horizontal)
+                    Button("Crear cuenta") { showCreate = true }
+                        .foregroundStyle(.cyan)
+                    Spacer()
                 }
-                .padding(.horizontal)
-                Button("Crear cuenta") { showCreate = true }
-                Spacer()
+                .padding()
             }
-            .padding()
             .sheet(isPresented: $showCreate) {
                 CreateAccountView()
                     .presentationDetents([.medium, .large])

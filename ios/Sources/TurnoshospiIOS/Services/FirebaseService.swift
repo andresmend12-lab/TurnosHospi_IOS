@@ -193,6 +193,7 @@ final class FirebaseService: NSObject, ObservableObject {
                 guard let raw = child.value as? [String: Any] else { continue }
                 let dateValue = raw["date"] as? TimeInterval ?? 0
                 let statusString = raw["status"] as? String ?? Shift.Status.assigned.rawValue
+                let segmentRaw = (raw["segment"] as? String ?? raw["type"] as? String) ?? Shift.Segment.fullDay.rawValue
                 let shift = Shift(
                     id: UUID(),
                     date: Date(timeIntervalSince1970: dateValue / 1000),
@@ -200,7 +201,9 @@ final class FirebaseService: NSObject, ObservableObject {
                     location: raw["location"] as? String ?? "",
                     status: mapStatus(statusString),
                     isNight: raw["isNight"] as? Bool ?? false,
-                    notes: raw["notes"] as? String ?? ""
+                    notes: raw["notes"] as? String ?? "",
+                    segment: Shift.Segment(rawValue: segmentRaw.uppercased()) ?? .fullDay,
+                    hours: raw["hours"] as? Double ?? (raw["segment"] as? String == Shift.Segment.halfDay.rawValue ? 6 : 12)
                 )
                 shifts.append(shift)
             }
@@ -304,6 +307,73 @@ final class FirebaseService: NSObject, ObservableObject {
             "timestamp": Int(Date().timeIntervalSince1970 * 1000)
         ]
         ref.setValue(payload)
+    }
+
+    func listenToVacations(plantId: String, userId: String, onChange: @escaping ([VacationRecord]) -> Void) -> (DatabaseReference, DatabaseHandle) {
+        let ref = database.child("plants").child(plantId).child("vacations").child(userId)
+        let handle = ref.observe(.value) { snapshot in
+            var records: [VacationRecord] = []
+            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                guard let raw = child.value as? [String: Any] else { continue }
+                let record = VacationRecord(
+                    id: child.key,
+                    userId: userId,
+                    startDate: ShiftChangeRequest.parseDate(raw["startDate"]) ?? Date(),
+                    endDate: ShiftChangeRequest.parseDate(raw["endDate"]) ?? Date(),
+                    status: VacationRecord.Status(rawValue: (raw["status"] as? String ?? "").uppercased()) ?? .pending,
+                    notes: raw["notes"] as? String ?? ""
+                )
+                records.append(record)
+            }
+            onChange(records.sorted { $0.startDate < $1.startDate })
+        }
+        return (ref, handle)
+    }
+
+    func submitSuggestion(userId: String, message: String) async {
+        guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let ref = database.child("suggestions").child(userId).childByAutoId()
+        let payload: [String: Any] = [
+            "message": message,
+            "status": "ENVIADO",
+            "createdAt": Int(Date().timeIntervalSince1970 * 1000)
+        ]
+        do { try await ref.setValue(payload) } catch {}
+    }
+
+    func listenToSuggestions(userId: String, onChange: @escaping ([Suggestion]) -> Void) -> (DatabaseReference, DatabaseHandle) {
+        let ref = database.child("suggestions").child(userId)
+        let handle = ref.observe(.value) { snapshot in
+            var suggestions: [Suggestion] = []
+            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                guard let raw = child.value as? [String: Any] else { continue }
+                let createdAt = ShiftChangeRequest.parseDate(raw["createdAt"]) ?? Date()
+                suggestions.append(Suggestion(
+                    id: child.key,
+                    userId: userId,
+                    message: raw["message"] as? String ?? "",
+                    createdAt: createdAt,
+                    status: raw["status"] as? String ?? "ENVIADO"
+                ))
+            }
+            onChange(suggestions.sorted { $0.createdAt > $1.createdAt })
+        }
+        return (ref, handle)
+    }
+
+    func buildStats(from shifts: [Shift], vacations: [VacationRecord], suggestions: [Suggestion], completedSwaps: Int) -> ShiftStats {
+        let totalHours = shifts.reduce(0) { $0 + $1.hours }
+        let nightCount = shifts.filter { $0.isNight }.count
+        let halfDays = shifts.filter { $0.segment == .halfDay }.count
+        let vacationsCount = vacations.count + shifts.filter { $0.segment == .vacation }.count
+        return ShiftStats(
+            totalHours: totalHours,
+            nightCount: nightCount,
+            halfDays: halfDays,
+            vacations: vacationsCount,
+            swapsCompleted: completedSwaps,
+            suggestionsSent: suggestions.count
+        )
     }
 
     func ensureChatId(currentUserId: String, otherUserId: String) -> String {

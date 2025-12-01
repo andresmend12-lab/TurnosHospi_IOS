@@ -14,6 +14,7 @@ struct ContentView: View {
                 LoginView()
             }
         }
+        .preferredColorScheme(.dark)
         .onChange(of: auth.userId) { userId in
             if let userId {
                 notifications.beginListening(userId: userId)

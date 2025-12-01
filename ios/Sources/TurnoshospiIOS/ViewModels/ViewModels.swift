@@ -108,24 +108,36 @@ final class AuthViewModel: ObservableObject {
 final class ShiftViewModel: ObservableObject {
     @Published var myShifts: [Shift] = []
     @Published var marketplaceRequests: [ShiftChangeRequest] = []
+    @Published var vacations: [VacationRecord] = []
+    @Published var suggestions: [Suggestion] = []
+    @Published var stats: ShiftStats = .init(totalHours: 0, nightCount: 0, halfDays: 0, vacations: 0, swapsCompleted: 0, suggestionsSent: 0)
 
     private let service = FirebaseService.shared
     private var shiftRef: DatabaseReference?
     private var shiftHandle: DatabaseHandle?
     private var requestRef: DatabaseReference?
     private var requestHandle: DatabaseHandle?
+    private var vacationRef: DatabaseReference?
+    private var vacationHandle: DatabaseHandle?
+    private var suggestionRef: DatabaseReference?
+    private var suggestionHandle: DatabaseHandle?
     private var memberLookup: [String: UserProfile] = [:]
+    private var currentUserId: String?
 
     func startListening(plantId: String, userId: String) {
+        currentUserId = userId
         service.detachListener(ref: shiftRef, handle: shiftHandle)
         let result = service.listenToUserShifts(plantId: plantId, userId: userId) { [weak self] shifts in
             Task { @MainActor in
                 self?.myShifts = shifts.isEmpty ? Shift.demoForWeek : shifts
+                self?.recomputeStats()
             }
         }
         shiftRef = result.0
         shiftHandle = result.1
         startMarketplace(plantId: plantId, userId: userId)
+        startVacations(plantId: plantId, userId: userId)
+        startSuggestions(userId: userId)
         Task { [weak self] in
             self?.memberLookup = await self?.service.fetchPlantMembers(plantId: plantId) ?? [:]
         }
@@ -134,12 +146,21 @@ final class ShiftViewModel: ObservableObject {
     func stopListening() {
         service.detachListener(ref: shiftRef, handle: shiftHandle)
         service.detachListener(ref: requestRef, handle: requestHandle)
+        service.detachListener(ref: vacationRef, handle: vacationHandle)
+        service.detachListener(ref: suggestionRef, handle: suggestionHandle)
         shiftRef = nil
         shiftHandle = nil
         requestRef = nil
         requestHandle = nil
+        vacationRef = nil
+        vacationHandle = nil
+        suggestionRef = nil
+        suggestionHandle = nil
         myShifts = []
         marketplaceRequests = []
+        vacations = []
+        suggestions = []
+        stats = .init(totalHours: 0, nightCount: 0, halfDays: 0, vacations: 0, swapsCompleted: 0, suggestionsSent: 0)
     }
 
     func startMarketplace(plantId: String, userId: String) {
@@ -147,6 +168,7 @@ final class ShiftViewModel: ObservableObject {
         let result = service.listenToShiftRequests(plantId: plantId, currentUserId: userId) { [weak self] requests in
             Task { @MainActor in
                 self?.marketplaceRequests = requests
+                self?.recomputeStats()
             }
         }
         requestRef = result.0
@@ -159,6 +181,40 @@ final class ShiftViewModel: ObservableObject {
 
     func resolveName(for id: String) -> String {
         memberLookup[id]?.name ?? id
+    }
+
+    private func startVacations(plantId: String, userId: String) {
+        service.detachListener(ref: vacationRef, handle: vacationHandle)
+        let result = service.listenToVacations(plantId: plantId, userId: userId) { [weak self] records in
+            Task { @MainActor in
+                self?.vacations = records
+                self?.recomputeStats()
+            }
+        }
+        vacationRef = result.0
+        vacationHandle = result.1
+    }
+
+    private func startSuggestions(userId: String) {
+        service.detachListener(ref: suggestionRef, handle: suggestionHandle)
+        let result = service.listenToSuggestions(userId: userId) { [weak self] suggestions in
+            Task { @MainActor in
+                self?.suggestions = suggestions
+                self?.recomputeStats()
+            }
+        }
+        suggestionRef = result.0
+        suggestionHandle = result.1
+    }
+
+    private func recomputeStats() {
+        let completedSwaps = myShifts.filter { $0.status == .swapped }.count
+        stats = service.buildStats(from: myShifts, vacations: vacations, suggestions: suggestions, completedSwaps: completedSwaps)
+    }
+
+    func submitSuggestion(text: String) {
+        guard let currentUserId else { return }
+        Task { await service.submitSuggestion(userId: currentUserId, message: text) }
     }
 }
 
