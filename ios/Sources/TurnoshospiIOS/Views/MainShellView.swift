@@ -16,6 +16,8 @@ struct MainShellView: View {
                 .tabItem { Label("Cambios", systemImage: "arrow.2.squarepath") }
             ChatListView()
                 .tabItem { Label("Mensajes", systemImage: "bubble.left.and.bubble.right") }
+            GroupChatView()
+                .tabItem { Label("Planta", systemImage: "person.3.sequence") }
             StatsView()
                 .tabItem { Label("Estadísticas", systemImage: "chart.bar.xaxis") }
             NotificationsView()

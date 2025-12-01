@@ -103,3 +103,50 @@ struct ChatThreadView: View {
         }
     }
 }
+
+struct GroupChatView: View {
+    @EnvironmentObject private var groupChatVM: GroupChatViewModel
+    @EnvironmentObject private var auth: AuthViewModel
+
+    var body: some View {
+        NavigationStack {
+            VStack {
+                ScrollView {
+                    VStack(spacing: 12) {
+                        ForEach(groupChatVM.messages) { message in
+                            HStack {
+                                if message.isMine { Spacer() }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(message.senderName)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text(message.text)
+                                        .padding(10)
+                                        .background(message.isMine ? Color.blue.opacity(0.25) : Color.gray.opacity(0.2), in: RoundedRectangle(cornerRadius: 12))
+                                }
+                                if !message.isMine { Spacer() }
+                            }
+                        }
+                    }
+                    .padding()
+                }
+                HStack {
+                    TextField("Mensaje a la planta", text: $groupChatVM.text)
+                        .textFieldStyle(.roundedBorder)
+                    Button {
+                        groupChatVM.send()
+                    } label: { Image(systemName: "paperplane.fill") }
+                    .disabled(groupChatVM.text.isEmpty)
+                }
+                .padding()
+            }
+            .navigationTitle("Chat de planta")
+            .onAppear {
+                if let plantId = auth.plant?.id, let profile = auth.profile {
+                    groupChatVM.start(plantId: plantId, user: profile)
+                }
+            }
+            .onDisappear { groupChatVM.stop() }
+        }
+    }
+}

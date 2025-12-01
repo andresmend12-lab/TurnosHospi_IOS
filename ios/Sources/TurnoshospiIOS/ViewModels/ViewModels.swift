@@ -340,6 +340,76 @@ final class NotificationsViewModel: ObservableObject {
     }
 }
 
+final class PlantViewModel: ObservableObject {
+    @Published var pendingPlant: Plant?
+    @Published var errorMessage: String?
+    @Published var isSaving = false
+
+    private let service = FirebaseService.shared
+
+    func createPlant(name: String, code: String, description: String, user: UserProfile) async {
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            let plant = try await service.createPlant(name: name, code: code, description: description, creator: user)
+            await MainActor.run { self.pendingPlant = plant }
+        } catch {
+            await MainActor.run { self.errorMessage = error.localizedDescription }
+        }
+    }
+
+    func joinPlant(code: String, userId: String) async {
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            let plant = try await service.joinPlant(code: code, userId: userId)
+            await MainActor.run { self.pendingPlant = plant }
+        } catch {
+            await MainActor.run { self.errorMessage = error.localizedDescription }
+        }
+    }
+}
+
+final class GroupChatViewModel: ObservableObject {
+    @Published var messages: [ChatMessage] = []
+    @Published var text: String = ""
+
+    private let service = FirebaseService.shared
+    private var chatRef: DatabaseReference?
+    private var chatHandle: DatabaseHandle?
+    private var plantId: String?
+    private var user: UserProfile?
+
+    func start(plantId: String, user: UserProfile) {
+        self.plantId = plantId
+        self.user = user
+        service.detachListener(ref: chatRef, handle: chatHandle)
+        let result = service.listenToGroupChat(plantId: plantId, currentUserId: user.id) { [weak self] items in
+            Task { @MainActor in
+                self?.messages = items
+            }
+        }
+        chatRef = result.0
+        chatHandle = result.1
+    }
+
+    func stop() {
+        service.detachListener(ref: chatRef, handle: chatHandle)
+        chatRef = nil
+        chatHandle = nil
+        messages = []
+        plantId = nil
+    }
+
+    func send() {
+        guard let plantId, let user else { return }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        service.sendGroupMessage(plantId: plantId, user: user, text: trimmed)
+        text = ""
+    }
+}
+
 private extension UserProfile {
     func replacing(id: String) -> UserProfile {
         UserProfile(

@@ -136,6 +136,38 @@ final class FirebaseService: NSObject, ObservableObject {
         return result.user
     }
 
+    func createPlant(name: String, code: String, description: String, creator: UserProfile) async throws -> Plant {
+        let plantId = code.uppercased()
+        let plantPayload: [String: Any] = [
+            "id": plantId,
+            "name": name,
+            "description": description,
+            "hospitalName": description,
+            "createdBy": creator.id,
+            "createdAt": Int(Date().timeIntervalSince1970 * 1000)
+        ]
+
+        try await database.child("plants").child(plantId).setValue(plantPayload)
+        try await link(userId: creator.id, toPlant: plantId)
+
+        return Plant(id: plantId, name: name, code: plantId, description: description, members: StaffMember.demoMembers, staffRequirements: [:], shiftTimes: [:])
+    }
+
+    func joinPlant(code: String, userId: String) async throws -> Plant {
+        let plantId = code.uppercased()
+        let snapshot = try await database.child("plants").child(plantId).getData()
+        guard let raw = snapshot.value as? [String: Any], let plant = Plant(firebase: raw, id: plantId) else {
+            throw NSError(domain: "Plant", code: 404, userInfo: [NSLocalizedDescriptionKey: "Planta no encontrada"])
+        }
+        try await link(userId: userId, toPlant: plantId)
+        return plant
+    }
+
+    private func link(userId: String, toPlant plantId: String) async throws {
+        try await database.child("users").child(userId).child("plantId").setValue(plantId)
+        try await database.child("plants").child(plantId).child("userPlants").child(userId).setValue(["role": "member"])
+    }
+
     func signOut() throws {
         try Auth.auth().signOut()
     }
@@ -228,6 +260,37 @@ final class FirebaseService: NSObject, ObservableObject {
                 onChange(requests.sorted { $0.timestamp > $1.timestamp })
             }
         return (ref, handle)
+    }
+
+    func listenToGroupChat(plantId: String, currentUserId: String, onChange: @escaping ([ChatMessage]) -> Void) -> (DatabaseReference, DatabaseHandle) {
+        let ref = database.child("plants").child(plantId).child("chat")
+        let handle = ref.observe(.value) { snapshot in
+            var messages: [ChatMessage] = []
+            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                guard let raw = child.value as? [String: Any] else { continue }
+                let message = ChatMessage(
+                    id: child.key,
+                    senderId: raw["senderId"] as? String ?? "",
+                    senderName: raw["senderName"] as? String ?? "",
+                    text: raw["text"] as? String ?? "",
+                    date: Date(timeIntervalSince1970: (raw["timestamp"] as? TimeInterval ?? 0) / 1000),
+                    isMine: (raw["senderId"] as? String ?? "") == currentUserId
+                )
+                messages.append(message)
+            }
+            onChange(messages.sorted { $0.date < $1.date })
+        }
+        return (ref, handle)
+    }
+
+    func sendGroupMessage(plantId: String, user: UserProfile, text: String) {
+        let payload: [String: Any] = [
+            "senderId": user.id,
+            "senderName": user.name,
+            "text": text,
+            "timestamp": Int(Date().timeIntervalSince1970 * 1000)
+        ]
+        database.child("plants").child(plantId).child("chat").childByAutoId().setValue(payload)
     }
 
     func respondToShiftRequest(plantId: String, request: ShiftChangeRequest, responder: UserProfile, selectedShift: Shift?) {

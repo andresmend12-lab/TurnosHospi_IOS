@@ -7,6 +7,8 @@ struct TurnoshospiApp: App {
     @StateObject private var notifications = NotificationsViewModel()
     @StateObject private var shiftViewModel = ShiftViewModel()
     @StateObject private var chatViewModel = ChatViewModel()
+    @StateObject private var plantViewModel = PlantViewModel()
+    @StateObject private var groupChatViewModel = GroupChatViewModel()
 
     var body: some Scene {
         WindowGroup {
@@ -15,6 +17,8 @@ struct TurnoshospiApp: App {
                 .environmentObject(notifications)
                 .environmentObject(shiftViewModel)
                 .environmentObject(chatViewModel)
+                .environmentObject(plantViewModel)
+                .environmentObject(groupChatViewModel)
         }
     }
 }
