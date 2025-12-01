@@ -111,6 +111,7 @@ final class ShiftViewModel: ObservableObject {
     @Published var vacations: [VacationRecord] = []
     @Published var suggestions: [Suggestion] = []
     @Published var stats: ShiftStats = .init(totalHours: 0, nightCount: 0, halfDays: 0, vacations: 0, swapsCompleted: 0, suggestionsSent: 0)
+    @Published var validationMessage: String?
 
     private let service = FirebaseService.shared
     private var shiftRef: DatabaseReference?
@@ -161,6 +162,7 @@ final class ShiftViewModel: ObservableObject {
         vacations = []
         suggestions = []
         stats = .init(totalHours: 0, nightCount: 0, halfDays: 0, vacations: 0, swapsCompleted: 0, suggestionsSent: 0)
+        validationMessage = nil
     }
 
     func startMarketplace(plantId: String, userId: String) {
@@ -176,7 +178,57 @@ final class ShiftViewModel: ObservableObject {
     }
 
     func respond(to request: ShiftChangeRequest, with shift: Shift?, profile: UserProfile, plantId: String) {
-        service.respondToShiftRequest(plantId: plantId, request: request, responder: profile, selectedShift: shift)
+        Task {
+            guard ShiftRulesEngine.canUserParticipate(userRole: profile.role) else {
+                await MainActor.run { self.validationMessage = "Tu rol no puede participar en cambios." }
+                return
+            }
+
+            let responderSchedule = ShiftRulesEngine.buildSchedule(from: myShifts)
+            let requesterSchedule = await service.fetchUserSchedule(plantId: plantId, userId: request.requesterId)
+
+            if let error = ShiftRulesEngine.validateWorkRules(
+                targetDate: request.requesterShiftDate,
+                targetShiftName: request.requesterShiftName,
+                userSchedule: responderSchedule
+            ) {
+                await MainActor.run { self.validationMessage = error }
+                return
+            }
+
+            if let swapShift = shift {
+                let candidate = ShiftChangeRequest(
+                    id: UUID().uuidString,
+                    type: .swap,
+                    status: .searching,
+                    mode: .flexible,
+                    requesterId: profile.id,
+                    requesterName: profile.name,
+                    requesterRole: profile.role,
+                    requesterShiftDate: swapShift.date,
+                    requesterShiftName: swapShift.name,
+                    offeredDates: [swapShift.date],
+                    targetUserId: request.requesterId,
+                    targetUserName: request.requesterName,
+                    targetShiftDate: request.requesterShiftDate,
+                    targetShiftName: request.requesterShiftName,
+                    timestamp: Date()
+                )
+
+                guard ShiftRulesEngine.checkMatch(
+                    requesterRequest: request,
+                    candidateRequest: candidate,
+                    requesterSchedule: requesterSchedule,
+                    candidateSchedule: responderSchedule
+                ) else {
+                    await MainActor.run { self.validationMessage = "El intercambio no cumple las reglas laborales." }
+                    return
+                }
+            }
+
+            service.respondToShiftRequest(plantId: plantId, request: request, responder: profile, selectedShift: shift)
+            await MainActor.run { self.validationMessage = nil }
+        }
     }
 
     func resolveName(for id: String) -> String {

@@ -169,6 +169,15 @@ struct MarketplaceView: View {
                     .ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 16) {
+                        if let warning = shiftVM.validationMessage {
+                            Text(warning)
+                                .foregroundStyle(.yellow)
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                                .padding(.horizontal)
+                        }
+
                         GlassCard(title: "Coberturas y cambios", icon: "arrow.2.squarepath") {
                             if shiftVM.marketplaceRequests.isEmpty {
                                 Text("Sin solicitudes abiertas")

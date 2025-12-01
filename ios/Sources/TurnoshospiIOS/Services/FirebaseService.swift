@@ -217,6 +217,23 @@ final class FirebaseService: NSObject, ObservableObject {
         return members
     }
 
+    func fetchUserSchedule(plantId: String, userId: String) async -> [Date: String] {
+        var schedule: [Date: String] = [:]
+        do {
+            let snapshot = try await database.child("plants").child(plantId).child("userPlants").child(userId).child("shifts").getData()
+            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                guard let raw = child.value as? [String: Any] else { continue }
+                let dateValue = raw["date"] as? TimeInterval ?? 0
+                let date = Date(timeIntervalSince1970: dateValue / 1000)
+                let name = raw["name"] as? String ?? (raw["shiftName"] as? String ?? "Turno")
+                schedule[Calendar.current.startOfDay(for: date)] = name
+            }
+        } catch {
+            return schedule
+        }
+        return schedule
+    }
+
     func listenToUserShifts(plantId: String, userId: String, onChange: @escaping ([Shift]) -> Void) -> (DatabaseReference, DatabaseHandle) {
         let ref = database.child("plants").child(plantId).child("userPlants").child(userId).child("shifts")
         let handle = ref.observe(.value) { snapshot in
