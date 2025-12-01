@@ -106,26 +106,15 @@ final class AuthViewModel: ObservableObject {
 }
 
 final class ShiftViewModel: ObservableObject {
-    @Published var myShifts: [Shift]
-    @Published var offers: [ShiftOffer]
+    @Published var myShifts: [Shift] = []
+    @Published var marketplaceRequests: [ShiftChangeRequest] = []
 
     private let service = FirebaseService.shared
     private var shiftRef: DatabaseReference?
     private var shiftHandle: DatabaseHandle?
-
-    init(members: [StaffMember]) {
-        self.myShifts = members.first?.shifts ?? []
-        self.offers = members.compactMap { member in
-            guard let offered = member.shifts.first else { return nil }
-            return ShiftOffer(
-                id: UUID(),
-                owner: member,
-                offeredShift: offered,
-                desiredShiftName: "Nocturno",
-                extraNotes: "Busco cambio por turno nocturno"
-            )
-        }
-    }
+    private var requestRef: DatabaseReference?
+    private var requestHandle: DatabaseHandle?
+    private var memberLookup: [String: UserProfile] = [:]
 
     func startListening(plantId: String, userId: String) {
         service.detachListener(ref: shiftRef, handle: shiftHandle)
@@ -136,55 +125,125 @@ final class ShiftViewModel: ObservableObject {
         }
         shiftRef = result.0
         shiftHandle = result.1
+        startMarketplace(plantId: plantId, userId: userId)
+        Task { [weak self] in
+            self?.memberLookup = await self?.service.fetchPlantMembers(plantId: plantId) ?? [:]
+        }
     }
 
     func stopListening() {
         service.detachListener(ref: shiftRef, handle: shiftHandle)
+        service.detachListener(ref: requestRef, handle: requestHandle)
         shiftRef = nil
         shiftHandle = nil
+        requestRef = nil
+        requestHandle = nil
         myShifts = []
+        marketplaceRequests = []
     }
 
-    func requestChange(for shift: Shift, with peer: StaffMember) {
-        offers.append(
-            ShiftOffer(
-                id: UUID(),
-                owner: peer,
-                offeredShift: shift,
-                desiredShiftName: "Diurno",
-                extraNotes: "Cambio rápido"
-            )
-        )
+    func startMarketplace(plantId: String, userId: String) {
+        service.detachListener(ref: requestRef, handle: requestHandle)
+        let result = service.listenToShiftRequests(plantId: plantId, currentUserId: userId) { [weak self] requests in
+            Task { @MainActor in
+                self?.marketplaceRequests = requests
+            }
+        }
+        requestRef = result.0
+        requestHandle = result.1
+    }
+
+    func respond(to request: ShiftChangeRequest, with shift: Shift?, profile: UserProfile, plantId: String) {
+        service.respondToShiftRequest(plantId: plantId, request: request, responder: profile, selectedShift: shift)
+    }
+
+    func resolveName(for id: String) -> String {
+        memberLookup[id]?.name ?? id
     }
 }
 
 final class ChatViewModel: ObservableObject {
-    @Published var threads: [ChatThread]
+    @Published var threads: [ChatThread] = []
+    @Published var messages: [ChatMessage] = []
+    @Published var availableContacts: [UserProfile] = []
+    @Published var activeChatId: String?
 
-    init(members: [StaffMember]) {
-        let me = members[1]
-        let other = members[0]
-        let now = Date()
-        let messages = [
-            ChatMessage(id: UUID(), sender: me, text: "Confirmas turno de mañana?", date: now, isMine: true),
-            ChatMessage(id: UUID(), sender: other, text: "Sí, quedamos en entregar 19:00", date: now, isMine: false)
-        ]
-        threads = [
-            ChatThread(
-                id: UUID(),
-                participants: [me, other],
-                lastMessage: messages.last?.text ?? "",
-                unreadCount: 2,
-                messages: messages
-            ),
-            ChatThread(
-                id: UUID(),
-                participants: members,
-                lastMessage: "Se actualizó el protocolo de triage",
-                unreadCount: 0,
-                messages: messages
-            )
-        ]
+    private let service = FirebaseService.shared
+    private var chatRef: DatabaseReference?
+    private var chatHandle: DatabaseHandle?
+    private var messagesRef: DatabaseReference?
+    private var messagesHandle: DatabaseHandle?
+    private var memberLookup: [String: UserProfile] = [:]
+    private var plantId: String?
+    private var user: UserProfile?
+
+    func start(plantId: String, user: UserProfile) {
+        self.plantId = plantId
+        self.user = user
+        Task { [weak self] in
+            guard let self else { return }
+            let members = await service.fetchPlantMembers(plantId: plantId)
+            await MainActor.run {
+                self.memberLookup = members
+                self.availableContacts = members.values.filter { $0.id != user.id }.sorted { $0.name < $1.name }
+            }
+        }
+        bindChats(plantId: plantId, userId: user.id)
+    }
+
+    func stop() {
+        service.detachListener(ref: chatRef, handle: chatHandle)
+        service.detachListener(ref: messagesRef, handle: messagesHandle)
+        chatRef = nil
+        chatHandle = nil
+        messagesRef = nil
+        messagesHandle = nil
+        threads = []
+        messages = []
+        activeChatId = nil
+        plantId = nil
+        user = nil
+        availableContacts = []
+    }
+
+    private func bindChats(plantId: String, userId: String) {
+        service.detachListener(ref: chatRef, handle: chatHandle)
+        let result = service.listenToDirectChats(plantId: plantId, currentUserId: userId) { [weak self] threads in
+            Task { @MainActor in
+                self?.threads = threads.map { thread in
+                    var namedThread = thread
+                    if let other = self?.memberLookup[thread.otherUserId] {
+                        namedThread.otherUserName = other.name
+                    }
+                    return namedThread
+                }
+            }
+        }
+        chatRef = result.0
+        chatHandle = result.1
+    }
+
+    func selectChat(with otherUserId: String) {
+        guard let plantId, let user else { return }
+        let chatId = service.ensureChatId(currentUserId: user.id, otherUserId: otherUserId)
+        activeChatId = chatId
+        service.detachListener(ref: messagesRef, handle: messagesHandle)
+        let result = service.listenToMessages(plantId: plantId, chatId: chatId, currentUserId: user.id) { [weak self] messages in
+            Task { @MainActor in
+                self?.messages = messages
+            }
+        }
+        messagesRef = result.0
+        messagesHandle = result.1
+    }
+
+    func sendMessage(_ text: String) {
+        guard let plantId, let chatId = activeChatId, let user, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        service.sendMessage(plantId: plantId, chatId: chatId, user: user, text: text)
+    }
+
+    func displayName(for thread: ChatThread) -> String {
+        memberLookup[thread.otherUserId]?.name ?? thread.otherUserName
     }
 }
 

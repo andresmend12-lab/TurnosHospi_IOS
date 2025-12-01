@@ -98,26 +98,39 @@ struct ShiftDetailView: View {
 struct MarketplaceView: View {
     let plant: Plant
     @EnvironmentObject private var shiftVM: ShiftViewModel
+    @EnvironmentObject private var auth: AuthViewModel
 
     var body: some View {
         NavigationStack {
             List {
-                Section("Ofertas activas") {
-                    ForEach(shiftVM.offers) { offer in
-                        VStack(alignment: .leading, spacing: 6) {
+                Section("Solicitudes abiertas") {
+                    ForEach(shiftVM.marketplaceRequests) { request in
+                        VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text(offer.owner.name).font(.headline)
+                                Text(shiftVM.resolveName(for: request.requesterId))
+                                    .font(.headline)
                                 Spacer()
-                                Label(offer.offeredShift.status.rawValue, systemImage: "arrow.left.arrow.right")
-                                    .foregroundStyle(.orange)
-                                    .font(.footnote)
+                                Text(request.type == .coverage ? "Cobertura" : "Intercambio")
+                                    .font(.caption)
+                                    .padding(6)
+                                    .background(Color.orange.opacity(0.2), in: Capsule())
                             }
-                            Text("Cambia su \(offer.offeredShift.name) por: \(offer.desiredShiftName)")
-                            Text(offer.extraNotes)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                            Text("Turno: \(request.requesterShiftName) · \(request.requesterShiftDate, style: .date)")
+                                .font(.subheadline)
+                            if !request.offeredDates.isEmpty {
+                                Text("Ofrece: \(request.offeredDates.map { $0.formatted(date: .numeric, time: .omitted) }.joined(separator: ", "))")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if let profile = auth.profile, let plantId = auth.plant?.id {
+                                Button {
+                                    shiftVM.respond(to: request, with: shiftVM.myShifts.first, profile: profile, plantId: plantId)
+                                } label: {
+                                    Label("Postularme", systemImage: "hand.wave")
+                                }
+                            }
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, 6)
                     }
                 }
                 Section("Equipo") {

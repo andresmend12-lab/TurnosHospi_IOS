@@ -5,31 +5,52 @@ struct ChatListView: View {
 
     var body: some View {
         NavigationStack {
-            List(chatVM.threads) { thread in
-                NavigationLink {
-                    ChatThreadView(thread: thread)
-                } label: {
-                    HStack(alignment: .top, spacing: 12) {
-                        Circle()
-                            .fill(Color.blue.opacity(0.2))
-                            .frame(width: 44, height: 44)
-                            .overlay(Image(systemName: "bubble.right.fill"))
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(thread.participants.map { $0.name }.joined(separator: ", "))
-                                .font(.headline)
-                            Text(thread.lastMessage)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if thread.unreadCount > 0 {
-                            Text("\(thread.unreadCount)")
-                                .padding(6)
-                                .background(.blue, in: Circle())
-                                .foregroundColor(.white)
+            List {
+                if !chatVM.availableContacts.isEmpty {
+                    Section("Contactos disponibles") {
+                        ForEach(chatVM.availableContacts) { contact in
+                            Button {
+                                chatVM.selectChat(with: contact.id)
+                            } label: {
+                                HStack {
+                                    Image(systemName: contact.avatarSystemName)
+                                    VStack(alignment: .leading) {
+                                        Text(contact.name).font(.headline)
+                                        Text(contact.role).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
                         }
                     }
-                    .padding(.vertical, 4)
+                }
+                Section("Chats activos") {
+                    ForEach(chatVM.threads) { thread in
+                        NavigationLink {
+                            ChatThreadView(thread: thread)
+                        } label: {
+                            HStack(alignment: .top, spacing: 12) {
+                                Circle()
+                                    .fill(Color.blue.opacity(0.2))
+                                    .frame(width: 44, height: 44)
+                                    .overlay(Image(systemName: "bubble.right.fill"))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(chatVM.displayName(for: thread))
+                                        .font(.headline)
+                                    Text(thread.lastMessage.isEmpty ? "Sin mensajes" : thread.lastMessage)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if thread.unreadCount > 0 {
+                                    Text("\(thread.unreadCount)")
+                                        .padding(6)
+                                        .background(.blue, in: Circle())
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
                 }
             }
             .navigationTitle("Mensajes")
@@ -39,16 +60,17 @@ struct ChatListView: View {
 
 struct ChatThreadView: View {
     let thread: ChatThread
+    @EnvironmentObject private var chatVM: ChatViewModel
     @State private var composerText = ""
 
     var body: some View {
         VStack {
             ScrollView {
-                ForEach(thread.messages) { message in
+                ForEach(chatVM.messages) { message in
                     HStack {
                         if message.isMine { Spacer() }
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(message.sender.name)
+                            Text(message.senderName)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Text(message.text)
@@ -65,6 +87,8 @@ struct ChatThreadView: View {
                 TextField("Escribe un mensaje", text: $composerText)
                     .textFieldStyle(.roundedBorder)
                 Button {
+                    let message = composerText
+                    chatVM.sendMessage(message)
                     composerText = ""
                 } label: {
                     Image(systemName: "paperplane.fill")
@@ -73,6 +97,9 @@ struct ChatThreadView: View {
             }
             .padding()
         }
-        .navigationTitle("Chat")
+        .navigationTitle(chatVM.displayName(for: thread))
+        .onAppear {
+            chatVM.selectChat(with: thread.otherUserId)
+        }
     }
 }

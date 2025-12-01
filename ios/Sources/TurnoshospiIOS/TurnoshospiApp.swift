@@ -5,8 +5,8 @@ struct TurnoshospiApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var auth = AuthViewModel()
     @StateObject private var notifications = NotificationsViewModel()
-    @StateObject private var shiftViewModel = ShiftViewModel(members: StaffMember.demoMembers)
-    @StateObject private var chatViewModel = ChatViewModel(members: StaffMember.demoMembers)
+    @StateObject private var shiftViewModel = ShiftViewModel()
+    @StateObject private var chatViewModel = ChatViewModel()
 
     var body: some Scene {
         WindowGroup {

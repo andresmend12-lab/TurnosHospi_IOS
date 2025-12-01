@@ -168,6 +168,23 @@ final class FirebaseService: NSObject, ObservableObject {
         return Plant(firebase: raw, id: plantId)
     }
 
+    func fetchPlantMembers(plantId: String) async -> [String: UserProfile] {
+        var members: [String: UserProfile] = [:]
+        do {
+            let plantMembers = try await database.child("plants").child(plantId).child("userPlants").getData()
+            for child in plantMembers.children.allObjects as? [DataSnapshot] ?? [] {
+                let uid = child.key
+                let userSnap = try await database.child("users").child(uid).getData()
+                if let raw = userSnap.value as? [String: Any], let profile = Self.makeProfile(from: raw, id: uid) {
+                    members[uid] = profile
+                }
+            }
+        } catch {
+            return members
+        }
+        return members
+    }
+
     func listenToUserShifts(plantId: String, userId: String, onChange: @escaping ([Shift]) -> Void) -> (DatabaseReference, DatabaseHandle) {
         let ref = database.child("plants").child(plantId).child("userPlants").child(userId).child("shifts")
         let handle = ref.observe(.value) { snapshot in
@@ -190,6 +207,107 @@ final class FirebaseService: NSObject, ObservableObject {
             onChange(shifts.sorted { $0.date < $1.date })
         }
         return (ref, handle)
+    }
+
+    func listenToShiftRequests(plantId: String, currentUserId: String, onChange: @escaping ([ShiftChangeRequest]) -> Void) -> (DatabaseReference, DatabaseHandle) {
+        let ref = database.child("plants").child(plantId).child("shift_requests")
+        let handle = ref
+            .queryOrdered(byChild: "status")
+            .queryEqual(toValue: RequestStatus.searching.rawValue)
+            .observe(.value) { snapshot in
+                var requests: [ShiftChangeRequest] = []
+                for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                    guard let raw = child.value as? [String: Any],
+                          let request = ShiftChangeRequest(firebase: raw, id: child.key),
+                          request.requesterId != currentUserId else { continue }
+                    requests.append(request)
+                }
+                onChange(requests.sorted { $0.timestamp > $1.timestamp })
+            }
+        return (ref, handle)
+    }
+
+    func respondToShiftRequest(plantId: String, request: ShiftChangeRequest, responder: UserProfile, selectedShift: Shift?) {
+        let ref = database.child("plants").child(plantId).child("shift_requests").child(request.id)
+        var payload: [String: Any] = [
+            "status": RequestStatus.pendingPartner.rawValue,
+            "targetUserId": responder.id,
+            "targetUserName": responder.name
+        ]
+        if let selectedShift {
+            payload["targetShiftDate"] = Int(selectedShift.date.timeIntervalSince1970 * 1000)
+            payload["targetShiftName"] = selectedShift.name
+        }
+        ref.updateChildValues(payload)
+    }
+
+    func listenToDirectChats(plantId: String, currentUserId: String, onChange: @escaping ([ChatThread]) -> Void) -> (DatabaseReference, DatabaseHandle) {
+        let ref = database.child("plants").child(plantId).child("direct_chats")
+        let handle = ref.observe(.value) { snapshot in
+            var threads: [ChatThread] = []
+            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                guard let chatId = child.key, chatId.contains(currentUserId) else { continue }
+                let ids = chatId.components(separatedBy: "_")
+                guard let otherId = ids.first(where: { $0 != currentUserId }) else { continue }
+                let messagesSnapshot = child.childSnapshot(forPath: "messages")
+                let lastMessageSnap = messagesSnapshot.children.allObjects.last as? DataSnapshot
+                let lastText = lastMessageSnap?.childSnapshot(forPath: "text").value as? String ?? ""
+                let timestamp = lastMessageSnap?.childSnapshot(forPath: "timestamp").value as? TimeInterval ?? 0
+                let unread = child.childSnapshot(forPath: "unread").childSnapshot(forPath: currentUserId).value as? Int ?? 0
+                let thread = ChatThread(
+                    id: chatId,
+                    otherUserId: otherId,
+                    otherUserName: otherId,
+                    lastMessage: lastText,
+                    unreadCount: unread,
+                    updatedAt: Date(timeIntervalSince1970: timestamp / 1000),
+                    messages: []
+                )
+                threads.append(thread)
+            }
+            onChange(threads.sorted { $0.updatedAt > $1.updatedAt })
+        }
+        return (ref, handle)
+    }
+
+    func listenToMessages(plantId: String, chatId: String, currentUserId: String, onChange: @escaping ([ChatMessage]) -> Void) -> (DatabaseReference, DatabaseHandle) {
+        let ref = database.child("plants").child(plantId).child("direct_chats").child(chatId).child("messages")
+        let handle = ref.observe(.value) { snapshot in
+            var messages: [ChatMessage] = []
+            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                guard let raw = child.value as? [String: Any] else { continue }
+                let senderId = raw["userId"] as? String ?? ""
+                let senderName = raw["userName"] as? String ?? ""
+                let text = raw["text"] as? String ?? ""
+                let timestamp = raw["timestamp"] as? TimeInterval ?? 0
+                let message = ChatMessage(
+                    id: child.key,
+                    senderId: senderId,
+                    senderName: senderName.isEmpty ? senderId : senderName,
+                    text: text,
+                    date: Date(timeIntervalSince1970: timestamp / 1000),
+                    isMine: senderId == currentUserId
+                )
+                messages.append(message)
+            }
+            onChange(messages.sorted { $0.date < $1.date })
+        }
+        return (ref, handle)
+    }
+
+    func sendMessage(plantId: String, chatId: String, user: UserProfile, text: String) {
+        let ref = database.child("plants").child(plantId).child("direct_chats").child(chatId).child("messages").childByAutoId()
+        let payload: [String: Any] = [
+            "text": text,
+            "userId": user.id,
+            "userName": user.name,
+            "timestamp": Int(Date().timeIntervalSince1970 * 1000)
+        ]
+        ref.setValue(payload)
+    }
+
+    func ensureChatId(currentUserId: String, otherUserId: String) -> String {
+        [currentUserId, otherUserId].sorted().joined(separator: "_")
     }
 
     func detachListener(ref: DatabaseReference?, handle: DatabaseHandle?) {
@@ -243,6 +361,69 @@ private extension Plant {
             members: StaffMember.demoMembers,
             staffRequirements: staffRequirements,
             shiftTimes: shiftTimes
+        )
+    }
+}
+
+private extension ShiftChangeRequest {
+    init?(firebase raw: [String: Any], id: String) {
+        let timestamp = raw["timestamp"]
+        let offeredDatesRaw = raw["offeredDates"] as? [Any] ?? []
+        let requesterDate = raw["requesterShiftDate"]
+
+        guard let type = RequestType(rawValue: (raw["type"] as? String ?? "").uppercased()),
+              let status = RequestStatus(rawValue: (raw["status"] as? String ?? "").uppercased()),
+              let mode = RequestMode(rawValue: (raw["mode"] as? String ?? "").uppercased()) else { return nil }
+
+        self.init(
+            id: id,
+            type: type,
+            status: status,
+            mode: mode,
+            requesterId: raw["requesterId"] as? String ?? "",
+            requesterName: raw["requesterName"] as? String ?? "",
+            requesterRole: raw["requesterRole"] as? String ?? "",
+            requesterShiftDate: Self.parseDate(requesterDate) ?? Date(),
+            requesterShiftName: raw["requesterShiftName"] as? String ?? "",
+            offeredDates: offeredDatesRaw.compactMap { Self.parseDate($0) },
+            targetUserId: raw["targetUserId"] as? String,
+            targetUserName: raw["targetUserName"] as? String,
+            targetShiftDate: Self.parseDate(raw["targetShiftDate"]),
+            targetShiftName: raw["targetShiftName"] as? String,
+            timestamp: Self.parseDate(timestamp) ?? Date()
+        )
+    }
+
+    static func parseDate(_ value: Any?) -> Date? {
+        if let ms = value as? TimeInterval {
+            return Date(timeIntervalSince1970: ms / 1000)
+        }
+        if let str = value as? String {
+            let iso = ISO8601DateFormatter()
+            if let date = iso.date(from: str) { return date }
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            return formatter.date(from: str)
+        }
+        return nil
+    }
+}
+
+private extension FirebaseService {
+    static func makeProfile(from raw: [String: Any], id: String) -> UserProfile? {
+        guard !(raw["email"] as? String ?? "").isEmpty else { return nil }
+        return UserProfile(
+            id: id,
+            firstName: raw["firstName"] as? String ?? "",
+            lastName: raw["lastName"] as? String ?? "",
+            role: raw["role"] as? String ?? "",
+            gender: raw["gender"] as? String ?? "",
+            email: raw["email"] as? String ?? "",
+            plantId: raw["plantId"] as? String,
+            avatarSystemName: "person.crop.circle.fill",
+            specialty: raw["specialty"] as? String ?? "",
+            createdAt: (raw["createdAt"] as? TimeInterval).map { Date(timeIntervalSince1970: $0 / 1000) },
+            updatedAt: (raw["updatedAt"] as? TimeInterval).map { Date(timeIntervalSince1970: $0 / 1000) }
         )
     }
 }

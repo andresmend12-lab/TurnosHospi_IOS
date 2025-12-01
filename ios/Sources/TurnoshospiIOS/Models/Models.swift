@@ -174,18 +174,50 @@ struct NotificationItem: Identifiable, Equatable {
     var targetId: String?
 }
 
+enum RequestType: String, Codable, CaseIterable { case coverage = "COVERAGE", swap = "SWAP" }
+enum RequestMode: String, Codable, CaseIterable { case strict = "STRICT", flexible = "FLEXIBLE" }
+enum RequestStatus: String, Codable, CaseIterable {
+    case draft = "DRAFT"
+    case searching = "SEARCHING"
+    case pendingPartner = "PENDING_PARTNER"
+    case awaitingSupervisor = "AWAITING_SUPERVISOR"
+    case approved = "APPROVED"
+    case rejected = "REJECTED"
+}
+
+struct ShiftChangeRequest: Identifiable, Equatable {
+    let id: String
+    var type: RequestType
+    var status: RequestStatus
+    var mode: RequestMode
+    var requesterId: String
+    var requesterName: String
+    var requesterRole: String
+    var requesterShiftDate: Date
+    var requesterShiftName: String
+    var offeredDates: [Date]
+    var targetUserId: String?
+    var targetUserName: String?
+    var targetShiftDate: Date?
+    var targetShiftName: String?
+    var timestamp: Date
+}
+
 struct ChatMessage: Identifiable, Equatable {
-    let id: UUID
-    var sender: StaffMember
+    let id: String
+    var senderId: String
+    var senderName: String
     var text: String
     var date: Date
     var isMine: Bool
 }
 
 struct ChatThread: Identifiable, Equatable {
-    let id: UUID
-    var participants: [StaffMember]
+    let id: String
+    var otherUserId: String
+    var otherUserName: String
     var lastMessage: String
     var unreadCount: Int
+    var updatedAt: Date
     var messages: [ChatMessage]
 }
