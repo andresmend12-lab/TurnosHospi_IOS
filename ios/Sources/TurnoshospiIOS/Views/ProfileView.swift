@@ -17,7 +17,7 @@ struct ProfileView: View {
                             .foregroundStyle(.blue)
                         VStack(alignment: .leading) {
                             Text(profile.name).font(.headline)
-                            Text(profile.role.rawValue).foregroundStyle(.secondary)
+                            Text(profile.displayRole).foregroundStyle(.secondary)
                         }
                     }
                     Text("Servicio: \(profile.specialty)")

@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var auth: AuthViewModel
+    @EnvironmentObject private var notifications: NotificationsViewModel
+    @EnvironmentObject private var shifts: ShiftViewModel
 
     var body: some View {
         Group {
@@ -10,6 +12,21 @@ struct ContentView: View {
             } else {
                 LoginView()
             }
+        }
+        .onChange(of: auth.userId) { userId in
+            if let userId {
+                notifications.beginListening(userId: userId)
+                if let plantId = auth.plant?.id {
+                    shifts.startListening(plantId: plantId, userId: userId)
+                }
+            } else {
+                notifications.stop()
+                shifts.stopListening()
+            }
+        }
+        .onChange(of: auth.plant?.id) { plantId in
+            guard let plantId, let userId = auth.userId else { return }
+            shifts.startListening(plantId: plantId, userId: userId)
         }
         .alert(item: Binding(
             get: { auth.errorMessage.map { AlertWrapper(message: $0) } },

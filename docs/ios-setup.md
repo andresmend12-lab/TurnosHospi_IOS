@@ -1,6 +1,6 @@
 # Turnoshospi para iOS
 
-Se añadió una implementación nativa en SwiftUI lista para abrirse en Xcode como proyecto de Swift Package Manager.
+Se añadió una implementación nativa en SwiftUI lista para abrirse en Xcode como proyecto de Swift Package Manager y conectada a Firebase (Auth, Realtime Database y Cloud Messaging) para mantener la paridad funcional con Android.
 
 ## Abrir en Xcode
 1. Abrir Xcode 15 o superior.
@@ -15,5 +15,7 @@ Se añadió una implementación nativa en SwiftUI lista para abrirse en Xcode co
 - `Resources/LaunchScreen.storyboard`: pantalla de lanzamiento con el ícono.
 
 ## Notas
-- Los datos son mockeados para reflejar flujos de turnos, ofertas, mensajería y alertas sin depender de Firebase.
-- Para conectar servicios reales (auth, notificaciones push, etc.) sustituir los view models por integraciones con Firebase o el backend deseado.
+- Incluye integración con Firebase para autenticación por correo, consultas a Realtime Database (`users`, `plants`, `user_notifications`, `userPlants/<uid>/shifts`) y registro de tokens FCM en `users/<uid>/fcmToken`.
+- Reemplaza `ios/Resources/GoogleService-Info.plist` con el archivo real generado desde la consola de Firebase para el bundle `com.example.turnoshospi`.
+- Habilita notificaciones push en el proyecto (Signing & Capabilities) y valida que el esquema tenga los permisos de notificaciones ya declarados en `Package.swift`.
+- Los view models activan listeners en tiempo real tras el login; para probar sin backend se puede usar el `Plant.demo` y los turnos de ejemplo.

@@ -30,11 +30,23 @@ struct NotificationsView: View {
                         Button("Leído") {
                             notificationsVM.markAsRead(notification)
                         }.tint(.blue)
+                        Button(role: .destructive) {
+                            notificationsVM.delete(notification)
+                        } label: {
+                            Label("Borrar", systemImage: "trash")
+                        }
                     }
                     .padding(.vertical, 4)
                 }
             }
             .navigationTitle("Alertas")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    if !notificationsVM.notifications.isEmpty {
+                        Button("Limpiar") { notificationsVM.deleteAll() }
+                    }
+                }
+            }
         }
     }
 
@@ -43,6 +55,7 @@ struct NotificationsView: View {
         case .chat: return "message.fill"
         case .shift: return "calendar.badge.exclamationmark"
         case .system: return "bell.fill"
+        case .generic: return "bell"
         }
     }
 
@@ -51,6 +64,7 @@ struct NotificationsView: View {
         case .chat: return .blue
         case .shift: return .orange
         case .system: return .green
+        case .generic: return .gray
         }
     }
 }

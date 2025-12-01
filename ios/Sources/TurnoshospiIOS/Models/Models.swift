@@ -1,20 +1,34 @@
 import Foundation
 
-struct UserProfile: Identifiable, Equatable {
-    let id: UUID
-    var name: String
+struct UserProfile: Identifiable, Equatable, Codable {
+    let id: String
+    var firstName: String
+    var lastName: String
+    var role: String
+    var gender: String
     var email: String
-    var role: StaffRole
+    var plantId: String?
     var avatarSystemName: String
     var specialty: String
+    var createdAt: Date?
+    var updatedAt: Date?
+
+    var name: String { [firstName, lastName].joined(separator: " ").trimmingCharacters(in: .whitespaces) }
+    var displayRole: String { role.isEmpty ? "Profesional" : role }
+    var staffRole: StaffRole? { StaffRole(rawValue: role) }
 
     static let demo = UserProfile(
-        id: UUID(uuidString: "9d216cbb-9567-4c8a-903b-6627fbdbc3ab")!,
-        name: "Dra. María Díaz",
+        id: "demo-user",
+        firstName: "Dra.",
+        lastName: "María Díaz",
+        role: "Médico",
+        gender: "F",
         email: "maria.diaz@hospi.cl",
-        role: .nurse,
+        plantId: "demo-plant",
         avatarSystemName: "person.crop.circle.fill",
-        specialty: "UTI"
+        specialty: "UTI",
+        createdAt: nil,
+        updatedAt: nil
     )
 }
 
@@ -35,20 +49,29 @@ enum StaffRole: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-struct Plant: Identifiable, Equatable {
-    let id: UUID
+struct Plant: Identifiable, Equatable, Codable {
+    let id: String
     var name: String
     var code: String
     var description: String
     var members: [StaffMember]
+    var staffRequirements: [String: Int]
+    var shiftTimes: [String: ShiftTime]
 
     static let demo = Plant(
-        id: UUID(uuidString: "6f929c15-a4fe-46a7-9ba9-7b5858bf9246")!,
+        id: "demo-plant",
         name: "Planta Pediatría Norte",
         code: "PEDI-NORTE",
         description: "Equipo multidisciplinario con 24 camas y urgencia 24/7",
-        members: StaffMember.demoMembers
+        members: StaffMember.demoMembers,
+        staffRequirements: [:],
+        shiftTimes: [:]
     )
+}
+
+struct ShiftTime: Codable, Equatable {
+    var start: String
+    var end: String
 }
 
 struct StaffMember: Identifiable, Equatable {
@@ -138,14 +161,17 @@ struct ShiftOffer: Identifiable, Equatable {
 }
 
 struct NotificationItem: Identifiable, Equatable {
-    enum Kind: String { case system, shift, chat }
+    enum Kind: String { case system, shift, chat, generic }
 
-    let id: UUID
+    let id: String
+    var type: String
     var title: String
     var message: String
     var date: Date
     var kind: Kind
     var isRead: Bool
+    var targetScreen: String?
+    var targetId: String?
 }
 
 struct ChatMessage: Identifiable, Equatable {

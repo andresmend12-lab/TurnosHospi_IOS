@@ -2,8 +2,8 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject private var auth: AuthViewModel
-    @State private var email = "maria.diaz@hospi.cl"
-    @State private var password = "123456"
+    @State private var email = ""
+    @State private var password = ""
     @State private var showCreate = false
 
     var body: some View {
@@ -35,11 +35,12 @@ struct LoginView: View {
                     Button {
                         auth.login(email: email, password: password)
                     } label: {
-                        Label("Ingresar", systemImage: "arrow.right.circle.fill")
+                        Label(auth.isLoading ? "Conectando..." : "Ingresar", systemImage: "arrow.right.circle.fill")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                    .disabled(auth.isLoading)
                 }
                 .padding(.horizontal)
                 Button("Crear cuenta") { showCreate = true }
@@ -56,21 +57,29 @@ struct LoginView: View {
 
 struct CreateAccountView: View {
     @EnvironmentObject private var auth: AuthViewModel
-    @State private var name = "Nueva persona"
+    @State private var firstName = ""
+    @State private var lastName = ""
     @State private var email = ""
     @State private var specialty = "Pediatría"
     @State private var role: StaffRole = .doctor
+    @State private var gender = "Femenino"
+    @State private var password = ""
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Datos") {
-                    TextField("Nombre", text: $name)
+                    TextField("Nombre", text: $firstName)
+                    TextField("Apellidos", text: $lastName)
                     TextField("Correo", text: $email)
+                    SecureField("Contraseña", text: $password)
                     Picker("Rol", selection: $role) {
                         ForEach(StaffRole.allCases) { role in
                             Label(role.rawValue, systemImage: role.icon).tag(role)
                         }
+                    }
+                    Picker("Género", selection: $gender) {
+                        ForEach(["Femenino", "Masculino", "Otro"], id: \.self, content: Text.init)
                     }
                     TextField("Servicio", text: $specialty)
                 }
@@ -79,16 +88,17 @@ struct CreateAccountView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Guardar") {
-                        auth.profile = UserProfile(
-                            id: UUID(),
-                            name: name,
+                        auth.register(
+                            firstName: firstName,
+                            lastName: lastName,
                             email: email,
                             role: role,
-                            avatarSystemName: "person.crop.circle.fill",
+                            gender: gender,
+                            password: password,
                             specialty: specialty
                         )
-                        auth.isAuthenticated = true
                     }
+                    .disabled(firstName.isEmpty || email.isEmpty || password.count < 6)
                 }
             }
         }
