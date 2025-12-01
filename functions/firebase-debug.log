@@ -1,0 +1,159 @@
+[debug] [2025-11-28T12:55:26.810Z] ----------------------------------------------------------------------
+[debug] [2025-11-28T12:55:26.813Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Andrés\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2025-11-28T12:55:26.814Z] CLI Version:   14.26.0
+[debug] [2025-11-28T12:55:26.814Z] Platform:      win32
+[debug] [2025-11-28T12:55:26.814Z] Node Version:  v22.21.0
+[debug] [2025-11-28T12:55:26.814Z] Time:          Fri Nov 28 2025 13:55:26 GMT+0100 (hora estándar de Europa central)
+[debug] [2025-11-28T12:55:26.815Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-11-28T12:55:27.114Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-28T12:55:27.115Z] > authorizing via signed-in user (andresmend12@gmail.com)
+[debug] [2025-11-28T12:55:27.115Z] [iam] checking project turnoshospi-f4870 for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2025-11-28T12:55:27.116Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:27.117Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:27.118Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870:testIamPermissions [none]
+[debug] [2025-11-28T12:55:27.118Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870:testIamPermissions x-goog-quota-user=projects/turnoshospi-f4870
+[debug] [2025-11-28T12:55:27.118Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-11-28T12:55:27.365Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870:testIamPermissions 200
+[debug] [2025-11-28T12:55:27.365Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-11-28T12:55:27.365Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:27.366Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:27.366Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/turnoshospi-f4870/serviceAccounts/turnoshospi-f4870@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2025-11-28T12:55:27.366Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/turnoshospi-f4870/serviceAccounts/turnoshospi-f4870@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2025-11-28T12:55:28.011Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/turnoshospi-f4870/serviceAccounts/turnoshospi-f4870@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2025-11-28T12:55:28.011Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/turnoshospi-f4870/serviceAccounts/turnoshospi-f4870@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'turnoshospi-f4870'...
+[info] 
+[info] i  deploying functions 
+[debug] [2025-11-28T12:55:28.017Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:28.017Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:28.018Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870 [none]
+[debug] [2025-11-28T12:55:28.183Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870 200
+[debug] [2025-11-28T12:55:28.183Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870 {"projectNumber":"130974977586","projectId":"turnoshospi-f4870","lifecycleState":"ACTIVE","name":"Turnoshospi","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-11-24T12:55:53.604476Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2025-11-28T12:55:28.188Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:28.188Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:28.189Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/turnoshospi-f4870/adminSdkConfig [none]
+[debug] [2025-11-28T12:55:28.747Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/turnoshospi-f4870/adminSdkConfig 200
+[debug] [2025-11-28T12:55:28.747Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/turnoshospi-f4870/adminSdkConfig {"projectId":"turnoshospi-f4870","databaseURL":"https://turnoshospi-f4870-default-rtdb.firebaseio.com","storageBucket":"turnoshospi-f4870.firebasestorage.app"}
+[debug] [2025-11-28T12:55:28.750Z] Validating nodejs source
+[debug] [2025-11-28T12:55:29.955Z] > [functions] package.json contents: {
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.0.0"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.4.1"
+  },
+  "private": true
+}
+[debug] [2025-11-28T12:55:29.956Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[debug] [2025-11-28T12:55:29.957Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-11-28T12:55:29.971Z] Found firebase-functions binary at 'C:\Users\Andrés\Documents\GitHub\Turnoshospi\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8219
+
+[debug] [2025-11-28T12:55:31.142Z] Got response from /__/functions.yaml {"endpoints":{"sendNotification":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"eventTrigger":{"eventType":"providers/google.firebase.database/eventTypes/ref.create","eventFilters":{"resource":"projects/_/instances/turnoshospi-f4870-default-rtdb/refs/user_notifications/{userId}/{notificationId}"},"retry":false},"labels":{},"entryPoint":"sendNotification"}},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{}}
+[info] i  extensions: ensuring required API firebaseextensions.googleapis.com is enabled... 
+[debug] [2025-11-28T12:55:35.198Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:35.198Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:35.198Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/turnoshospi-f4870/services/firebaseextensions.googleapis.com [none]
+[debug] [2025-11-28T12:55:35.198Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/turnoshospi-f4870/services/firebaseextensions.googleapis.com x-goog-quota-user=projects/turnoshospi-f4870
+[debug] [2025-11-28T12:55:36.048Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/turnoshospi-f4870/services/firebaseextensions.googleapis.com 200
+[debug] [2025-11-28T12:55:36.048Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/turnoshospi-f4870/services/firebaseextensions.googleapis.com [omitted]
+[warn] !  extensions: missing required API firebaseextensions.googleapis.com. Enabling now... 
+[debug] [2025-11-28T12:55:36.049Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:36.049Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:36.050Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/turnoshospi-f4870/services/firebaseextensions.googleapis.com:enable [none]
+[debug] [2025-11-28T12:55:36.050Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/turnoshospi-f4870/services/firebaseextensions.googleapis.com:enable x-goog-quota-user=projects/turnoshospi-f4870
+[debug] [2025-11-28T12:55:37.054Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/turnoshospi-f4870/services/firebaseextensions.googleapis.com:enable 200
+[debug] [2025-11-28T12:55:37.054Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/turnoshospi-f4870/services/firebaseextensions.googleapis.com:enable [omitted]
+[debug] [2025-11-28T12:55:47.072Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-11-28T12:55:47.082Z] > authorizing via signed-in user (andresmend12@gmail.com)
+[debug] [2025-11-28T12:55:47.082Z] [iam] checking project turnoshospi-f4870 for permissions ["firebase.projects.get","firebaseextensions.instances.list"]
+[debug] [2025-11-28T12:55:47.083Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:47.083Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:47.083Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870:testIamPermissions [none]
+[debug] [2025-11-28T12:55:47.083Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870:testIamPermissions x-goog-quota-user=projects/turnoshospi-f4870
+[debug] [2025-11-28T12:55:47.084Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2025-11-28T12:55:47.708Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870:testIamPermissions 200
+[debug] [2025-11-28T12:55:47.708Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2025-11-28T12:55:47.709Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:47.709Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:47.709Z] >>> [apiv2][query] GET https://firebaseextensions.googleapis.com/v1beta/projects/turnoshospi-f4870/instances pageSize=100&pageToken=
+[debug] [2025-11-28T12:55:49.369Z] <<< [apiv2][status] GET https://firebaseextensions.googleapis.com/v1beta/projects/turnoshospi-f4870/instances 200
+[debug] [2025-11-28T12:55:49.369Z] <<< [apiv2][body] GET https://firebaseextensions.googleapis.com/v1beta/projects/turnoshospi-f4870/instances {}
+[info] i  functions: preparing functions directory for uploading... 
+[info] i  functions: packaged C:\Users\Andrés\Documents\GitHub\Turnoshospi\functions (68.47 KB) for uploading 
+[debug] [2025-11-28T12:55:49.431Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:49.431Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:49.432Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/turnoshospi-f4870/locations/-/functions [none]
+[debug] [2025-11-28T12:55:50.051Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/turnoshospi-f4870/locations/-/functions 200
+[debug] [2025-11-28T12:55:50.051Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/turnoshospi-f4870/locations/-/functions {}
+[debug] [2025-11-28T12:55:50.052Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:50.052Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:50.053Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/turnoshospi-f4870/locations/-/functions filter=environment%3D%22GEN_2%22
+[debug] [2025-11-28T12:55:51.018Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/turnoshospi-f4870/locations/-/functions 200
+[debug] [2025-11-28T12:55:51.018Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/turnoshospi-f4870/locations/-/functions {}
+[debug] [2025-11-28T12:55:51.022Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:51.022Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:51.022Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870 [none]
+[debug] [2025-11-28T12:55:51.196Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870 200
+[debug] [2025-11-28T12:55:51.196Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/turnoshospi-f4870 {"projectNumber":"130974977586","projectId":"turnoshospi-f4870","lifecycleState":"ACTIVE","name":"Turnoshospi","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-11-24T12:55:53.604476Z"}
+[debug] [2025-11-28T12:55:51.197Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:51.197Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:51.197Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/turnoshospi-f4870/billingInfo [none]
+[debug] [2025-11-28T12:55:51.614Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/turnoshospi-f4870/billingInfo 200
+[debug] [2025-11-28T12:55:51.614Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/turnoshospi-f4870/billingInfo {"name":"projects/turnoshospi-f4870/billingInfo","projectId":"turnoshospi-f4870","billingAccountName":"billingAccounts/013024-D437C1-84D9C0","billingEnabled":true}
+[debug] [2025-11-28T12:55:51.615Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:51.615Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:55:51.615Z] >>> [apiv2][query] POST https://cloudfunctions.googleapis.com/v1/projects/turnoshospi-f4870/locations/us-central1/functions:generateUploadUrl [none]
+[debug] [2025-11-28T12:55:51.615Z] >>> [apiv2][body] POST https://cloudfunctions.googleapis.com/v1/projects/turnoshospi-f4870/locations/us-central1/functions:generateUploadUrl {}
+[debug] [2025-11-28T12:56:04.196Z] <<< [apiv2][status] POST https://cloudfunctions.googleapis.com/v1/projects/turnoshospi-f4870/locations/us-central1/functions:generateUploadUrl 200
+[debug] [2025-11-28T12:56:04.197Z] <<< [apiv2][body] POST https://cloudfunctions.googleapis.com/v1/projects/turnoshospi-f4870/locations/us-central1/functions:generateUploadUrl {"uploadUrl":"https://storage.googleapis.com/uploads-477957906628.us-central1.cloudfunctions.appspot.com/9c9c22ae-5d71-4cfe-bd75-bef229b1da47.zip?GoogleAccessId=service-130974977586@gcf-admin-robot.iam.gserviceaccount.com&Expires=1764336362&Signature=HtwL%2BsB57gA4tRQpvnlQPWZyp8tKS2d8X7yT53g4H5quP%2FptOVFy%2Bvp%2F%2BWaOeeX8O58R2lr%2FSP4iHPzU6vVVrBmWAoSGJ6sxLU00OghsZ22b9B1xsqMdkA6PI%2FOZ6GBpYpIlg3pyf2OOdxcnxzx20dcVQYemR0dqBlZNSOyzG6rplZ%2BI96zHAc%2F8wpxrtm6h0zHDh3TXi0hCKqimaseoDssqtJKAKkXDSCUDLjVr46JkgDDT93EsUVfUHmE9ghtTZdhJ%2BE5FySOWNKOfQ%2Bk9R%2FG9URxK47cqpDLom4M5HA2v9LcCns5HP3Ho5Cvk7TXdY%2FlA8ZyiHRFwbS9Kgl%2BmSg%3D%3D"}
+[debug] [2025-11-28T12:56:04.198Z] >>> [apiv2][query] PUT https://storage.googleapis.com/uploads-477957906628.us-central1.cloudfunctions.appspot.com/9c9c22ae-5d71-4cfe-bd75-bef229b1da47.zip GoogleAccessId=service-130974977586%40gcf-admin-robot.iam.gserviceaccount.com&Expires=1764336362&Signature=HtwL%2BsB57gA4tRQpvnlQPWZyp8tKS2d8X7yT53g4H5quP%2FptOVFy%2Bvp%2F%2BWaOeeX8O58R2lr%2FSP4iHPzU6vVVrBmWAoSGJ6sxLU00OghsZ22b9B1xsqMdkA6PI%2FOZ6GBpYpIlg3pyf2OOdxcnxzx20dcVQYemR0dqBlZNSOyzG6rplZ%2BI96zHAc%2F8wpxrtm6h0zHDh3TXi0hCKqimaseoDssqtJKAKkXDSCUDLjVr46JkgDDT93EsUVfUHmE9ghtTZdhJ%2BE5FySOWNKOfQ%2Bk9R%2FG9URxK47cqpDLom4M5HA2v9LcCns5HP3Ho5Cvk7TXdY%2FlA8ZyiHRFwbS9Kgl%2BmSg%3D%3D
+[debug] [2025-11-28T12:56:04.198Z] >>> [apiv2][body] PUT https://storage.googleapis.com/uploads-477957906628.us-central1.cloudfunctions.appspot.com/9c9c22ae-5d71-4cfe-bd75-bef229b1da47.zip [stream]
+[debug] [2025-11-28T12:56:04.832Z] <<< [apiv2][status] PUT https://storage.googleapis.com/uploads-477957906628.us-central1.cloudfunctions.appspot.com/9c9c22ae-5d71-4cfe-bd75-bef229b1da47.zip 200
+[debug] [2025-11-28T12:56:04.832Z] <<< [apiv2][body] PUT https://storage.googleapis.com/uploads-477957906628.us-central1.cloudfunctions.appspot.com/9c9c22ae-5d71-4cfe-bd75-bef229b1da47.zip [omitted]
+[info] +  functions: functions source uploaded successfully 
+[info] i  functions: creating Node.js 22 (1st Gen) function sendNotification(us-central1)... 
+[debug] [2025-11-28T12:56:04.837Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:56:04.837Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:56:04.838Z] >>> [apiv2][query] POST https://cloudfunctions.googleapis.com/v1/projects/turnoshospi-f4870/locations/us-central1/functions [none]
+[debug] [2025-11-28T12:56:04.838Z] >>> [apiv2][body] POST https://cloudfunctions.googleapis.com/v1/projects/turnoshospi-f4870/locations/us-central1/functions {"name":"projects/turnoshospi-f4870/locations/us-central1/functions/sendNotification","sourceUploadUrl":"https://storage.googleapis.com/uploads-477957906628.us-central1.cloudfunctions.appspot.com/9c9c22ae-5d71-4cfe-bd75-bef229b1da47.zip?GoogleAccessId=service-130974977586@gcf-admin-robot.iam.gserviceaccount.com&Expires=1764336362&Signature=HtwL%2BsB57gA4tRQpvnlQPWZyp8tKS2d8X7yT53g4H5quP%2FptOVFy%2Bvp%2F%2BWaOeeX8O58R2lr%2FSP4iHPzU6vVVrBmWAoSGJ6sxLU00OghsZ22b9B1xsqMdkA6PI%2FOZ6GBpYpIlg3pyf2OOdxcnxzx20dcVQYemR0dqBlZNSOyzG6rplZ%2BI96zHAc%2F8wpxrtm6h0zHDh3TXi0hCKqimaseoDssqtJKAKkXDSCUDLjVr46JkgDDT93EsUVfUHmE9ghtTZdhJ%2BE5FySOWNKOfQ%2Bk9R%2FG9URxK47cqpDLom4M5HA2v9LcCns5HP3Ho5Cvk7TXdY%2FlA8ZyiHRFwbS9Kgl%2BmSg%3D%3D","entryPoint":"sendNotification","runtime":"nodejs22","dockerRegistry":"ARTIFACT_REGISTRY","labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"f651fca29b7ced6f5f3bd9713632a1ca90b734c6"},"eventTrigger":{"eventType":"providers/google.firebase.database/eventTypes/ref.create","resource":"projects/_/instances/turnoshospi-f4870-default-rtdb/refs/user_notifications/{userId}/{notificationId}"},"minInstances":null,"maxInstances":null,"ingressSettings":null,"environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"turnoshospi-f4870\",\"databaseURL\":\"https://turnoshospi-f4870-default-rtdb.firebaseio.com\",\"storageBucket\":\"turnoshospi-f4870.firebasestorage.app\"}","GCLOUD_PROJECT":"turnoshospi-f4870","EVENTARC_CLOUD_EVENT_SOURCE":"projects/turnoshospi-f4870/locations/us-central1/functions/sendNotification"},"serviceAccountEmail":null,"availableMemoryMb":null,"timeout":null,"vpcConnector":null,"vpcConnectorEgressSettings":null,"buildEnvironmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""}}
+[debug] [2025-11-28T12:56:05.518Z] <<< [apiv2][status] POST https://cloudfunctions.googleapis.com/v1/projects/turnoshospi-f4870/locations/us-central1/functions 200
+[debug] [2025-11-28T12:56:05.518Z] <<< [apiv2][body] POST https://cloudfunctions.googleapis.com/v1/projects/turnoshospi-f4870/locations/us-central1/functions {"name":"operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v1.OperationMetadataV1","target":"projects/turnoshospi-f4870/locations/us-central1/functions/sendNotification","updateTime":"2025-11-28T12:56:04.277562441Z"}}
+[debug] [2025-11-28T12:56:05.519Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:56:05.519Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:56:05.520Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg [none]
+[debug] [2025-11-28T12:56:05.742Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg 200
+[debug] [2025-11-28T12:56:05.742Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg {"name":"operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v1.OperationMetadataV1","target":"projects/turnoshospi-f4870/locations/us-central1/functions/sendNotification","updateTime":"2025-11-28T12:56:04.277562441Z"}}
+[debug] [2025-11-28T12:56:06.244Z] [create-default-us-central1-sendNotification] Retrying task index 0
+[debug] [2025-11-28T12:56:06.245Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:56:06.245Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:56:06.245Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg [none]
+[debug] [2025-11-28T12:56:06.447Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg 200
+[debug] [2025-11-28T12:56:06.448Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg {"name":"operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v1.OperationMetadataV1","target":"projects/turnoshospi-f4870/locations/us-central1/functions/sendNotification","type":"CREATE_FUNCTION","request":{"@type":"type.googleapis.com/google.cloud.functions.v1.CloudFunction","name":"projects/turnoshospi-f4870/locations/us-central1/functions/sendNotification","eventTrigger":{"eventType":"providers/google.firebase.database/eventTypes/ref.create","resource":"projects/_/instances/turnoshospi-f4870-default-rtdb/refs/user_notifications/{userId}/{notificationId}","failurePolicy":{}},"entryPoint":"sendNotification","updateTime":"1970-01-01T00:00:00Z","labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"f651fca29b7ced6f5f3bd9713632a1ca90b734c6"},"sourceUploadUrl":"https://storage.googleapis.com/uploads-477957906628.us-central1.cloudfunctions.appspot.com/9c9c22ae-5d71-4cfe-bd75-bef229b1da47.zip?GoogleAccessId=service-130974977586@gcf-admin-robot.iam.gserviceaccount.com&Expires=1764336362&Signature=HtwL%2BsB57gA4tRQpvnlQPWZyp8tKS2d8X7yT53g4H5quP%2FptOVFy%2Bvp%2F%2BWaOeeX8O58R2lr%2FSP4iHPzU6vVVrBmWAoSGJ6sxLU00OghsZ22b9B1xsqMdkA6PI%2FOZ6GBpYpIlg3pyf2OOdxcnxzx20dcVQYemR0dqBlZNSOyzG6rplZ%2BI96zHAc%2F8wpxrtm6h0zHDh3TXi0hCKqimaseoDssqtJKAKkXDSCUDLjVr46JkgDDT93EsUVfUHmE9ghtTZdhJ%2BE5FySOWNKOfQ%2Bk9R%2FG9URxK47cqpDLom4M5HA2v9LcCns5HP3Ho5Cvk7TXdY%2FlA8ZyiHRFwbS9Kgl%2BmSg%3D%3D","environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"turnoshospi-f4870\",\"databaseURL\":\"https://turnoshospi-f4870-default-rtdb.firebaseio.com\",\"storageBucket\":\"turnoshospi-f4870.firebasestorage.app\"}","GCLOUD_PROJECT":"turnoshospi-f4870","EVENTARC_CLOUD_EVENT_SOURCE":"projects/turnoshospi-f4870/locations/us-central1/functions/sendNotification"},"runtime":"nodejs22","buildEnvironmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRegistry":"ARTIFACT_REGISTRY"},"versionId":"1","updateTime":"2025-11-28T12:56:04.277562441Z"}}
+[debug] [2025-11-28T12:56:07.458Z] [create-default-us-central1-sendNotification] Retrying task index 0
+[debug] [2025-11-28T12:56:07.459Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:56:07.459Z] Checked if tokens are valid: true, expires at: 1764337326360
+[debug] [2025-11-28T12:56:07.459Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg [none]
+[debug] [2025-11-28T12:56:07.655Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg 200
+[debug] [2025-11-28T12:56:07.655Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg {"name":"operations/cHJvamVjdHMvdHVybm9zaG9zcGktZjQ4NzAvbG9jYXRpb25zL3VzLWNlbnRyYWwxL29wZXJhdGlvbnMvb3BlcmF0aW9uLTE3NjQzMzQ1NjM4NTUtNjQ0YTcyNmYxOGUxYi01OGExODA1Ny1mNTVjOWJkMg","metadata":{"@type":"type.googleapis.com/google.cloud.functions.v1.OperationMetadataV1","target":"projects/turnoshospi-f4870/locations/us-central1/functions/sendNotification","type":"CREATE_FUNCTION","request":{"@type":"type.googleapis.com/google.cloud.functions.v1.CloudFunction","name":"projects/turnoshospi-f4870/locations/us-central1/functions/sendNotification","eventTrigger":{"eventType":"providers/google.firebase.database/eventTypes/ref.create","resource":"projects/_/instances/turnoshospi-f4870-default-rtdb/refs/user_notifications/{userId}/{notificationId}","failurePolicy":{}},"entryPoint":"sendNotification","updateTime":"1970-01-01T00:00:00Z","labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"f651fca29b7ced6f5f3bd9713632a1ca90b734c6"},"sourceUploadUrl":"https://storage.googleapis.com/uploads-477957906628.us-central1.cloudfunctions.appspot.com/9c9c22ae-5d71-4cfe-bd75-bef229b1da47.zip?GoogleAccessId=service-130974977586@gcf-admin-robot.iam.gserviceaccount.com&Expires=1764336362&Signature=HtwL%2BsB57gA4tRQpvnlQPWZyp8tKS2d8X7yT53g4H5quP%2FptOVFy%2Bvp%2F%2BWaOeeX8O58R2lr%2FSP4iHPzU6vVVrBmWAoSGJ6sxLU00OghsZ22b9B1xsqMdkA6PI%2FOZ6GBpYpIlg3pyf2OOdxcnxzx20dcVQYemR0dqBlZNSOyzG6rplZ%2BI96zHAc%2F8wpxrtm6h0zHDh3TXi0hCKqimaseoDssqtJKAKkXDSCUDLjVr46JkgDDT93EsUVfUHmE9ghtTZdhJ%2BE5FySOWNKOfQ%2Bk9R%2FG9URxK47cqpDLom4M5HA2v9LcCns5HP3Ho5Cvk7TXdY%2FlA8ZyiHRFwbS9Kgl%2BmSg%3D%3D","environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"turnoshospi-f4870\",\"databaseURL\":\"https://turnoshospi-f4870-default-rtdb.firebaseio.com\",\"storageBucket\":\"turnoshospi-f4870.firebasestorage.app\"}","GCLOUD_PROJECT":"turnoshospi-f4870","EVENTARC_CLOUD_EVENT_SOURCE":"projects/turnoshospi-f4870/locations/us-central1/functions/sendNotification"},"runtime":"nodejs22","buildEnvironmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRegistry":"ARTIFACT_REGISTRY"},"versionId":"1","updateTime":"2025-11-28T12:56:04.277562441Z"}}

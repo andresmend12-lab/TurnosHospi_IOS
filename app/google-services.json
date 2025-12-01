@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "130974977586",
+    "firebase_url": "https://turnoshospi-f4870-default-rtdb.firebaseio.com",
+    "project_id": "turnoshospi-f4870",
+    "storage_bucket": "turnoshospi-f4870.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:130974977586:android:4f391b59a8c983f639f62b",
+        "android_client_info": {
+          "package_name": "com.example.turnoshospi"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "130974977586-5694ukl5k7qplnpiips94qv7grmndpa2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLMRAgOsumbRvXTi5oFitO4qa_dot7DHo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "130974977586-5694ukl5k7qplnpiips94qv7grmndpa2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
