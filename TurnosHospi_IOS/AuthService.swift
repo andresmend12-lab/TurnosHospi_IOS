@@ -126,33 +126,41 @@ class AuthService: ObservableObject {
     }
     
     private func fetchUserProfile(uid: String) {
-        db.child("users").child(uid).observeSingleEvent(of: .value) { [weak self] snapshot in
-            guard let self = self else { return }
-            
-            guard let value = snapshot.value as? [String: Any] else {
-                print("No se encontró perfil para el usuario \(uid)")
-                self.isAuthenticated = true // Autenticado pero sin perfil (raro, manejar error si se desea)
-                self.isLoading = false
-                return
-            }
-            
-            do {
-                // Decodificar JSON a struct UserProfile
-                let jsonData = try JSONSerialization.data(withJSONObject: value)
-                let userProfile = try JSONDecoder().decode(UserProfile.self, from: jsonData)
+            db.child("users").child(uid).observeSingleEvent(of: .value) { [weak self] snapshot in
+                guard let self = self else { return }
                 
-                DispatchQueue.main.async {
-                    self.currentUser = userProfile
-                    self.isAuthenticated = true
-                    self.isLoading = false
+                // 1. Obtenemos el diccionario
+                guard var value = snapshot.value as? [String: Any] else {
+                    print("No se encontró perfil para el usuario \(uid)")
+                    DispatchQueue.main.async {
+                        self.isLoading = false
+                    }
+                    return
                 }
-            } catch {
-                print("Error decodificando perfil: \(error)")
-                self.isAuthenticated = true
-                self.isLoading = false
+                
+                // 2. CORRECCIÓN: Aseguramos que el ID exista en el diccionario antes de decodificar
+                // Si el JSON en Firebase no tiene "id", se lo ponemos aquí usando el uid del nodo.
+                value["id"] = uid
+                
+                do {
+                    // 3. Decodificamos el diccionario (ahora ya tiene ID seguro)
+                    let jsonData = try JSONSerialization.data(withJSONObject: value)
+                    let userProfile = try JSONDecoder().decode(UserProfile.self, from: jsonData)
+                    
+                    DispatchQueue.main.async {
+                        self.currentUser = userProfile
+                        self.isAuthenticated = true
+                        self.isLoading = false
+                    }
+                } catch {
+                    print("Error decodificando perfil: \(error)")
+                    // Manejar error gracefuly
+                    DispatchQueue.main.async {
+                        self.isLoading = false
+                    }
+                }
             }
         }
-    }
     
     // Función auxiliar para actualizar token FCM
     func updateFCMToken(token: String) {
