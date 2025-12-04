@@ -42,7 +42,8 @@ struct EditProfileView: View {
                             .frame(width: 100, height: 100)
                             .shadow(color: .neonViolet.opacity(0.5), radius: 10, x: 0, y: 5)
                         
-                        Text("\(firstName.prefix(1))\(lastName.prefix(1))")
+                        // CORRECCIÓN AQUÍ: Convertimos las subcadenas a String
+                        Text("\(String(firstName.prefix(1)))\(String(lastName.prefix(1)))")
                             .font(.largeTitle.bold())
                             .foregroundColor(.white)
                             .textCase(.uppercase)
