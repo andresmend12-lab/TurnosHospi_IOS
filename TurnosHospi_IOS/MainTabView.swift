@@ -1,56 +1,24 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @EnvironmentObject var shiftRepository: ShiftRepository
-    
-    // Selección de pestaña por defecto
-    @State private var selectedTab = 0
-    
     var body: some View {
-        TabView(selection: $selectedTab) {
-            
-            // Pestaña 1: Mi Calendario
-            CalendarView()
+        TabView {
+            // 1. Pestaña Principal (La nueva que acabamos de crear)
+            HomeScreen()
                 .tabItem {
-                    Image(systemName: "calendar")
-                    Text("Calendario")
+                    Label("Principal", systemImage: "house.fill")
                 }
-                .tag(0)
             
-            // Pestaña 2: Solicitar Cambio
-            ShiftChangeView()
+            // 2. Otras pestañas (Mercado, Estadísticas, etc.)
+            Text("Mercado") // Tu vista de MarketView
                 .tabItem {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                    Text("Cambiar")
+                    Label("Mercado", systemImage: "cart")
                 }
-                .tag(1)
-            
-            // Pestaña 3: Bolsa de Turnos
-            ShiftMarketplaceView()
+                
+            Text("Estadísticas") // Tu vista de StatisticsView
                 .tabItem {
-                    Image(systemName: "list.bullet.clipboard")
-                    Text("Bolsa")
+                    Label("Estadísticas", systemImage: "chart.bar")
                 }
-                .tag(2)
-            
-            // Pestaña 4: Ajustes y Perfil
-            SettingsView()
-                .tabItem {
-                    Image(systemName: "gearshape")
-                    Text("Perfil")
-                }
-                .tag(3)
         }
-        // Cargar datos al aparecer la vista principal
-        
-        .accentColor(.blue) // Color de acento global para la app
-    }
-}
-
-struct MainTabView_Previews: PreviewProvider {
-    static var previews: some View {
-        MainTabView()
-            .environmentObject(ShiftRepository())
-            .environmentObject(AuthService())
     }
 }
