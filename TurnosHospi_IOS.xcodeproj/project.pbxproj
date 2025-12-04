@@ -32,6 +32,7 @@
 		97FB93892EE2049300F5490F /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93882EE2049200F5490F /* Extensions.swift */; };
 		97FB938B2EE20B4F00F5490F /* Shift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB938A2EE20B4E00F5490F /* Shift.swift */; };
 		97FB938D2EE20B7600F5490F /* ShiftManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB938C2EE20B7600F5490F /* ShiftManager.swift */; };
+		97FB938F2EE20D9B00F5490F /* CalendarComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB938E2EE20D9B00F5490F /* CalendarComponents.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -77,6 +78,7 @@
 		97FB93882EE2049200F5490F /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		97FB938A2EE20B4E00F5490F /* Shift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shift.swift; sourceTree = "<group>"; };
 		97FB938C2EE20B7600F5490F /* ShiftManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftManager.swift; sourceTree = "<group>"; };
+		97FB938E2EE20D9B00F5490F /* CalendarComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarComponents.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,6 +141,7 @@
 				97E962CE2EE18976006E7707 /* Preview Content */,
 				97FB93692EE1D55700F5490F /* LoginView.swift */,
 				97FB936D2EE1DAF300F5490F /* MainMenuView.swift */,
+				97FB938E2EE20D9B00F5490F /* CalendarComponents.swift */,
 				97FB937E2EE1F26100F5490F /* PlantModels.swift */,
 				97FB93802EE1F27C00F5490F /* PlantManager.swift */,
 				97FB93822EE1F29F00F5490F /* JoinPlantView.swift */,
@@ -322,6 +325,7 @@
 				97FB936E2EE1DAF300F5490F /* MainMenuView.swift in Sources */,
 				97FB937D2EE1EF6B00F5490F /* SideMenuView.swift in Sources */,
 				97FB938D2EE20B7600F5490F /* ShiftManager.swift in Sources */,
+				97FB938F2EE20D9B00F5490F /* CalendarComponents.swift in Sources */,
 				97FB93832EE1F29F00F5490F /* JoinPlantView.swift in Sources */,
 				97FB936A2EE1D55700F5490F /* LoginView.swift in Sources */,
 				97FB93812EE1F27C00F5490F /* PlantManager.swift in Sources */,
