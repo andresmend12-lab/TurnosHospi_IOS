@@ -33,6 +33,7 @@
 		97FB938B2EE20B4F00F5490F /* Shift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB938A2EE20B4E00F5490F /* Shift.swift */; };
 		97FB938D2EE20B7600F5490F /* ShiftManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB938C2EE20B7600F5490F /* ShiftManager.swift */; };
 		97FB938F2EE20D9B00F5490F /* CalendarComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB938E2EE20D9B00F5490F /* CalendarComponents.swift */; };
+		97FB93912EE212C400F5490F /* CreatePlantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93902EE212C400F5490F /* CreatePlantView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -79,6 +80,7 @@
 		97FB938A2EE20B4E00F5490F /* Shift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shift.swift; sourceTree = "<group>"; };
 		97FB938C2EE20B7600F5490F /* ShiftManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftManager.swift; sourceTree = "<group>"; };
 		97FB938E2EE20D9B00F5490F /* CalendarComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarComponents.swift; sourceTree = "<group>"; };
+		97FB93902EE212C400F5490F /* CreatePlantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePlantView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -148,6 +150,7 @@
 				97FB936B2EE1D6FE00F5490F /* AuthManager.swift */,
 				97FB93842EE1F69400F5490F /* EditProfilesView.swift */,
 				97FB93862EE1FC7B00F5490F /* PlantDashboardView.swift */,
+				97FB93902EE212C400F5490F /* CreatePlantView.swift */,
 				97FB938A2EE20B4E00F5490F /* Shift.swift */,
 				97FB938C2EE20B7600F5490F /* ShiftManager.swift */,
 				97FB93882EE2049200F5490F /* Extensions.swift */,
@@ -334,6 +337,7 @@
 				97FB93852EE1F69400F5490F /* EditProfilesView.swift in Sources */,
 				97FB93892EE2049300F5490F /* Extensions.swift in Sources */,
 				97E962CA2EE18973006E7707 /* ContentView.swift in Sources */,
+				97FB93912EE212C400F5490F /* CreatePlantView.swift in Sources */,
 				97FB938B2EE20B4F00F5490F /* Shift.swift in Sources */,
 				97FB937B2EE1E19700F5490F /* SignUpView.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,

@@ -17,3 +17,10 @@ struct HospitalPlant {
     let accessPassword: String
     let staffList: [PlantStaff]
 }
+
+// --- NUEVO: Representa a un trabajador en un turno específico ---
+struct PlantShiftWorker: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let role: String
+}

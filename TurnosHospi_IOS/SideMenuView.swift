@@ -8,6 +8,7 @@ struct SideMenuView: View {
     @State private var showJoinPlantSheet = false
     @State private var showPlantDashboard = false
     @State private var showEditProfileSheet = false
+    @State private var showCreatePlantSheet = false // <-- NUEVO: Estado para abrir CreatePlantView
     
     var body: some View {
         ZStack {
@@ -43,7 +44,12 @@ struct SideMenuView: View {
                 VStack(alignment: .leading, spacing: 25) {
                     
                     if authManager.userRole == "Supervisor" {
-                        MenuOptionRow(icon: "plus.app.fill", text: "Crear nueva planta")
+                        // <-- MODIFICACIÓN: Botón funcional para crear planta
+                        Button(action: {
+                            showCreatePlantSheet = true
+                        }) {
+                            MenuOptionRow(icon: "plus.app.fill", text: "Crear nueva planta")
+                        }
                     }
                     
                     // --- BOTÓN INTELIGENTE "MI PLANTA" ---
@@ -94,6 +100,10 @@ struct SideMenuView: View {
         }
         .sheet(isPresented: $showEditProfileSheet) {
             EditProfileView()
+        }
+        // <-- NUEVO: Presentar la vista de creación de planta
+        .sheet(isPresented: $showCreatePlantSheet) {
+            CreatePlantView()
         }
     }
 }

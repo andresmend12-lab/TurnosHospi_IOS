@@ -10,7 +10,10 @@ class PlantManager: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var joinSuccess: Bool = false
     
-    // Buscar planta
+    // Almacena los trabajadores del día seleccionado (Agrupados por turno: "Mañana" -> [Persona1, Persona2])
+    @Published var dailyStaff: [String: [PlantShiftWorker]] = [:]
+    
+    // MARK: - Buscar Planta
     func searchPlant(plantId: String, password: String) {
         self.isLoading = true
         self.errorMessage = nil
@@ -57,7 +60,7 @@ class PlantManager: ObservableObject {
         }
     }
     
-    // Unirse a la planta
+    // MARK: - Unirse a Planta
     func joinPlant(plant: HospitalPlant, selectedStaff: PlantStaff) {
         guard let user = Auth.auth().currentUser else { return }
         self.isLoading = true
@@ -69,25 +72,56 @@ class PlantManager: ObservableObject {
             "staffRole": selectedStaff.role
         ]
         
-        // 1. Guardar en la planta
         ref.child("plants").child(plant.id).child("userPlants").child(user.uid).setValue(userPlantData) { error, _ in
             if let error = error {
                 self.isLoading = false
                 self.errorMessage = "Error al unirse: \(error.localizedDescription)"
             } else {
-                
-                // 2. ACTUALIZAR PERFIL DE USUARIO (Guardar ID de planta)
-                let userUpdates: [String: Any] = [
-                    "role": selectedStaff.role,
-                    "plantId": plant.id
-                ]
-                
+                let userUpdates: [String: Any] = ["role": selectedStaff.role, "plantId": plant.id]
                 self.ref.child("users").child(user.uid).updateChildValues(userUpdates) { err, _ in
                     self.isLoading = false
-                    if err == nil {
-                        self.joinSuccess = true
-                    }
+                    if err == nil { self.joinSuccess = true }
                 }
+            }
+        }
+    }
+    
+    // MARK: - NUEVO: Obtener personal del día
+    func fetchDailyStaff(plantId: String, date: Date) {
+        // 1. Formatear la fecha a "YYYY-MM-DD"
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateString = formatter.string(from: date)
+        let nodeName = "turnos-\(dateString)"
+        
+        // 2. Ruta: plants -> [ID] -> turnos -> turnos-2025-11-28
+        ref.child("plants").child(plantId).child("turnos").child(nodeName).observe(.value) { snapshot in
+            
+            var newDailyStaff: [String: [PlantShiftWorker]] = [:]
+            
+            // Estructura esperada:
+            // "Mañana": { "uid1": {name: "Pepe", role: "Enfermero"}, ... }
+            // "Tarde": { ... }
+            
+            if let shiftsDict = snapshot.value as? [String: [String: [String: Any]]] {
+                
+                for (shiftName, workersDict) in shiftsDict {
+                    var workers: [PlantShiftWorker] = []
+                    
+                    for (workerId, workerData) in workersDict {
+                        let name = workerData["name"] as? String ?? "Usuario"
+                        let role = workerData["role"] as? String ?? "Personal"
+                        
+                        let worker = PlantShiftWorker(id: workerId, name: name, role: role)
+                        workers.append(worker)
+                    }
+                    
+                    newDailyStaff[shiftName] = workers
+                }
+            }
+            
+            DispatchQueue.main.async {
+                self.dailyStaff = newDailyStaff
             }
         }
     }
