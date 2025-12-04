@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseDatabase // Necesario para guardar en la base de datos
 
 struct CreatePlantView: View {
     @Environment(\.dismiss) var dismiss
@@ -7,47 +8,67 @@ struct CreatePlantView: View {
     @State private var plantName: String = ""
     @State private var unitType: String = ""
     @State private var hospitalName: String = ""
+    @State private var accessPassword: String = "" // <--- NUEVO: Contraseña requerida
     
     // --- CONFIGURACIÓN DE TURNOS ---
     enum ShiftDuration: String, CaseIterable {
-        case eightHours = "8 Horas (Mañana, Tarde, Noche)"
-        case twelveHours = "12 Horas (Día, Noche)"
+        case eightHours = "8 Horas"
+        case twelveHours = "12 Horas"
     }
     @State private var selectedDuration: ShiftDuration = .eightHours
+    @State private var allowHalfDay: Bool = false // <--- NUEVO: Opción media jornada
     
     // Horarios 8h
-    @State private var morningStart = Calendar.current.date(from: DateComponents(hour: 8))!
-    @State private var morningEnd = Calendar.current.date(from: DateComponents(hour: 15))!
-    @State private var afternoonStart = Calendar.current.date(from: DateComponents(hour: 15))!
-    @State private var afternoonEnd = Calendar.current.date(from: DateComponents(hour: 22))!
-    @State private var nightStart = Calendar.current.date(from: DateComponents(hour: 22))!
-    @State private var nightEnd = Calendar.current.date(from: DateComponents(hour: 8))!
+    @State private var morningStart = defaultTime(8)
+    @State private var morningEnd = defaultTime(15)
+    @State private var afternoonStart = defaultTime(15)
+    @State private var afternoonEnd = defaultTime(22)
+    @State private var nightStart = defaultTime(22)
+    @State private var nightEnd = defaultTime(8)
     
     // Horarios 12h
-    @State private var day12Start = Calendar.current.date(from: DateComponents(hour: 8))!
-    @State private var day12End = Calendar.current.date(from: DateComponents(hour: 20))!
-    @State private var night12Start = Calendar.current.date(from: DateComponents(hour: 20))!
-    @State private var night12End = Calendar.current.date(from: DateComponents(hour: 8))!
+    @State private var day12Start = defaultTime(8)
+    @State private var day12End = defaultTime(20)
+    @State private var night12Start = defaultTime(20)
+    @State private var night12End = defaultTime(8)
     
     // --- PERSONAL ---
     enum StaffType: String, CaseIterable {
         case nursesOnly = "Solo Enfermeros"
         case nursesAndAux = "Enfermeros y Auxiliares"
+        
+        // Mapeo al valor que pide la base de datos
+        var dbValue: String {
+            switch self {
+            case .nursesOnly: return "nurses_only"
+            case .nursesAndAux: return "nurses_and_aux"
+            }
+        }
     }
     @State private var selectedStaffType: StaffType = .nursesOnly
     
     // --- REQUERIMIENTOS MÍNIMOS ---
-    // Diccionario para guardar el número de personas por turno
     @State private var minStaffRequirements: [String: Int] = [
         "Mañana": 1, "Tarde": 1, "Noche": 1, "Día": 1
     ]
+    
+    // --- ESTADO DE CARGA ---
+    @State private var isLoading = false
+    
+    // --- VALIDACIÓN ---
+    var isValid: Bool {
+        return !plantName.isEmpty &&
+               !unitType.isEmpty &&
+               !hospitalName.isEmpty &&
+               !accessPassword.isEmpty
+    }
     
     var body: some View {
         ZStack {
             // Fondo
             Color.deepSpace.ignoresSafeArea()
             
-            // Decoración de fondo
+            // Decoración
             ZStack {
                 Circle().fill(Color.electricBlue).frame(width: 300).blur(radius: 90).offset(x: -120, y: -300).opacity(0.4)
                 Circle().fill(Color.neonViolet).frame(width: 300).blur(radius: 90).offset(x: 120, y: 100).opacity(0.4)
@@ -74,9 +95,10 @@ struct CreatePlantView: View {
                     VStack(alignment: .leading, spacing: 15) {
                         SectionHeader(title: "Datos Generales", icon: "building.2.fill")
                         
-                        GlassTextField(icon: "cross.case.fill", placeholder: "Nombre de la Planta (ej: UCI 1)", text: $plantName)
+                        GlassTextField(icon: "cross.case.fill", placeholder: "Nombre de la Planta", text: $plantName)
                         GlassTextField(icon: "bed.double.fill", placeholder: "Tipo de Unidad", text: $unitType)
                         GlassTextField(icon: "building.columns.fill", placeholder: "Nombre del Hospital", text: $hospitalName)
+                        GlassTextField(icon: "key.fill", placeholder: "Contraseña de acceso", text: $accessPassword) // Campo contraseña
                     }
                     .padding()
                     .background(.ultraThinMaterial)
@@ -97,12 +119,20 @@ struct CreatePlantView: View {
                                 }
                             }
                             .pickerStyle(.segmented)
-                            .colorScheme(.dark) // Para que se vea bien en fondo oscuro
+                            .colorScheme(.dark)
                         }
+                        
+                        // Toggle Media Jornada
+                        Toggle(isOn: $allowHalfDay) {
+                            Text("Permitir turnos de media jornada")
+                                .foregroundColor(.white)
+                                .font(.subheadline)
+                        }
+                        .tint(Color.neonViolet)
                         
                         Divider().background(Color.white.opacity(0.3))
                         
-                        // Lógica condicional para los selectores de hora
+                        // Selectores de hora dinámicos
                         if selectedDuration == .eightHours {
                             TimeRangePicker(label: "Mañana", start: $morningStart, end: $morningEnd, color: .yellow)
                             TimeRangePicker(label: "Tarde", start: $afternoonStart, end: $afternoonEnd, color: .orange)
@@ -128,8 +158,11 @@ struct CreatePlantView: View {
                                         Image(systemName: type == selectedStaffType ? "checkmark.circle.fill" : "circle")
                                         Text(type.rawValue)
                                             .font(.caption)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                            .multilineTextAlignment(.leading)
                                     }
                                     .padding(10)
+                                    .frame(maxWidth: .infinity)
                                     .background(type == selectedStaffType ? Color.neonViolet.opacity(0.3) : Color.white.opacity(0.05))
                                     .foregroundColor(.white)
                                     .cornerRadius(10)
@@ -163,15 +196,23 @@ struct CreatePlantView: View {
                     
                     // BOTÓN CREAR
                     Button(action: createPlant) {
-                        Text("Crear Planta")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(LinearGradient(colors: [.electricBlue, .neonViolet], startPoint: .leading, endPoint: .trailing))
-                            .cornerRadius(15)
-                            .shadow(color: .neonViolet.opacity(0.5), radius: 10, x: 0, y: 5)
+                        if isLoading {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Crear Planta")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(isValid
+                                            ? LinearGradient(colors: [.electricBlue, .neonViolet], startPoint: .leading, endPoint: .trailing)
+                                            : LinearGradient(colors: [.gray, .gray], startPoint: .leading, endPoint: .trailing))
+                                .cornerRadius(15)
+                                .shadow(color: isValid ? .neonViolet.opacity(0.5) : .clear, radius: 10, x: 0, y: 5)
+                        }
                     }
+                    .disabled(!isValid || isLoading) // Validación impide pulsar
+                    .opacity(isValid ? 1.0 : 0.6)
                     .padding(.bottom, 40)
                     
                 }
@@ -180,7 +221,8 @@ struct CreatePlantView: View {
         }
     }
     
-    // Helper para binding seguro al diccionario
+    // --- LÓGICA Y HELPERS ---
+    
     private func binding(for key: String) -> Binding<Int> {
         return Binding(
             get: { self.minStaffRequirements[key] ?? 1 },
@@ -188,24 +230,83 @@ struct CreatePlantView: View {
         )
     }
     
+    static func defaultTime(_ hour: Int) -> Date {
+        return Calendar.current.date(from: DateComponents(hour: hour)) ?? Date()
+    }
+    
     func createPlant() {
-        // Aquí iría la lógica para guardar en Firebase usando PlantManager
-        print("Creando planta: \(plantName) - \(selectedDuration.rawValue)")
-        dismiss()
+        isLoading = true
+        
+        let ref = Database.database().reference().child("plants")
+        
+        // Generar ID automático (ej: -Of1C2YrGUi6B3-9o_gN)
+        guard let plantRef = ref.childByAutoId().key else { return }
+        let plantId = plantRef
+        
+        // Formatear horas
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        
+        var shiftTimes: [String: [String: String]] = [:]
+        var finalRequirements: [String: Int] = [:]
+        
+        if selectedDuration == .eightHours {
+            shiftTimes["Mañana"] = ["start": timeFormatter.string(from: morningStart), "end": timeFormatter.string(from: morningEnd)]
+            shiftTimes["Tarde"] = ["start": timeFormatter.string(from: afternoonStart), "end": timeFormatter.string(from: afternoonEnd)]
+            shiftTimes["Noche"] = ["start": timeFormatter.string(from: nightStart), "end": timeFormatter.string(from: nightEnd)]
+            
+            finalRequirements["Mañana"] = minStaffRequirements["Mañana"]
+            finalRequirements["Tarde"] = minStaffRequirements["Tarde"]
+            finalRequirements["Noche"] = minStaffRequirements["Noche"]
+        } else {
+            shiftTimes["Día"] = ["start": timeFormatter.string(from: day12Start), "end": timeFormatter.string(from: day12End)]
+            shiftTimes["Noche"] = ["start": timeFormatter.string(from: night12Start), "end": timeFormatter.string(from: night12End)]
+            
+            finalRequirements["Día"] = minStaffRequirements["Día"]
+            finalRequirements["Noche"] = minStaffRequirements["Noche12"]
+        }
+        
+        // Construcción del objeto JSON exacto
+        let plantData: [String: Any] = [
+            "id": plantId,
+            "name": plantName,
+            "hospitalName": hospitalName,
+            "unitType": unitType,
+            "accessPassword": accessPassword,
+            "shiftDuration": selectedDuration.rawValue.lowercased(), // "8 horas" o "12 horas"
+            "allowHalfDay": allowHalfDay,
+            "staffScope": selectedStaffType.dbValue,
+            "createdAt": ServerValue.timestamp(),
+            "shiftTimes": shiftTimes,
+            "staffRequirements": finalRequirements
+            // Las claves vacías (chat, balances, etc.) se crearán automáticamente cuando se inserten datos hijos en Firebase,
+            // no es necesario enviarlas como null o diccionarios vacíos en la creación inicial.
+        ]
+        
+        // Guardar en Firebase
+        ref.child(plantId).setValue(plantData) { error, _ in
+            isLoading = false
+            if let error = error {
+                print("Error al crear planta: \(error.localizedDescription)")
+                // Aquí podrías mostrar una alerta de error
+            } else {
+                print("Planta creada con éxito: \(plantId)")
+                dismiss() // Cerrar la pantalla
+            }
+        }
     }
 }
 
-// MARK: - Componentes Auxiliares para el diseño
+// MARK: - Componentes Auxiliares
+// (Los mismos que antes, necesarios para que compile)
+
 struct SectionHeader: View {
     let title: String
     let icon: String
     var body: some View {
         HStack {
-            Image(systemName: icon)
-                .foregroundColor(.electricBlue)
-            Text(title)
-                .font(.headline)
-                .foregroundColor(.white.opacity(0.9))
+            Image(systemName: icon).foregroundColor(.electricBlue)
+            Text(title).font(.headline).foregroundColor(.white.opacity(0.9))
         }
     }
 }
@@ -226,8 +327,7 @@ struct TimeRangePicker: View {
                 VStack(alignment: .leading) {
                     Text("Inicio").font(.caption2).foregroundColor(.gray)
                     DatePicker("", selection: $start, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
-                        .colorScheme(.dark)
+                        .labelsHidden().colorScheme(.dark)
                 }
                 Spacer()
                 Image(systemName: "arrow.right").foregroundColor(.gray)
@@ -235,8 +335,7 @@ struct TimeRangePicker: View {
                 VStack(alignment: .leading) {
                     Text("Fin").font(.caption2).foregroundColor(.gray)
                     DatePicker("", selection: $end, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
-                        .colorScheme(.dark)
+                        .labelsHidden().colorScheme(.dark)
                 }
             }
             .padding(10)
@@ -252,8 +351,7 @@ struct StaffStepper: View {
     
     var body: some View {
         HStack {
-            Text(label)
-                .foregroundColor(.white)
+            Text(label).foregroundColor(.white)
             Spacer()
             HStack {
                 Button(action: { if value > 0 { value -= 1 } }) {
