@@ -42,11 +42,7 @@ struct MainTabView: View {
                 .tag(3)
         }
         // Cargar datos al aparecer la vista principal
-        .onAppear {
-            print("MainTabView ha aparecido. Cargando datos...")
-            shiftRepository.loadMyShifts()
-            shiftRepository.loadMarketplaceRequests()
-        }
+        
         .accentColor(.blue) // Color de acento global para la app
     }
 }

@@ -54,7 +54,11 @@ struct PlantDetailView: View {
                 }
             }
         }
-        .listStyle(InsetGroupedListStyle())
+#if os(iOS)
+.listStyle(InsetGroupedListStyle())
+#else
+.listStyle(GroupedListStyle())
+#endif
         .navigationTitle("Mi Planta")
         .sheet(isPresented: $showingAddStaff) {
             Text("Formulario para añadir personal") // Placeholder
