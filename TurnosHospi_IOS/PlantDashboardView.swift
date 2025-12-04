@@ -10,32 +10,31 @@ struct PlantDashboardView: View {
     
     var body: some View {
         ZStack {
-            // Fondo base (visible en los bordes al abrir menú)
+            // Fondo base (visible cuando el dashboard se encoge)
             Color.black.ignoresSafeArea()
             
-            // --- CAPA 1: CONTENIDO DEL DASHBOARD (CALENDARIO, ETC.) ---
+            // --- CAPA 1: CONTENIDO DEL DASHBOARD ---
             ZStack {
-                // Fondo del contenido principal
                 Color(red: 0.1, green: 0.1, blue: 0.18) // DeepSpace dark blue
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     
-                    // --- HEADER (CORREGIDO) ---
+                    // --- HEADER (CORREGIDO PARA SAFE AREA) ---
                     HStack {
                         Button(action: {
+                            // Acción de abrir menú
                             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                                 isMenuOpen.toggle()
                             }
                         }) {
                             Image(systemName: "line.3.horizontal")
-                                .font(.system(size: 24, weight: .bold)) // Icono más grande y grueso
+                                .font(.system(size: 24, weight: .bold))
                                 .foregroundColor(.white)
-                                .padding(10) // Espacio táctil extra alrededor del icono
-                                .background(Color.white.opacity(0.1)) // Pequeño fondo para ver dónde pulsas (opcional)
-                                .clipShape(Circle())
+                                .padding(10) // Área táctil extra
+                                .contentShape(Rectangle()) // Asegura que se detecte el toque
                         }
-                        .zIndex(100) // Asegura que el botón esté por encima de todo
+                        .zIndex(100)
                         
                         Spacer()
                         
@@ -50,10 +49,8 @@ struct PlantDashboardView: View {
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 10)
-                    // ESTO ES LO QUE ARREGLA EL PROBLEMA:
-                    // Empujamos el header hacia abajo para salir de la zona de la batería/hora
-                    .padding(.top, 60)
-                    .background(Color.black.opacity(0.3)) // Fondo semitransparente para el header
+                    .padding(.top, 60) // <--- FIX: Espacio para bajar de la zona de batería/hora
+                    .background(Color.black.opacity(0.3))
                     
                     // --- CONTENIDO SCROLL ---
                     ScrollView {
@@ -67,13 +64,14 @@ struct PlantDashboardView: View {
                             .padding(.horizontal)
                             .padding(.top, 20)
                             
+                            // Renderizado condicional de vistas
                             if selectedOption == "Calendario" {
-                                CalendarPreviewView()
+                                CalendarPreviewView() // Versión interactiva
                             } else {
                                 PlaceholderView(iconName: getIconForOption(selectedOption), title: selectedOption)
                             }
                         }
-                        .padding(.bottom, 100) // Espacio extra abajo para que no se corte
+                        .padding(.bottom, 100)
                     }
                 }
                 
@@ -86,15 +84,15 @@ struct PlantDashboardView: View {
                         }
                 }
             }
-            // Transformaciones al abrir menú
+            // Animaciones del menú
             .cornerRadius(isMenuOpen ? 30 : 0)
             .offset(x: isMenuOpen ? 280 : 0, y: isMenuOpen ? 40 : 0)
             .scaleEffect(isMenuOpen ? 0.9 : 1)
             .shadow(color: .black.opacity(0.5), radius: 20, x: -10, y: 0)
-            .ignoresSafeArea() // Mantenemos esto para el diseño, pero corregimos con padding arriba
-            .disabled(isMenuOpen)
+            .ignoresSafeArea()
+            .disabled(isMenuOpen) // Bloquea toques en el dashboard si el menú está abierto
             
-            // --- CAPA 2: MENÚ LATERAL ---
+            // --- CAPA 2: MENÚ LATERAL (DRAWER) ---
             if isMenuOpen {
                 PlantMenuDrawer(isMenuOpen: $isMenuOpen, selectedOption: $selectedOption, onLogout: {
                     dismiss()
@@ -126,7 +124,7 @@ struct PlantDashboardView: View {
     }
 }
 
-// MARK: - MENÚ LATERAL (DRAWER)
+// MARK: - MENÚ LATERAL DE LA PLANTA
 struct PlantMenuDrawer: View {
     @EnvironmentObject var authManager: AuthManager
     @Binding var isMenuOpen: Bool
@@ -159,7 +157,7 @@ struct PlantMenuDrawer: View {
                             .foregroundColor(.gray)
                     }
                 }
-                .padding(.top, 60) // Bajamos también el contenido del menú
+                .padding(.top, 60)
                 .padding(.bottom, 20)
                 
                 // Opciones
@@ -193,6 +191,7 @@ struct PlantMenuDrawer: View {
                     }
                 }
                 Spacer()
+                
                 Button(action: onLogout) {
                     HStack {
                         Image(systemName: "arrow.left.circle.fill")
@@ -247,19 +246,22 @@ struct PlantMenuRow: View {
     }
 }
 
-// Calendario
+// MARK: - CALENDARIO INTERACTIVO
 struct CalendarPreviewView: View {
     let days = ["L", "M", "X", "J", "V", "S", "D"]
     let dates = Array(1...31)
     
+    @State private var selectedDay: Int = 4 // Día seleccionado por defecto
+    
     var body: some View {
         VStack(spacing: 15) {
+            // Cabecera mes
             HStack {
                 Text("Diciembre 2025")
                     .font(.title3.bold())
                     .foregroundColor(.white)
                 Spacer()
-                HStack {
+                HStack(spacing: 20) {
                     Image(systemName: "chevron.left")
                     Image(systemName: "chevron.right")
                 }
@@ -267,6 +269,7 @@ struct CalendarPreviewView: View {
             }
             .padding(.horizontal)
             
+            // Días semana
             HStack {
                 ForEach(days, id: \.self) { day in
                     Text(day)
@@ -276,22 +279,55 @@ struct CalendarPreviewView: View {
                 }
             }
             
+            // Rejilla interactiva
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 15) {
                 ForEach(dates, id: \.self) { date in
-                    let isToday = date == 4
-                    VStack {
-                        Text("\(date)")
-                            .foregroundColor(isToday ? .black : .white)
-                            .font(.system(size: 14))
-                            .frame(width: 30, height: 30)
-                            .background(isToday ? Color.white : Color.clear)
-                            .clipShape(Circle())
+                    let isSelected = (selectedDay == date)
+                    
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedDay = date
+                        }
+                    }) {
+                        VStack {
+                            Text("\(date)")
+                                .foregroundColor(isSelected ? .black : .white)
+                                .font(.system(size: 14, weight: isSelected ? .bold : .regular))
+                                .frame(width: 30, height: 30)
+                                .background(isSelected ? Color.white : Color.clear)
+                                .clipShape(Circle())
+                        }
+                        .frame(height: 40)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white.opacity(0.05))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(isSelected ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 1)
+                        )
                     }
-                    .frame(height: 40)
-                    .background(Color.white.opacity(0.05))
-                    .cornerRadius(8)
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
+            
+            Divider()
+                .background(Color.white.opacity(0.2))
+                .padding(.vertical, 5)
+            
+            // Texto informativo del día
+            HStack {
+                Image(systemName: "calendar.badge.clock")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+                
+                Text("\(selectedDay) de Diciembre de 2025")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 5)
         }
         .padding()
         .background(.ultraThinMaterial)
@@ -301,22 +337,16 @@ struct CalendarPreviewView: View {
     }
 }
 
-// Placeholder
+// Vista Placeholder
 struct PlaceholderView: View {
     let iconName: String
     let title: String
-    
     var body: some View {
         VStack(spacing: 20) {
             Spacer()
-            Image(systemName: iconName)
-                .font(.system(size: 60))
-                .foregroundColor(.white.opacity(0.3))
-            Text("Sección: \(title)")
-                .font(.title2)
-                .foregroundColor(.white.opacity(0.5))
+            Image(systemName: iconName).font(.system(size: 60)).foregroundColor(.white.opacity(0.3))
+            Text("Sección: \(title)").font(.title2).foregroundColor(.white.opacity(0.5))
             Spacer()
-        }
-        .frame(height: 300)
+        }.frame(height: 300)
     }
 }
