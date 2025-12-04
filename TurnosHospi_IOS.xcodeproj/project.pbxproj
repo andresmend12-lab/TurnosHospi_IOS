@@ -96,17 +96,9 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		97D023AC2EE1ADF900D9D1D1 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
 		97E962BB2EE18973006E7707 = {
 			isa = PBXGroup;
 			children = (
-				97D023AC2EE1ADF900D9D1D1 /* Models */,
 				97E962C62EE18973006E7707 /* TurnosHospi_IOS */,
 				97E962D82EE18976006E7707 /* TurnosHospi_IOSTests */,
 				97E962E22EE18976006E7707 /* TurnosHospi_IOSUITests */,
