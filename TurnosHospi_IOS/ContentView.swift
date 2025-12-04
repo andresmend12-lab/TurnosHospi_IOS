@@ -1,26 +1,17 @@
-//
-//  ContentView.swift
-//  TurnosHospi_IOS
-//
-//  Created by Andrés Mendoza Domínguez on 4/12/25.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var authManager: AuthManager
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundColor(.accentColor)
-            Text("Hello , world!")
+        Group {
+            if authManager.user != nil {
+                // Si el usuario está autenticado, vamos al Menú Principal
+                MainMenuView()
+            } else {
+                // Si no, mostramos la pantalla de Login
+                LoginView()
+            }
         }
-        .padding()
-    }
-}
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
     }
 }

@@ -1,17 +1,20 @@
-//
-//  TurnosHospi_IOSApp.swift
-//  TurnosHospi_IOS
-//
-//  Created by Andrés Mendoza Domínguez on 4/12/25.
-//
-
 import SwiftUI
+import FirebaseCore
 
 @main
 struct TurnosHospi_IOSApp: App {
+    // Inicializamos el gestor de autenticación para toda la app
+    @StateObject var authManager = AuthManager()
+    
+    init() {
+        // Configuramos Firebase al arrancar
+        FirebaseApp.configure()
+    }
+    
     var body: some Scene {
         WindowGroup {
-            LoginView()
+            ContentView()
+                .environmentObject(authManager) // Pasamos el gestor a las vistas hijas
         }
     }
 }
