@@ -1,14 +1,16 @@
 import SwiftUI
 import FirebaseDatabase
+import FirebaseAuth // Necesario para obtener el UID del usuario actual
 
 struct CreatePlantView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var authManager: AuthManager // Acceso a los datos del supervisor
     
     // --- DATOS GENERALES ---
     @State private var plantName: String = ""
     @State private var unitType: String = ""
     @State private var hospitalName: String = ""
-    @State private var accessPassword: String = "" // Se genera automáticamente
+    @State private var accessPassword: String = "" // Generada automáticamente
     
     // --- CONFIGURACIÓN DE TURNOS ---
     enum ShiftDuration: String, CaseIterable {
@@ -53,7 +55,6 @@ struct CreatePlantView: View {
     
     // --- ESTADO DE CARGA ---
     @State private var isLoading = false
-    @State private var showCopyAlert = false
     
     // --- VALIDACIÓN ---
     var isValid: Bool {
@@ -98,61 +99,6 @@ struct CreatePlantView: View {
                         GlassTextField(icon: "cross.case.fill", placeholder: "Nombre de la Planta", text: $plantName)
                         GlassTextField(icon: "bed.double.fill", placeholder: "Tipo de Unidad", text: $unitType)
                         GlassTextField(icon: "building.columns.fill", placeholder: "Nombre del Hospital", text: $hospitalName)
-                        
-                        // --- CONTRASEÑA GENERADA ---
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Contraseña de Acceso (Generada)")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                .padding(.leading, 5)
-                            
-                            HStack {
-                                Image(systemName: "key.fill")
-                                    .foregroundColor(.neonViolet)
-                                
-                                Text(accessPassword)
-                                    .font(.system(.title3, design: .monospaced))
-                                    .bold()
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal)
-                                
-                                Spacer()
-                                
-                                // Botón Regenerar
-                                Button(action: generateRandomPassword) {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                        .foregroundColor(.white.opacity(0.7))
-                                }
-                                .padding(.trailing, 10)
-                                
-                                // Botón Copiar
-                                Button(action: {
-                                    UIPasteboard.general.string = accessPassword
-                                    showCopyAlert = true
-                                    // Ocultar alerta después de 2 seg
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                        showCopyAlert = false
-                                    }
-                                }) {
-                                    Image(systemName: "doc.on.doc.fill")
-                                        .foregroundColor(.electricBlue)
-                                }
-                            }
-                            .padding()
-                            .background(Color.black.opacity(0.3))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.neonViolet.opacity(0.3), lineWidth: 1)
-                            )
-                            
-                            if showCopyAlert {
-                                Text("¡Copiada al portapapeles!")
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                                    .transition(.opacity)
-                            }
-                        }
                     }
                     .padding()
                     .background(.ultraThinMaterial)
@@ -186,7 +132,7 @@ struct CreatePlantView: View {
                         
                         Divider().background(Color.white.opacity(0.3))
                         
-                        // Selectores de hora dinámicos
+                        // Selectores de hora
                         if selectedDuration == .eightHours {
                             TimeRangePicker(label: "Mañana", start: $morningStart, end: $morningEnd, color: .yellow)
                             TimeRangePicker(label: "Tarde", start: $afternoonStart, end: $afternoonEnd, color: .orange)
@@ -274,7 +220,6 @@ struct CreatePlantView: View {
             }
         }
         .onAppear {
-            // Generar contraseña al abrir la vista
             if accessPassword.isEmpty {
                 generateRandomPassword()
             }
@@ -283,7 +228,6 @@ struct CreatePlantView: View {
     
     // --- LÓGICA Y HELPERS ---
     
-    // Generador de contraseñas aleatorias
     func generateRandomPassword() {
         let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         accessPassword = String((0..<6).map { _ in chars.randomElement()! })
@@ -301,18 +245,22 @@ struct CreatePlantView: View {
     }
     
     func createPlant() {
+        // Validación extra de usuario
+        guard let user = Auth.auth().currentUser else { return }
+        
         isLoading = true
         
-        let ref = Database.database().reference().child("plants")
+        let ref = Database.database().reference()
         
-        // Generar ID automático
-        guard let plantRef = ref.childByAutoId().key else { return }
+        // 1. Generar ID
+        guard let plantRef = ref.child("plants").childByAutoId().key else { return }
         let plantId = plantRef
         
-        // Formatear horas
+        // Formato de hora
         let timeFormatter = DateFormatter()
         timeFormatter.dateFormat = "HH:mm"
         
+        // Preparar turnos y requerimientos
         var shiftTimes: [String: [String: String]] = [:]
         var finalRequirements: [String: Int] = [:]
         
@@ -332,6 +280,15 @@ struct CreatePlantView: View {
             finalRequirements["Noche"] = minStaffRequirements["Noche12"]
         }
         
+        // Datos del supervisor para añadir a la planta
+        let supervisorData: [String: Any] = [
+            "plantId": plantId,
+            "staffName": authManager.currentUserName,
+            "staffRole": authManager.userRole, // Debería ser "Supervisor"
+            "joinedAt": ServerValue.timestamp()
+        ]
+        
+        // Objeto Planta completo
         let plantData: [String: Any] = [
             "id": plantId,
             "name": plantName,
@@ -343,16 +300,37 @@ struct CreatePlantView: View {
             "staffScope": selectedStaffType.dbValue,
             "createdAt": ServerValue.timestamp(),
             "shiftTimes": shiftTimes,
-            "staffRequirements": finalRequirements
+            "staffRequirements": finalRequirements,
+            // Aquí añadimos al supervisor directamente
+            "userPlants": [
+                user.uid: supervisorData
+            ]
         ]
         
-        ref.child(plantId).setValue(plantData) { error, _ in
-            isLoading = false
+        // 2. Guardar Planta en Firebase
+        ref.child("plants").child(plantId).setValue(plantData) { error, _ in
             if let error = error {
-                print("Error al crear planta: \(error.localizedDescription)")
+                print("Error creando planta: \(error.localizedDescription)")
+                isLoading = false
             } else {
-                print("Planta creada con éxito: \(plantId)")
-                dismiss()
+                
+                // 3. Actualizar el perfil del usuario (Supervisor) para vincularlo a esta planta
+                let userUpdates: [String: Any] = [
+                    "plantId": plantId,
+                    "role": authManager.userRole // Reconfirmamos rol por si acaso
+                ]
+                
+                ref.child("users").child(user.uid).updateChildValues(userUpdates) { err, _ in
+                    isLoading = false
+                    if err == nil {
+                        // 4. Actualizar estado local para que la UI responda inmediatamente
+                        DispatchQueue.main.async {
+                            authManager.userPlantId = plantId
+                            print("Planta creada y supervisor asignado con éxito.")
+                            dismiss()
+                        }
+                    }
+                }
             }
         }
     }
