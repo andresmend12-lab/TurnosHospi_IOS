@@ -23,6 +23,10 @@
 		97FB93752EE1DCF900F5490F /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 97FB93742EE1DCF900F5490F /* FirebaseFirestore */; };
 		97FB93772EE1DCF900F5490F /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 97FB93762EE1DCF900F5490F /* FirebaseMessaging */; };
 		97FB937B2EE1E19700F5490F /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB937A2EE1E19700F5490F /* SignUpView.swift */; };
+		97FB937D2EE1EF6B00F5490F /* SideMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB937C2EE1EF6A00F5490F /* SideMenuView.swift */; };
+		97FB937F2EE1F26100F5490F /* PlantModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB937E2EE1F26100F5490F /* PlantModels.swift */; };
+		97FB93812EE1F27C00F5490F /* PlantManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93802EE1F27C00F5490F /* PlantManager.swift */; };
+		97FB93832EE1F29F00F5490F /* JoinPlantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93822EE1F29F00F5490F /* JoinPlantView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +63,10 @@
 		97FB936B2EE1D6FE00F5490F /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		97FB936D2EE1DAF300F5490F /* MainMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainMenuView.swift; sourceTree = "<group>"; };
 		97FB937A2EE1E19700F5490F /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		97FB937C2EE1EF6A00F5490F /* SideMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideMenuView.swift; sourceTree = "<group>"; };
+		97FB937E2EE1F26100F5490F /* PlantModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantModels.swift; sourceTree = "<group>"; };
+		97FB93802EE1F27C00F5490F /* PlantManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantManager.swift; sourceTree = "<group>"; };
+		97FB93822EE1F29F00F5490F /* JoinPlantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinPlantView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,7 +129,11 @@
 				97E962CE2EE18976006E7707 /* Preview Content */,
 				97FB93692EE1D55700F5490F /* LoginView.swift */,
 				97FB936D2EE1DAF300F5490F /* MainMenuView.swift */,
+				97FB937E2EE1F26100F5490F /* PlantModels.swift */,
+				97FB93802EE1F27C00F5490F /* PlantManager.swift */,
+				97FB93822EE1F29F00F5490F /* JoinPlantView.swift */,
 				97FB936B2EE1D6FE00F5490F /* AuthManager.swift */,
+				97FB937C2EE1EF6A00F5490F /* SideMenuView.swift */,
 				97FB937A2EE1E19700F5490F /* SignUpView.swift */,
 			);
 			path = TurnosHospi_IOS;
@@ -293,11 +305,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				97FB936E2EE1DAF300F5490F /* MainMenuView.swift in Sources */,
+				97FB937D2EE1EF6B00F5490F /* SideMenuView.swift in Sources */,
+				97FB93832EE1F29F00F5490F /* JoinPlantView.swift in Sources */,
 				97FB936A2EE1D55700F5490F /* LoginView.swift in Sources */,
+				97FB93812EE1F27C00F5490F /* PlantManager.swift in Sources */,
 				97FB936C2EE1D6FE00F5490F /* AuthManager.swift in Sources */,
 				97E962CA2EE18973006E7707 /* ContentView.swift in Sources */,
 				97FB937B2EE1E19700F5490F /* SignUpView.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
+				97FB937F2EE1F26100F5490F /* PlantModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

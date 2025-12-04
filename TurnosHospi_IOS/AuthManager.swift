@@ -3,41 +3,44 @@ import FirebaseAuth
 import FirebaseDatabase
 
 class AuthManager: ObservableObject {
-    // Variable que detecta si hay sesión activa
+    // Variables publicadas para que las vistas se actualicen solas
     @Published var user: User?
-    
-    // Variable para guardar el nombre y mostrarlo en la vista
     @Published var currentUserName: String = ""
+    @Published var userRole: String = "" // <--- Guardamos el rol aquí
     
     private let ref = Database.database().reference()
     
     init() {
-        // Escuchar cambios de sesión. Si el usuario ya está logueado, bajamos sus datos.
+        // Escuchar cambios de sesión
         Auth.auth().addStateDidChangeListener { [weak self] auth, user in
             self?.user = user
             if let user = user {
+                // Si hay usuario, descargamos sus datos
                 self?.fetchUserData(uid: user.uid)
             } else {
-                self?.currentUserName = "" // Limpiar nombre si cierra sesión
+                // Si cerramos sesión, limpiamos todo
+                self?.currentUserName = ""
+                self?.userRole = ""
             }
         }
     }
     
-    // MARK: - Obtener datos del usuario (Nombre)
+    // MARK: - Obtener datos (Nombre y Rol)
     func fetchUserData(uid: String) {
-        // Vamos a la ruta users -> UID
         ref.child("users").child(uid).observeSingleEvent(of: .value) { snapshot in
+            guard let value = snapshot.value as? [String: Any] else { return }
             
-            // Convertimos la respuesta a un diccionario
-            guard let value = snapshot.value as? [String: Any] else {
-                print("Error al obtener datos o usuario vacío")
-                return
-            }
-            
-            // Extraemos el nombre (firstName)
+            // 1. Obtener Nombre
             if let firstName = value["firstName"] as? String {
                 DispatchQueue.main.async {
                     self.currentUserName = firstName
+                }
+            }
+            
+            // 2. Obtener Rol (Supervisor, Enfermero, etc.)
+            if let role = value["role"] as? String {
+                DispatchQueue.main.async {
+                    self.userRole = role
                 }
             }
         }
@@ -49,7 +52,6 @@ class AuthManager: ObservableObject {
             if let error = error {
                 completion(error.localizedDescription)
             } else {
-                // Al iniciar sesión, Auth listener (en init) se disparará y llamará a fetchUserData
                 completion(nil)
             }
         }
@@ -66,13 +68,14 @@ class AuthManager: ObservableObject {
             
             guard let uid = result?.user.uid else { return }
             
+            // Guardamos todos los datos, incluido el ROL
             let userData: [String: Any] = [
                 "uid": uid,
                 "firstName": firstName,
                 "lastName": lastName,
                 "email": email,
                 "gender": gender,
-                "role": role,
+                "role": role, // <--- Importante
                 "createdAt": ServerValue.timestamp()
             ]
             
@@ -80,9 +83,10 @@ class AuthManager: ObservableObject {
                 if let error = error {
                     completion(error.localizedDescription)
                 } else {
-                    // Actualizamos la variable local inmediatamente para no esperar recarga
+                    // Actualizamos localmente para no esperar
                     DispatchQueue.main.async {
                         self.currentUserName = firstName
+                        self.userRole = role
                     }
                     completion(nil)
                 }
@@ -94,7 +98,9 @@ class AuthManager: ObservableObject {
     func signOut() {
         do {
             try Auth.auth().signOut()
+            // Limpiamos variables locales
             self.currentUserName = ""
+            self.userRole = ""
         } catch {
             print("Error al cerrar sesión: \(error.localizedDescription)")
         }
