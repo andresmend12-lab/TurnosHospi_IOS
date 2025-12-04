@@ -4,9 +4,10 @@ struct SideMenuView: View {
     @Binding var isShowing: Bool
     @EnvironmentObject var authManager: AuthManager
     
-    // Estados para las hojas modales
+    // Estados de navegación
     @State private var showJoinPlantSheet = false
-    @State private var showEditProfileSheet = false // <--- NUEVO ESTADO
+    @State private var showPlantDashboard = false
+    @State private var showEditProfileSheet = false
     
     var body: some View {
         ZStack {
@@ -45,12 +46,19 @@ struct SideMenuView: View {
                         MenuOptionRow(icon: "plus.app.fill", text: "Crear nueva planta")
                     }
                     
-                    // Botón Mi planta
-                    Button(action: { showJoinPlantSheet = true }) {
-                        MenuOptionRow(icon: "bed.double.fill", text: "Mi planta / Unirse")
+                    // --- BOTÓN INTELIGENTE "MI PLANTA" ---
+                    Button(action: {
+                        if !authManager.userPlantId.isEmpty {
+                            // Si YA tiene planta -> Abre el Dashboard
+                            showPlantDashboard = true
+                        } else {
+                            // Si NO tiene planta -> Abre el Buscador
+                            showJoinPlantSheet = true
+                        }
+                    }) {
+                        MenuOptionRow(icon: "bed.double.fill", text: "Mi planta")
                     }
                     
-                    // Botón Editar Perfil (ACTUALIZADO)
                     Button(action: { showEditProfileSheet = true }) {
                         MenuOptionRow(icon: "person.text.rectangle.fill", text: "Editar perfil")
                     }
@@ -61,7 +69,6 @@ struct SideMenuView: View {
                 
                 Spacer()
                 
-                // Cerrar Sesión
                 Button(action: {
                     authManager.signOut()
                     withAnimation { isShowing = false }
@@ -80,17 +87,20 @@ struct SideMenuView: View {
             .padding(.horizontal)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        // Modales
+        // Modales de navegación
         .sheet(isPresented: $showJoinPlantSheet) {
             JoinPlantView()
         }
-        .sheet(isPresented: $showEditProfileSheet) { // <--- NUEVA MODAL
+        .fullScreenCover(isPresented: $showPlantDashboard) {
+            PlantDashboardView()
+        }
+        .sheet(isPresented: $showEditProfileSheet) {
             EditProfileView()
         }
     }
 }
 
-// Subvista auxiliar (Necesaria dentro del archivo o en uno común)
+// Estructura auxiliar para filas del menú
 struct MenuOptionRow: View {
     var icon: String
     var text: String

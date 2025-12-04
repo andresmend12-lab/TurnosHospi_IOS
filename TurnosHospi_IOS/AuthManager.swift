@@ -5,8 +5,9 @@ import FirebaseDatabase
 class AuthManager: ObservableObject {
     @Published var user: User?
     @Published var currentUserName: String = ""
-    @Published var currentUserLastName: String = "" // <--- NUEVO: Para guardar el apellido
+    @Published var currentUserLastName: String = ""
     @Published var userRole: String = ""
+    @Published var userPlantId: String = "" // Variable clave para la navegación
     
     private let ref = Database.database().reference()
     
@@ -16,33 +17,26 @@ class AuthManager: ObservableObject {
             if let user = user {
                 self?.fetchUserData(uid: user.uid)
             } else {
-                self?.currentUserName = ""
-                self?.currentUserLastName = ""
-                self?.userRole = ""
+                self?.cleanSession()
             }
         }
     }
     
-    // MARK: - Obtener datos
+    // MARK: - Obtener datos del usuario
     func fetchUserData(uid: String) {
         ref.child("users").child(uid).observeSingleEvent(of: .value) { snapshot in
             guard let value = snapshot.value as? [String: Any] else { return }
             
             DispatchQueue.main.async {
-                if let firstName = value["firstName"] as? String {
-                    self.currentUserName = firstName
-                }
-                if let lastName = value["lastName"] as? String {
-                    self.currentUserLastName = lastName
-                }
-                if let role = value["role"] as? String {
-                    self.userRole = role
-                }
+                self.currentUserName = value["firstName"] as? String ?? ""
+                self.currentUserLastName = value["lastName"] as? String ?? ""
+                self.userRole = value["role"] as? String ?? ""
+                self.userPlantId = value["plantId"] as? String ?? "" // Recuperamos el ID de la planta
             }
         }
     }
     
-    // MARK: - Actualizar Perfil (NUEVO)
+    // MARK: - Actualizar Perfil
     func updateUserProfile(firstName: String, lastName: String, role: String, completion: @escaping (Bool, String?) -> Void) {
         guard let uid = user?.uid else { return }
         
@@ -56,7 +50,6 @@ class AuthManager: ObservableObject {
             if let error = error {
                 completion(false, error.localizedDescription)
             } else {
-                // Actualizamos los datos locales al instante
                 DispatchQueue.main.async {
                     self.currentUserName = firstName
                     self.currentUserLastName = lastName
@@ -117,11 +110,16 @@ class AuthManager: ObservableObject {
     func signOut() {
         do {
             try Auth.auth().signOut()
-            self.currentUserName = ""
-            self.currentUserLastName = ""
-            self.userRole = ""
+            cleanSession()
         } catch {
             print("Error logout: \(error.localizedDescription)")
         }
+    }
+    
+    private func cleanSession() {
+        self.currentUserName = ""
+        self.currentUserLastName = ""
+        self.userRole = ""
+        self.userPlantId = ""
     }
 }

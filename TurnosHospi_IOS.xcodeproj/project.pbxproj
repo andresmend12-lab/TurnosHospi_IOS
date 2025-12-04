@@ -28,6 +28,7 @@
 		97FB93812EE1F27C00F5490F /* PlantManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93802EE1F27C00F5490F /* PlantManager.swift */; };
 		97FB93832EE1F29F00F5490F /* JoinPlantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93822EE1F29F00F5490F /* JoinPlantView.swift */; };
 		97FB93852EE1F69400F5490F /* EditProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93842EE1F69400F5490F /* EditProfilesView.swift */; };
+		97FB93872EE1FC7B00F5490F /* PlantDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93862EE1FC7B00F5490F /* PlantDashboardView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -69,6 +70,7 @@
 		97FB93802EE1F27C00F5490F /* PlantManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantManager.swift; sourceTree = "<group>"; };
 		97FB93822EE1F29F00F5490F /* JoinPlantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinPlantView.swift; sourceTree = "<group>"; };
 		97FB93842EE1F69400F5490F /* EditProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfilesView.swift; sourceTree = "<group>"; };
+		97FB93862EE1FC7B00F5490F /* PlantDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantDashboardView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,6 +138,7 @@
 				97FB93822EE1F29F00F5490F /* JoinPlantView.swift */,
 				97FB936B2EE1D6FE00F5490F /* AuthManager.swift */,
 				97FB93842EE1F69400F5490F /* EditProfilesView.swift */,
+				97FB93862EE1FC7B00F5490F /* PlantDashboardView.swift */,
 				97FB937C2EE1EF6A00F5490F /* SideMenuView.swift */,
 				97FB937A2EE1E19700F5490F /* SignUpView.swift */,
 			);
@@ -312,6 +315,7 @@
 				97FB93832EE1F29F00F5490F /* JoinPlantView.swift in Sources */,
 				97FB936A2EE1D55700F5490F /* LoginView.swift in Sources */,
 				97FB93812EE1F27C00F5490F /* PlantManager.swift in Sources */,
+				97FB93872EE1FC7B00F5490F /* PlantDashboardView.swift in Sources */,
 				97FB936C2EE1D6FE00F5490F /* AuthManager.swift in Sources */,
 				97FB93852EE1F69400F5490F /* EditProfilesView.swift in Sources */,
 				97E962CA2EE18973006E7707 /* ContentView.swift in Sources */,
