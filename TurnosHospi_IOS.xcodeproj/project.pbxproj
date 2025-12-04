@@ -14,6 +14,8 @@
 		97E962DA2EE18976006E7707 /* TurnosHospi_IOSTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962D92EE18976006E7707 /* TurnosHospi_IOSTests.swift */; };
 		97E962E42EE18977006E7707 /* TurnosHospi_IOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962E32EE18977006E7707 /* TurnosHospi_IOSUITests.swift */; };
 		97E962E62EE18977006E7707 /* TurnosHospi_IOSUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962E52EE18977006E7707 /* TurnosHospi_IOSUITestsLaunchTests.swift */; };
+		97FB93682EE1D46800F5490F /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 97FB93672EE1D46800F5490F /* GoogleService-Info.plist */; };
+		97FB936A2EE1D55700F5490F /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93692EE1D55700F5490F /* LoginView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,6 +47,8 @@
 		97E962DF2EE18976006E7707 /* TurnosHospi_IOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TurnosHospi_IOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		97E962E32EE18977006E7707 /* TurnosHospi_IOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSUITests.swift; sourceTree = "<group>"; };
 		97E962E52EE18977006E7707 /* TurnosHospi_IOSUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		97FB93672EE1D46800F5490F /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "../../../../Downloads/GoogleService-Info.plist"; sourceTree = "<group>"; };
+		97FB93692EE1D55700F5490F /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -98,8 +102,10 @@
 				97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */,
 				97E962C92EE18973006E7707 /* ContentView.swift */,
 				97E962CB2EE18976006E7707 /* Assets.xcassets */,
+				97FB93672EE1D46800F5490F /* GoogleService-Info.plist */,
 				97E962CD2EE18976006E7707 /* TurnosHospi_IOS.entitlements */,
 				97E962CE2EE18976006E7707 /* Preview Content */,
+				97FB93692EE1D55700F5490F /* LoginView.swift */,
 			);
 			path = TurnosHospi_IOS;
 			sourceTree = "<group>";
@@ -235,6 +241,7 @@
 			files = (
 				97E962D02EE18976006E7707 /* Preview Assets.xcassets in Resources */,
 				97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */,
+				97FB93682EE1D46800F5490F /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -259,6 +266,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				97FB936A2EE1D55700F5490F /* LoginView.swift in Sources */,
 				97E962CA2EE18973006E7707 /* ContentView.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
 			);
