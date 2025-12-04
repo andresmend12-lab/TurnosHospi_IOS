@@ -30,6 +30,8 @@
 		97FB93852EE1F69400F5490F /* EditProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93842EE1F69400F5490F /* EditProfilesView.swift */; };
 		97FB93872EE1FC7B00F5490F /* PlantDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93862EE1FC7B00F5490F /* PlantDashboardView.swift */; };
 		97FB93892EE2049300F5490F /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93882EE2049200F5490F /* Extensions.swift */; };
+		97FB938B2EE20B4F00F5490F /* Shift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB938A2EE20B4E00F5490F /* Shift.swift */; };
+		97FB938D2EE20B7600F5490F /* ShiftManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB938C2EE20B7600F5490F /* ShiftManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,6 +75,8 @@
 		97FB93842EE1F69400F5490F /* EditProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfilesView.swift; sourceTree = "<group>"; };
 		97FB93862EE1FC7B00F5490F /* PlantDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantDashboardView.swift; sourceTree = "<group>"; };
 		97FB93882EE2049200F5490F /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		97FB938A2EE20B4E00F5490F /* Shift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shift.swift; sourceTree = "<group>"; };
+		97FB938C2EE20B7600F5490F /* ShiftManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -141,6 +145,8 @@
 				97FB936B2EE1D6FE00F5490F /* AuthManager.swift */,
 				97FB93842EE1F69400F5490F /* EditProfilesView.swift */,
 				97FB93862EE1FC7B00F5490F /* PlantDashboardView.swift */,
+				97FB938A2EE20B4E00F5490F /* Shift.swift */,
+				97FB938C2EE20B7600F5490F /* ShiftManager.swift */,
 				97FB93882EE2049200F5490F /* Extensions.swift */,
 				97FB937C2EE1EF6A00F5490F /* SideMenuView.swift */,
 				97FB937A2EE1E19700F5490F /* SignUpView.swift */,
@@ -315,6 +321,7 @@
 			files = (
 				97FB936E2EE1DAF300F5490F /* MainMenuView.swift in Sources */,
 				97FB937D2EE1EF6B00F5490F /* SideMenuView.swift in Sources */,
+				97FB938D2EE20B7600F5490F /* ShiftManager.swift in Sources */,
 				97FB93832EE1F29F00F5490F /* JoinPlantView.swift in Sources */,
 				97FB936A2EE1D55700F5490F /* LoginView.swift in Sources */,
 				97FB93812EE1F27C00F5490F /* PlantManager.swift in Sources */,
@@ -323,6 +330,7 @@
 				97FB93852EE1F69400F5490F /* EditProfilesView.swift in Sources */,
 				97FB93892EE2049300F5490F /* Extensions.swift in Sources */,
 				97E962CA2EE18973006E7707 /* ContentView.swift in Sources */,
+				97FB938B2EE20B4F00F5490F /* Shift.swift in Sources */,
 				97FB937B2EE1E19700F5490F /* SignUpView.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
 				97FB937F2EE1F26100F5490F /* PlantModels.swift in Sources */,

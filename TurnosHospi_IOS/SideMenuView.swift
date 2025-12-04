@@ -4,7 +4,7 @@ struct SideMenuView: View {
     @Binding var isShowing: Bool
     @EnvironmentObject var authManager: AuthManager
     
-    // Navegación
+    // Estados de navegación
     @State private var showJoinPlantSheet = false
     @State private var showPlantDashboard = false
     @State private var showEditProfileSheet = false
@@ -16,7 +16,7 @@ struct SideMenuView: View {
             
             VStack(alignment: .leading, spacing: 30) {
                 
-                // Cabecera Usuario
+                // Cabecera
                 VStack(alignment: .leading, spacing: 10) {
                     Image(systemName: "person.crop.circle.fill")
                         .resizable()
@@ -46,12 +46,12 @@ struct SideMenuView: View {
                         MenuOptionRow(icon: "plus.app.fill", text: "Crear nueva planta")
                     }
                     
-                    // BOTÓN INTELIGENTE
+                    // --- BOTÓN INTELIGENTE "MI PLANTA" ---
                     Button(action: {
                         if !authManager.userPlantId.isEmpty {
-                            showPlantDashboard = true
+                            showPlantDashboard = true // Ir al Dashboard
                         } else {
-                            showJoinPlantSheet = true
+                            showJoinPlantSheet = true // Ir a Unirse
                         }
                     }) {
                         MenuOptionRow(icon: "bed.double.fill", text: "Mi planta")

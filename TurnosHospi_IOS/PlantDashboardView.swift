@@ -4,26 +4,23 @@ struct PlantDashboardView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     
-    // Estado para controlar el menú lateral
     @State private var isMenuOpen = false
     @State private var selectedOption: String = "Calendario"
     
     var body: some View {
         ZStack {
-            // Fondo base (visible cuando el dashboard se encoge)
+            // Fondo base
             Color.black.ignoresSafeArea()
             
-            // --- CAPA 1: CONTENIDO DEL DASHBOARD ---
+            // --- CAPA 1: DASHBOARD ---
             ZStack {
-                Color(red: 0.1, green: 0.1, blue: 0.18) // DeepSpace dark blue
-                    .ignoresSafeArea()
+                Color(red: 0.1, green: 0.1, blue: 0.18).ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     
-                    // --- HEADER (CORREGIDO PARA SAFE AREA) ---
+                    // HEADER
                     HStack {
                         Button(action: {
-                            // Acción de abrir menú
                             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                                 isMenuOpen.toggle()
                             }
@@ -31,8 +28,8 @@ struct PlantDashboardView: View {
                             Image(systemName: "line.3.horizontal")
                                 .font(.system(size: 24, weight: .bold))
                                 .foregroundColor(.white)
-                                .padding(10) // Área táctil extra
-                                .contentShape(Rectangle()) // Asegura que se detecte el toque
+                                .padding(10)
+                                .contentShape(Rectangle()) // Área táctil grande
                         }
                         .zIndex(100)
                         
@@ -44,15 +41,15 @@ struct PlantDashboardView: View {
                                 .foregroundColor(.white)
                             Text(authManager.userRole)
                                 .font(.caption)
-                                .foregroundColor(Color(red: 0.7, green: 0.5, blue: 1.0)) // NeonViolet
+                                .foregroundColor(Color(red: 0.7, green: 0.5, blue: 1.0))
                         }
                     }
                     .padding(.horizontal)
                     .padding(.bottom, 10)
-                    .padding(.top, 60) // <--- FIX: Espacio para bajar de la zona de batería/hora
+                    .padding(.top, 60) // <--- FIX SAFE AREA
                     .background(Color.black.opacity(0.3))
                     
-                    // --- CONTENIDO SCROLL ---
+                    // CONTENIDO
                     ScrollView {
                         VStack(spacing: 20) {
                             HStack {
@@ -64,9 +61,8 @@ struct PlantDashboardView: View {
                             .padding(.horizontal)
                             .padding(.top, 20)
                             
-                            // Renderizado condicional de vistas
                             if selectedOption == "Calendario" {
-                                CalendarPreviewView() // Versión interactiva
+                                CalendarPreviewView()
                             } else {
                                 PlaceholderView(iconName: getIconForOption(selectedOption), title: selectedOption)
                             }
@@ -75,24 +71,21 @@ struct PlantDashboardView: View {
                     }
                 }
                 
-                // Capa invisible para cerrar el menú al tocar fuera
+                // Cierre al tocar fuera
                 if isMenuOpen {
                     Color.white.opacity(0.001)
                         .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation { isMenuOpen = false }
-                        }
+                        .onTapGesture { withAnimation { isMenuOpen = false } }
                 }
             }
-            // Animaciones del menú
             .cornerRadius(isMenuOpen ? 30 : 0)
             .offset(x: isMenuOpen ? 280 : 0, y: isMenuOpen ? 40 : 0)
             .scaleEffect(isMenuOpen ? 0.9 : 1)
             .shadow(color: .black.opacity(0.5), radius: 20, x: -10, y: 0)
             .ignoresSafeArea()
-            .disabled(isMenuOpen) // Bloquea toques en el dashboard si el menú está abierto
+            .disabled(isMenuOpen)
             
-            // --- CAPA 2: MENÚ LATERAL (DRAWER) ---
+            // --- CAPA 2: DRAWER ---
             if isMenuOpen {
                 PlantMenuDrawer(isMenuOpen: $isMenuOpen, selectedOption: $selectedOption, onLogout: {
                     dismiss()
@@ -105,7 +98,6 @@ struct PlantDashboardView: View {
         .navigationBarHidden(true)
     }
     
-    // Helper de Iconos
     func getIconForOption(_ option: String) -> String {
         switch option {
         case "Añadir personal": return "person.badge.plus"
@@ -124,7 +116,7 @@ struct PlantDashboardView: View {
     }
 }
 
-// MARK: - MENÚ LATERAL DE LA PLANTA
+// MARK: - MENÚ LATERAL (DRAWER)
 struct PlantMenuDrawer: View {
     @EnvironmentObject var authManager: AuthManager
     @Binding var isMenuOpen: Bool
@@ -143,18 +135,10 @@ struct PlantMenuDrawer: View {
                     Circle()
                         .fill(LinearGradient(colors: [.blue, .purple], startPoint: .top, endPoint: .bottom))
                         .frame(width: 50, height: 50)
-                        .overlay(
-                            Text(String(authManager.currentUserName.prefix(1)))
-                                .bold()
-                                .foregroundColor(.white)
-                        )
+                        .overlay(Text(String(authManager.currentUserName.prefix(1))).bold().foregroundColor(.white))
                     VStack(alignment: .leading) {
-                        Text(authManager.currentUserName)
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        Text(authManager.userRole)
-                            .font(.caption)
-                            .foregroundColor(.gray)
+                        Text(authManager.currentUserName).font(.headline).foregroundColor(.white)
+                        Text(authManager.userRole).font(.caption).foregroundColor(.gray)
                     }
                 }
                 .padding(.top, 60)
@@ -191,16 +175,9 @@ struct PlantMenuDrawer: View {
                     }
                 }
                 Spacer()
-                
                 Button(action: onLogout) {
-                    HStack {
-                        Image(systemName: "arrow.left.circle.fill")
-                        Text("Volver al menú principal")
-                            .bold()
-                    }
-                    .foregroundColor(.red.opacity(0.9))
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack { Image(systemName: "arrow.left.circle.fill"); Text("Volver al menú principal").bold() }
+                        .foregroundColor(.red.opacity(0.9)).padding()
                 }
                 .padding(.bottom, 30)
             }
@@ -210,12 +187,9 @@ struct PlantMenuDrawer: View {
         }
     }
     
-    func close() {
-        withAnimation { isMenuOpen = false }
-    }
+    func close() { withAnimation { isMenuOpen = false } }
 }
 
-// Fila del menú
 struct PlantMenuRow: View {
     let title: String
     let icon: String
@@ -223,72 +197,43 @@ struct PlantMenuRow: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: {
-            selected = title
-            action()
-        }) {
+        Button(action: { selected = title; action() }) {
             HStack(spacing: 15) {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .frame(width: 30)
+                Image(systemName: icon).font(.system(size: 18)).frame(width: 30)
                     .foregroundColor(selected == title ? Color(red: 0.7, green: 0.5, blue: 1.0) : .white.opacity(0.7))
-                Text(title)
-                    .font(.subheadline)
+                Text(title).font(.subheadline)
                     .foregroundColor(selected == title ? .white : .white.opacity(0.7))
                     .bold(selected == title)
                 Spacer()
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 10)
+            .padding(.vertical, 12).padding(.horizontal, 10)
             .background(selected == title ? Color.white.opacity(0.1) : Color.clear)
             .cornerRadius(10)
         }
     }
 }
 
-// MARK: - CALENDARIO INTERACTIVO
+// CALENDARIO INTERACTIVO
 struct CalendarPreviewView: View {
     let days = ["L", "M", "X", "J", "V", "S", "D"]
     let dates = Array(1...31)
     
-    @State private var selectedDay: Int = 4 // Día seleccionado por defecto
+    @State private var selectedDay: Int = 4
     
     var body: some View {
         VStack(spacing: 15) {
-            // Cabecera mes
             HStack {
-                Text("Diciembre 2025")
-                    .font(.title3.bold())
-                    .foregroundColor(.white)
+                Text("Diciembre 2025").font(.title3.bold()).foregroundColor(.white)
                 Spacer()
-                HStack(spacing: 20) {
-                    Image(systemName: "chevron.left")
-                    Image(systemName: "chevron.right")
-                }
-                .foregroundColor(.blue)
-            }
-            .padding(.horizontal)
+                HStack { Image(systemName: "chevron.left"); Image(systemName: "chevron.right") }.foregroundColor(.blue)
+            }.padding(.horizontal)
             
-            // Días semana
-            HStack {
-                ForEach(days, id: \.self) { day in
-                    Text(day)
-                        .font(.caption.bold())
-                        .foregroundColor(.gray)
-                        .frame(maxWidth: .infinity)
-                }
-            }
+            HStack { ForEach(days, id: \.self) { day in Text(day).font(.caption.bold()).foregroundColor(.gray).frame(maxWidth: .infinity) } }
             
-            // Rejilla interactiva
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 15) {
                 ForEach(dates, id: \.self) { date in
                     let isSelected = (selectedDay == date)
-                    
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            selectedDay = date
-                        }
-                    }) {
+                    Button(action: { withAnimation(.easeInOut(duration: 0.2)) { selectedDay = date } }) {
                         VStack {
                             Text("\(date)")
                                 .foregroundColor(isSelected ? .black : .white)
@@ -297,47 +242,26 @@ struct CalendarPreviewView: View {
                                 .background(isSelected ? Color.white : Color.clear)
                                 .clipShape(Circle())
                         }
-                        .frame(height: 40)
-                        .frame(maxWidth: .infinity)
+                        .frame(height: 40).frame(maxWidth: .infinity)
                         .background(Color.white.opacity(0.05))
                         .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(isSelected ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 1)
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 1))
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
             }
+            Divider().background(Color.white.opacity(0.2)).padding(.vertical, 5)
             
-            Divider()
-                .background(Color.white.opacity(0.2))
-                .padding(.vertical, 5)
-            
-            // Texto informativo del día
             HStack {
-                Image(systemName: "calendar.badge.clock")
-                    .foregroundColor(.blue)
-                    .font(.title3)
-                
-                Text("\(selectedDay) de Diciembre de 2025")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
+                Image(systemName: "calendar.badge.clock").foregroundColor(.blue).font(.title3)
+                Text("\(selectedDay) de Diciembre de 2025").font(.headline).foregroundColor(.white)
                 Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 5)
+            }.padding(.horizontal).padding(.bottom, 5)
         }
-        .padding()
-        .background(.ultraThinMaterial)
-        .cornerRadius(20)
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.1), lineWidth: 1))
-        .padding(.horizontal)
+        .padding().background(.ultraThinMaterial).cornerRadius(20).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.1), lineWidth: 1)).padding(.horizontal)
     }
 }
 
-// Vista Placeholder
 struct PlaceholderView: View {
     let iconName: String
     let title: String
