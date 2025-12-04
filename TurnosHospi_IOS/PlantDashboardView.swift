@@ -12,8 +12,7 @@ struct PlantDashboardView: View {
     @State private var selectedOption: String = "Calendario"
     @State private var selectedDate = Date()
     
-    // NUEVO: Estado para abrir el modal de Añadir Personal
-    @State private var showAddStaffSheet = false
+    // REMOVIDO: @State private var showAddStaffSheet = false
     
     // Helper para obtener el staffScope de forma segura
     var staffScope: String {
@@ -73,7 +72,7 @@ struct PlantDashboardView: View {
                         .padding(.horizontal)
                         .padding(.top, 20)
                         
-                        // Lógica de Vistas (MODIFICADO)
+                        // Lógica de Vistas
                         Group {
                             let plantId = authManager.userPlantId
                             
@@ -134,12 +133,11 @@ struct PlantDashboardView: View {
             .disabled(isMenuOpen)
             
             if isMenuOpen {
-                // MODIFICADO: Pasamos showAddStaffSheet al Drawer
+                // MODIFICADO: Eliminamos el binding showAddStaffSheet
                 PlantMenuDrawer(
                     isMenuOpen: $isMenuOpen,
                     selectedOption: $selectedOption,
-                    onLogout: { dismiss() },
-                    showAddStaffSheet: $showAddStaffSheet
+                    onLogout: { dismiss() }
                 )
                 .transition(.move(edge: .leading))
                 .zIndex(2)
@@ -155,17 +153,7 @@ struct PlantDashboardView: View {
                 plantManager.fetchDailyStaff(plantId: authManager.userPlantId, date: selectedDate)
             }
         }
-        // NUEVO: Hoja modal para el formulario de Añadir Personal
-        .sheet(isPresented: $showAddStaffSheet) {
-            if !authManager.userPlantId.isEmpty && !staffScope.isEmpty {
-                AddEditStaffView(plantId: authManager.userPlantId, staffScope: staffScope, staffToEdit: nil)
-            } else {
-                VStack {
-                    Text("Error: No se pudieron obtener los datos de la planta.").foregroundColor(.red)
-                    Button("Cerrar") { showAddStaffSheet = false }
-                }
-            }
-        }
+        // REMOVIDO: .sheet(isPresented: $showAddStaffSheet) { ... }
     }
     
     func getIconForOption(_ option: String) -> String {
@@ -301,8 +289,7 @@ struct PlantMenuDrawer: View {
     @Binding var selectedOption: String
     var onLogout: () -> Void
     
-    // NUEVO BINDING
-    @Binding var showAddStaffSheet: Bool
+    // REMOVIDO: @Binding var showAddStaffSheet: Bool
     
     let menuBackground = Color(red: 26/255, green: 26/255, blue: 46/255)
     
@@ -324,18 +311,9 @@ struct PlantMenuDrawer: View {
                             Group {
                                 Text("ADMINISTRACIÓN").font(.caption2).bold().foregroundColor(.gray).padding(.leading, 10)
                                 
-                                // MODIFICADO: Añadir personal AHORA ABRE UN MODAL
-                                Button(action: {
-                                    withAnimation { isMenuOpen = false }
-                                    showAddStaffSheet = true
-                                    selectedOption = "Calendario" // Mantiene la vista de fondo
-                                }) {
-                                    // Nunca seleccionado, es una acción
-                                    PlantMenuRowContent(title: "Añadir personal", icon: "person.badge.plus", isSelected: false)
-                                }
-                                .buttonStyle(.plain)
+                                // REMOVIDO: Botón "Añadir personal"
                                 
-                                // MODIFICADO: Lista de personal AHORA CAMBIA LA VISTA PRINCIPAL
+                                // MODIFICADO: Lista de personal
                                 PlantMenuRow(title: "Lista de personal", icon: "person.3.fill", selected: $selectedOption) { close() }
                                 
                                 PlantMenuRow(title: "Configuración de la planta", icon: "gearshape.2.fill", selected: $selectedOption) { close() }
