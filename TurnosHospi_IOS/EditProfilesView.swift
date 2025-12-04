@@ -1,212 +1,178 @@
 import SwiftUI
 
-struct JoinPlantView: View {
+struct EditProfileView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
-    @StateObject var plantManager = PlantManager()
     
-    @State private var plantIdInput: String = ""
-    @State private var passwordInput: String = ""
-    @State private var selectedStaff: PlantStaff?
+    // Campos editables
+    @State private var firstName: String = ""
+    @State private var lastName: String = ""
+    @State private var selectedRole: String = ""
+    
+    // Estados de UI
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var showSuccessAlert = false
+    
+    // ⚠️ LISTA LIMITADA DE ROLES
+    let roles = ["Supervisor", "Enfermero", "Auxiliar"]
     
     var body: some View {
         ZStack {
+            // Fondo Deep Space
             Color.deepSpace.ignoresSafeArea()
             
+            // Decoración
             ZStack {
-                Circle().fill(Color.electricBlue).frame(width: 200).blur(radius: 60).offset(x: -120, y: -200)
-                Circle().fill(Color.neonViolet).frame(width: 200).blur(radius: 60).offset(x: 120, y: 200)
-            }
-            .opacity(0.5)
-            
-            VStack(spacing: 20) {
-                Text("Unirse a una Planta")
-                    .font(.largeTitle.bold())
-                    .foregroundColor(.white)
-                    .padding(.top, 30)
-                
-                if plantManager.foundPlant == nil {
-                    loginPhase
-                } else {
-                    selectionPhase
-                }
-                
-                Spacer()
-            }
-            .padding()
-            
-            if plantManager.isLoading {
-                ZStack {
-                    Color.black.opacity(0.5).ignoresSafeArea()
-                    ProgressView().tint(.white).scaleEffect(1.5)
-                }
-            }
-        }
-        .onChange(of: plantManager.joinSuccess) { success in
-            if success { dismiss() }
-        }
-    }
-    
-    var loginPhase: some View {
-        VStack(spacing: 20) {
-            Text("Introduce las credenciales de la planta.")
-                .font(.body)
-                .foregroundColor(.white.opacity(0.7))
-            
-            VStack(spacing: 15) {
-                GlassTextField(icon: "building.2.fill", placeholder: "ID de la Planta", text: $plantIdInput)
-                GlassTextField(icon: "key.fill", placeholder: "Contraseña", text: $passwordInput, isSecure: true)
-                
-                if let error = plantManager.errorMessage {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.caption)
-                        .multilineTextAlignment(.center)
-                }
-            }
-            .padding()
-            
-            Button(action: {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                plantManager.searchPlant(plantId: plantIdInput, password: passwordInput)
-            }) {
-                Text("Buscar Planta")
-                    .bold()
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(LinearGradient(colors: [.electricBlue, .neonViolet], startPoint: .leading, endPoint: .trailing))
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-            }
-            .padding(.horizontal)
-        }
-        .padding()
-        .background(.ultraThinMaterial)
-        .cornerRadius(20)
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.1), lineWidth: 1))
-        .padding()
-    }
-    
-    var selectionPhase: some View {
-        VStack(spacing: 20) {
-            
-            VStack(spacing: 5) {
-                Text(plantManager.foundPlant?.name ?? "")
-                    .font(.title2.bold())
-                    .foregroundColor(.neonViolet)
-                Text(plantManager.foundPlant?.hospitalName ?? "")
-                    .font(.headline)
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            
-            Divider().background(Color.white.opacity(0.3))
-            
-            VStack(spacing: 5) {
-                Text("Selecciona tu perfil en la lista")
-                    .font(.subheadline)
-                    .foregroundColor(.white)
-                
-                // Normalización del rol para visualización
-                let displayRole = authManager.userRole == "Enfermero" ? "Enfermera/o" : authManager.userRole
-                Text("(Solo se muestran puestos de \(displayRole))")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                Circle().fill(Color.electricBlue).frame(width: 300).blur(radius: 80).offset(x: -150, y: -300).opacity(0.4)
+                Circle().fill(Color.neonViolet).frame(width: 300).blur(radius: 80).offset(x: 150, y: 300).opacity(0.4)
             }
             
             ScrollView {
-                VStack(spacing: 10) {
-                    // --- FILTRO INTELIGENTE ---
-                    // Si el usuario es "Enfermero", buscamos también "Enfermera/o"
-                    let targetRole = (authManager.userRole == "Enfermero") ? "Enfermera/o" : authManager.userRole
+                VStack(spacing: 25) {
                     
-                    let filteredStaff = (plantManager.foundPlant?.staffList ?? []).filter { $0.role == targetRole }
+                    Text("Editar Perfil")
+                        .font(.title2.bold())
+                        .foregroundColor(.white)
+                        .padding(.top)
                     
-                    if filteredStaff.isEmpty {
-                        Text("No hay puestos disponibles para tu rol en esta planta.")
-                            .foregroundColor(.white.opacity(0.6))
-                            .padding(.top, 20)
-                            .multilineTextAlignment(.center)
-                    } else {
-                        ForEach(filteredStaff, id: \.id) { staff in
-                            StaffRow(staff: staff, isSelected: selectedStaff?.id == staff.id)
-                                .onTapGesture {
-                                    selectedStaff = staff
+                    // Avatar con iniciales
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(colors: [.electricBlue, .neonViolet], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .frame(width: 100, height: 100)
+                            .shadow(color: .neonViolet.opacity(0.5), radius: 10, x: 0, y: 5)
+                        
+                        // Corrección de String interpolation aplicada aquí
+                        Text("\(String(firstName.prefix(1)))\(String(lastName.prefix(1)))")
+                            .font(.largeTitle.bold())
+                            .foregroundColor(.white)
+                            .textCase(.uppercase)
+                    }
+                    .padding(.bottom, 10)
+                    
+                    // --- FORMULARIO ---
+                    VStack(spacing: 20) {
+                        
+                        // Nombre
+                        CustomEditField(title: "Nombre", text: $firstName)
+                        
+                        // Apellidos
+                        CustomEditField(title: "Apellidos", text: $lastName)
+                        
+                        // Rol (Selector con lista limitada)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Puesto / Rol")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .padding(.leading, 5)
+                            
+                            Menu {
+                                ForEach(roles, id: \.self) { role in
+                                    Button(role) {
+                                        selectedRole = role
+                                    }
                                 }
+                            } label: {
+                                HStack {
+                                    Text(selectedRole.isEmpty ? "Selecciona un rol" : selectedRole)
+                                        .foregroundColor(.white)
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                        .foregroundColor(.neonViolet)
+                                }
+                                .padding()
+                                .background(Color.white.opacity(0.05))
+                                .cornerRadius(12)
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                            }
                         }
                     }
-                }
-                .padding(.horizontal)
-            }
-            .frame(maxHeight: 350)
-            
-            if let staff = selectedStaff {
-                Button(action: {
-                    if let plant = plantManager.foundPlant {
-                        plantManager.joinPlant(plant: plant, selectedStaff: staff)
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(20)
+                    .padding(.horizontal)
+                    
+                    if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                            .padding(.top)
                     }
-                }) {
-                    Text("Confirmar: Soy \(staff.name)")
-                        .bold()
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.green.opacity(0.8))
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                        .shadow(color: .green.opacity(0.4), radius: 10, x: 0, y: 5)
+                    
+                    // Botón Guardar
+                    Button(action: saveChanges) {
+                        if isLoading {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Guardar Cambios")
+                                .bold()
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(LinearGradient(colors: [.electricBlue, .neonViolet], startPoint: .leading, endPoint: .trailing))
+                                .foregroundColor(.white)
+                                .cornerRadius(15)
+                                .shadow(color: .neonViolet.opacity(0.5), radius: 10, x: 0, y: 5)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 20)
+                    .disabled(isLoading)
                 }
-                .padding(.horizontal)
+                .padding(.bottom, 30)
             }
-            
-            Button("Cancelar búsqueda") {
-                withAnimation {
-                    plantManager.foundPlant = nil
-                    selectedStaff = nil
-                    plantManager.errorMessage = nil
-                }
-            }
-            .foregroundColor(.white.opacity(0.6))
-            .padding(.bottom, 10)
         }
-        .padding()
-        .background(.ultraThinMaterial)
-        .cornerRadius(20)
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.1), lineWidth: 1))
-        .padding()
+        // Cargar datos actuales al abrir la vista
+        .onAppear {
+            firstName = authManager.currentUserName
+            lastName = authManager.currentUserLastName
+            selectedRole = authManager.userRole
+        }
+        .alert("Perfil Actualizado", isPresented: $showSuccessAlert) {
+            Button("OK") { dismiss() }
+        } message: {
+            Text("Tus datos se han guardado correctamente.")
+        }
+    }
+    
+    func saveChanges() {
+        guard !firstName.isEmpty, !lastName.isEmpty else {
+            errorMessage = "El nombre y apellidos no pueden estar vacíos."
+            return
+        }
+        
+        isLoading = true
+        errorMessage = nil
+        
+        authManager.updateUserProfile(firstName: firstName, lastName: lastName, role: selectedRole) { success, error in
+            isLoading = false
+            if success {
+                showSuccessAlert = true
+            } else {
+                errorMessage = error ?? "Error desconocido"
+            }
+        }
     }
 }
 
-struct StaffRow: View {
-    let staff: PlantStaff
-    let isSelected: Bool
+// Componente para los campos de texto
+struct CustomEditField: View {
+    let title: String
+    @Binding var text: String
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text(staff.name)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                Text(staff.role)
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.6))
-            }
-            Spacer()
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
+                .padding(.leading, 5)
             
-            if isSelected {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.neonViolet)
-                    .font(.title3)
-            } else {
-                Image(systemName: "circle")
-                    .foregroundColor(.white.opacity(0.2))
-                    .font(.title3)
-            }
+            TextField("", text: $text)
+                .padding()
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(12)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                .foregroundColor(.white)
         }
-        .padding()
-        .background(Color.white.opacity(isSelected ? 0.15 : 0.05))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.neonViolet : Color.clear, lineWidth: 1)
-        )
     }
 }

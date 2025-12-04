@@ -1,23 +1,18 @@
 import SwiftUI
 
 struct JoinPlantView: View {
-    @Environment(\.dismiss) var dismiss // Para cerrar la ventana al terminar
-    @EnvironmentObject var authManager: AuthManager // Para conocer el rol del usuario
-    @StateObject var plantManager = PlantManager() // Para la lógica de búsqueda y unión
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var authManager: AuthManager
+    @StateObject var plantManager = PlantManager()
     
-    // Inputs del formulario
     @State private var plantIdInput: String = ""
     @State private var passwordInput: String = ""
-    
-    // Selección del usuario en la lista
     @State private var selectedStaff: PlantStaff?
     
     var body: some View {
         ZStack {
-            // --- FONDO DEEP SPACE ---
             Color.deepSpace.ignoresSafeArea()
             
-            // Círculos de ambiente
             ZStack {
                 Circle().fill(Color.electricBlue).frame(width: 200).blur(radius: 60).offset(x: -120, y: -200)
                 Circle().fill(Color.neonViolet).frame(width: 200).blur(radius: 60).offset(x: 120, y: 200)
@@ -25,19 +20,14 @@ struct JoinPlantView: View {
             .opacity(0.5)
             
             VStack(spacing: 20) {
-                
-                // Cabecera
                 Text("Unirse a una Planta")
                     .font(.largeTitle.bold())
                     .foregroundColor(.white)
                     .padding(.top, 30)
                 
-                // --- LÓGICA DE FASES ---
                 if plantManager.foundPlant == nil {
-                    // FASE 1: Buscador (ID y Contraseña)
                     loginPhase
                 } else {
-                    // FASE 2: Selección de personal (Filtrada por Rol)
                     selectionPhase
                 }
                 
@@ -45,25 +35,18 @@ struct JoinPlantView: View {
             }
             .padding()
             
-            // Overlay de Carga
             if plantManager.isLoading {
                 ZStack {
                     Color.black.opacity(0.5).ignoresSafeArea()
-                    ProgressView()
-                        .tint(.white)
-                        .scaleEffect(1.5)
+                    ProgressView().tint(.white).scaleEffect(1.5)
                 }
             }
         }
-        // Cerrar vista si se une con éxito
         .onChange(of: plantManager.joinSuccess) { success in
-            if success {
-                dismiss()
-            }
+            if success { dismiss() }
         }
     }
     
-    // MARK: - FASE 1: Formulario de Búsqueda
     var loginPhase: some View {
         VStack(spacing: 20) {
             Text("Introduce las credenciales de la planta.")
@@ -104,11 +87,9 @@ struct JoinPlantView: View {
         .padding()
     }
     
-    // MARK: - FASE 2: Lista de Personal (FILTRADA)
     var selectionPhase: some View {
         VStack(spacing: 20) {
             
-            // Info de la planta encontrada
             VStack(spacing: 5) {
                 Text(plantManager.foundPlant?.name ?? "")
                     .font(.title2.bold())
@@ -120,22 +101,25 @@ struct JoinPlantView: View {
             
             Divider().background(Color.white.opacity(0.3))
             
-            // Explicación del filtro
             VStack(spacing: 5) {
                 Text("Selecciona tu perfil en la lista")
                     .font(.subheadline)
                     .foregroundColor(.white)
                 
-                Text("(Solo se muestran puestos de \(authManager.userRole))")
+                // Normalización del rol para visualización
+                let displayRole = authManager.userRole == "Enfermero" ? "Enfermera/o" : authManager.userRole
+                Text("(Solo se muestran puestos de \(displayRole))")
                     .font(.caption)
                     .foregroundColor(.gray)
             }
             
-            // LISTA SCROLLABLE
             ScrollView {
                 VStack(spacing: 10) {
-                    // --- FILTRO CLAVE: Solo mostramos personal con el mismo rol que el usuario ---
-                    let filteredStaff = (plantManager.foundPlant?.staffList ?? []).filter { $0.role == authManager.userRole }
+                    // --- FILTRO INTELIGENTE ---
+                    // Si el usuario es "Enfermero", buscamos también "Enfermera/o"
+                    let targetRole = (authManager.userRole == "Enfermero") ? "Enfermera/o" : authManager.userRole
+                    
+                    let filteredStaff = (plantManager.foundPlant?.staffList ?? []).filter { $0.role == targetRole }
                     
                     if filteredStaff.isEmpty {
                         Text("No hay puestos disponibles para tu rol en esta planta.")
@@ -153,9 +137,8 @@ struct JoinPlantView: View {
                 }
                 .padding(.horizontal)
             }
-            .frame(maxHeight: 350) // Limitar altura para que no ocupe todo
+            .frame(maxHeight: 350)
             
-            // Botón de Confirmación
             if let staff = selectedStaff {
                 Button(action: {
                     if let plant = plantManager.foundPlant {
@@ -174,7 +157,6 @@ struct JoinPlantView: View {
                 .padding(.horizontal)
             }
             
-            // Botón Cancelar
             Button("Cancelar búsqueda") {
                 withAnimation {
                     plantManager.foundPlant = nil
@@ -193,7 +175,6 @@ struct JoinPlantView: View {
     }
 }
 
-// Subvista para cada fila de personal
 struct StaffRow: View {
     let staff: PlantStaff
     let isSelected: Bool
@@ -227,13 +208,5 @@ struct StaffRow: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isSelected ? Color.neonViolet : Color.clear, lineWidth: 1)
         )
-    }
-}
-
-// Preview
-struct JoinPlantView_Previews: PreviewProvider {
-    static var previews: some View {
-        JoinPlantView()
-            .environmentObject(AuthManager())
     }
 }
