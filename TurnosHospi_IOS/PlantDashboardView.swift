@@ -12,6 +12,14 @@ struct PlantDashboardView: View {
     @State private var selectedOption: String = "Calendario"
     @State private var selectedDate = Date()
     
+    // NUEVO: Estado para abrir el modal de Añadir Personal
+    @State private var showAddStaffSheet = false
+    
+    // Helper para obtener el staffScope de forma segura
+    var staffScope: String {
+        return plantManager.currentPlant?.staffScope ?? "nurses_only"
+    }
+    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -53,65 +61,62 @@ struct PlantDashboardView: View {
                     .background(Color.black.opacity(0.3))
                     
                     // CONTENIDO
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            HStack {
-                                Text(selectedOption)
-                                    .font(.largeTitle.bold())
-                                    .foregroundColor(.white)
-                                Spacer()
-                            }
-                            .padding(.horizontal)
-                            .padding(.top, 20)
+                    VStack(spacing: 20) {
+                        
+                        // Título de la sección
+                        HStack {
+                            Text(selectedOption)
+                                .font(.largeTitle.bold())
+                                .foregroundColor(.white)
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 20)
+                        
+                        // Lógica de Vistas (MODIFICADO)
+                        Group {
+                            let plantId = authManager.userPlantId
                             
-                            if selectedOption == "Calendario" {
-                                // 1. CALENDARIO
-                                CalendarWithShiftsView(selectedDate: $selectedDate, shifts: shiftManager.userShifts)
-                                    .onChange(of: selectedDate) { newDate in
-                                        // Cuando cambia la fecha, cargamos el personal de ese día
-                                        if !authManager.userPlantId.isEmpty {
-                                            plantManager.fetchDailyStaff(plantId: authManager.userPlantId, date: newDate)
-                                        }
-                                    }
-                                
-                                // 2. LISTA DE PERSONAL DEL DÍA (NUEVO)
-                                VStack(alignment: .leading, spacing: 15) {
-                                    Text("Equipo en turno - \(selectedDate.formatted(date: .abbreviated, time: .omitted))")
-                                        .font(.title3.bold())
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal)
-                                        .padding(.top, 10)
-                                    
-                                    if plantManager.dailyStaff.isEmpty {
-                                        Text("No hay registros de personal para este día.")
-                                            .foregroundColor(.gray)
-                                            .italic()
-                                            .padding(.horizontal)
-                                            .padding(.bottom, 20)
-                                    } else {
-                                        // Mostramos los turnos en orden
-                                        let turnosOrdenados = ["Mañana", "Media mañana", "Tarde", "Media tarde", "Noche"]
-                                        
-                                        ForEach(turnosOrdenados, id: \.self) { turno in
-                                            if let workers = plantManager.dailyStaff[turno], !workers.isEmpty {
-                                                DailyShiftSection(title: turno, workers: workers)
+                            switch selectedOption {
+                            case "Calendario":
+                                ScrollView {
+                                    VStack(spacing: 20) {
+                                        // 1. CALENDARIO
+                                        CalendarWithShiftsView(selectedDate: $selectedDate, shifts: shiftManager.userShifts)
+                                            .onChange(of: selectedDate) { newDate in
+                                                // Cuando cambia la fecha, cargamos el personal de ese día
+                                                if !plantId.isEmpty {
+                                                    plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
+                                                }
                                             }
-                                        }
                                         
-                                        // Turnos extra que no estén en la lista ordenada
-                                        ForEach(plantManager.dailyStaff.keys.sorted().filter { !turnosOrdenados.contains($0) }, id: \.self) { turno in
-                                            if let workers = plantManager.dailyStaff[turno] {
-                                                DailyShiftSection(title: turno, workers: workers)
-                                            }
-                                        }
+                                        // 2. LISTA DE PERSONAL DEL DÍA
+                                        DailyStaffContent(selectedDate: $selectedDate, plantManager: plantManager)
+                                            .padding(.bottom, 100)
                                     }
                                 }
-                                
-                            } else {
-                                PlantPlaceholderView(iconName: getIconForOption(selectedOption), title: selectedOption)
+
+                            case "Lista de personal":
+                                // AHORA MUESTRA StaffListView
+                                if !plantId.isEmpty && !staffScope.isEmpty {
+                                    StaffListView(plantId: plantId, staffScope: staffScope)
+                                        .padding(.horizontal)
+                                } else {
+                                    Text("Cargando lista de personal...").foregroundColor(.gray).padding(.top, 50)
+                                    Spacer()
+                                }
+
+                            default:
+                                // Placeholder para el resto de opciones
+                                ScrollView {
+                                    PlantPlaceholderView(iconName: getIconForOption(selectedOption), title: selectedOption)
+                                        .padding(.top, 50)
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                }
                             }
                         }
-                        .padding(.bottom, 100)
+                        // Aseguramos que la vista se expanda para llenar el espacio
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
                 }
                 
@@ -129,9 +134,13 @@ struct PlantDashboardView: View {
             .disabled(isMenuOpen)
             
             if isMenuOpen {
-                PlantMenuDrawer(isMenuOpen: $isMenuOpen, selectedOption: $selectedOption, onLogout: {
-                    dismiss()
-                })
+                // MODIFICADO: Pasamos showAddStaffSheet al Drawer
+                PlantMenuDrawer(
+                    isMenuOpen: $isMenuOpen,
+                    selectedOption: $selectedOption,
+                    onLogout: { dismiss() },
+                    showAddStaffSheet: $showAddStaffSheet
+                )
                 .transition(.move(edge: .leading))
                 .zIndex(2)
             }
@@ -140,9 +149,21 @@ struct PlantDashboardView: View {
         .navigationBarHidden(true)
         .onAppear {
             shiftManager.fetchUserShifts()
-            // Cargar personal del día de hoy al entrar
             if !authManager.userPlantId.isEmpty {
+                // NUEVO: Cargar los detalles de la planta para obtener el staffScope
+                plantManager.fetchCurrentPlant(plantId: authManager.userPlantId)
                 plantManager.fetchDailyStaff(plantId: authManager.userPlantId, date: selectedDate)
+            }
+        }
+        // NUEVO: Hoja modal para el formulario de Añadir Personal
+        .sheet(isPresented: $showAddStaffSheet) {
+            if !authManager.userPlantId.isEmpty && !staffScope.isEmpty {
+                AddEditStaffView(plantId: authManager.userPlantId, staffScope: staffScope, staffToEdit: nil)
+            } else {
+                VStack {
+                    Text("Error: No se pudieron obtener los datos de la planta.").foregroundColor(.red)
+                    Button("Cerrar") { showAddStaffSheet = false }
+                }
             }
         }
     }
@@ -219,12 +240,69 @@ struct DailyShiftSection: View {
     }
 }
 
+// MARK: - HELPERS (Extraer contenido repetido en structs para mayor claridad)
+
+// Helper para el contenido de la sección de Calendario/Personal del día
+struct DailyStaffContent: View {
+    @Binding var selectedDate: Date
+    @ObservedObject var plantManager: PlantManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text("Equipo en turno - \(selectedDate.formatted(date: .abbreviated, time: .omitted))")
+                .font(.title3.bold())
+                .foregroundColor(.white)
+                .padding(.horizontal)
+                .padding(.top, 10)
+            
+            if plantManager.dailyStaff.isEmpty {
+                Text("No hay registros de personal para este día.")
+                    .foregroundColor(.gray)
+                    .italic()
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
+            } else {
+                // Mostramos los turnos en orden
+                let turnosOrdenados = ["Mañana", "Media mañana", "Tarde", "Media tarde", "Noche"]
+                
+                ForEach(turnosOrdenados, id: \.self) { turno in
+                    if let workers = plantManager.dailyStaff[turno], !workers.isEmpty {
+                        DailyShiftSection(title: turno, workers: workers)
+                    }
+                }
+                
+                // Turnos extra que no estén en la lista ordenada
+                ForEach(plantManager.dailyStaff.keys.sorted().filter { !turnosOrdenados.contains($0) }, id: \.self) { turno in
+                    if let workers = plantManager.dailyStaff[turno] {
+                        DailyShiftSection(title: turno, workers: workers)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Helper para el contenido visual de la fila (extraído de PlantMenuDrawer)
+struct PlantMenuRowContent: View {
+    let title: String; let icon: String; let isSelected: Bool
+    var body: some View {
+        HStack(spacing: 15) {
+            Image(systemName: icon).font(.system(size: 18)).frame(width: 30).foregroundColor(isSelected ? Color(red: 0.7, green: 0.5, blue: 1.0) : .white.opacity(0.7));
+            Text(title).font(.subheadline).foregroundColor(isSelected ? .white : .white.opacity(0.7)).bold(isSelected); Spacer()
+        }
+        .padding(.vertical, 12).padding(.horizontal, 10).background(isSelected ? Color.white.opacity(0.1) : Color.clear).cornerRadius(10)
+    }
+}
+
 // MARK: - COMPONENTES AUXILIARES (Drawer, Placeholder)
 struct PlantMenuDrawer: View {
     @EnvironmentObject var authManager: AuthManager
     @Binding var isMenuOpen: Bool
     @Binding var selectedOption: String
     var onLogout: () -> Void
+    
+    // NUEVO BINDING
+    @Binding var showAddStaffSheet: Bool
     
     let menuBackground = Color(red: 26/255, green: 26/255, blue: 46/255)
     
@@ -245,8 +323,21 @@ struct PlantMenuDrawer: View {
                         if authManager.userRole == "Supervisor" {
                             Group {
                                 Text("ADMINISTRACIÓN").font(.caption2).bold().foregroundColor(.gray).padding(.leading, 10)
-                                PlantMenuRow(title: "Añadir personal", icon: "person.badge.plus", selected: $selectedOption) { close() }
+                                
+                                // MODIFICADO: Añadir personal AHORA ABRE UN MODAL
+                                Button(action: {
+                                    withAnimation { isMenuOpen = false }
+                                    showAddStaffSheet = true
+                                    selectedOption = "Calendario" // Mantiene la vista de fondo
+                                }) {
+                                    // Nunca seleccionado, es una acción
+                                    PlantMenuRowContent(title: "Añadir personal", icon: "person.badge.plus", isSelected: false)
+                                }
+                                .buttonStyle(.plain)
+                                
+                                // MODIFICADO: Lista de personal AHORA CAMBIA LA VISTA PRINCIPAL
                                 PlantMenuRow(title: "Lista de personal", icon: "person.3.fill", selected: $selectedOption) { close() }
+                                
                                 PlantMenuRow(title: "Configuración de la planta", icon: "gearshape.2.fill", selected: $selectedOption) { close() }
                                 PlantMenuRow(title: "Importar turnos", icon: "square.and.arrow.down", selected: $selectedOption) { close() }
                                 PlantMenuRow(title: "Gestión de cambios", icon: "arrow.triangle.2.circlepath", selected: $selectedOption) { close() }
@@ -278,9 +369,10 @@ struct PlantMenuRow: View {
     let title: String; let icon: String; @Binding var selected: String; let action: () -> Void
     var body: some View {
         Button(action: { selected = title; action() }) {
-            HStack(spacing: 15) { Image(systemName: icon).font(.system(size: 18)).frame(width: 30).foregroundColor(selected == title ? Color(red: 0.7, green: 0.5, blue: 1.0) : .white.opacity(0.7)); Text(title).font(.subheadline).foregroundColor(selected == title ? .white : .white.opacity(0.7)).bold(selected == title); Spacer() }
-            .padding(.vertical, 12).padding(.horizontal, 10).background(selected == title ? Color.white.opacity(0.1) : Color.clear).cornerRadius(10)
+            // MODIFICADO: Usar el nuevo helper de contenido
+            PlantMenuRowContent(title: title, icon: icon, isSelected: selected == title)
         }
+        .buttonStyle(.plain) // Necesario para que el botón se vea como una fila de menú
     }
 }
 
