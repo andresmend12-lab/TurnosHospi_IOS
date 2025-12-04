@@ -7,7 +7,7 @@ struct StaffListView: View {
     var staffScope: String // "nurses_only" o "nurses_and_aux"
     
     @State private var staffList: [PlantStaff] = []
-    @State private var showingAddSheet = false
+    @State private var showingAddSheet = false // <--- Estado para mostrar el modal de añadir
     @State private var selectedStaff: PlantStaff? // Para editar
     @State private var isLoading = true
     
@@ -23,7 +23,7 @@ struct StaffListView: View {
                         .foregroundColor(.white)
                     Spacer()
                     // Botón Añadir (+)
-                    Button(action: { showingAddSheet = true }) {
+                    Button(action: { showingAddSheet = true }) { // <--- Acción para abrir el modal
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 30))
                             .foregroundColor(.electricBlue)
@@ -65,7 +65,7 @@ struct StaffListView: View {
             fetchStaff()
         }
         // Hoja para AÑADIR nuevo
-        .sheet(isPresented: $showingAddSheet) {
+        .sheet(isPresented: $showingAddSheet) { // <--- Se presenta el modal para añadir
             AddEditStaffView(plantId: plantId, staffScope: staffScope, staffToEdit: nil)
         }
         // Hoja para EDITAR existente

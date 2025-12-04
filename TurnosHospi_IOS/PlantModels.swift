@@ -16,7 +16,7 @@ struct HospitalPlant {
     let hospitalName: String
     let accessPassword: String
     let staffList: [PlantStaff]
-    let staffScope: String // <--- PROPIEDAD AÑADIDA
+    let staffScope: String
 }
 
 // --- NUEVO: Representa a un trabajador en un turno específico ---

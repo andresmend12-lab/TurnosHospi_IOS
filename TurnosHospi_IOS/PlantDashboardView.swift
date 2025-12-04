@@ -6,13 +6,11 @@ struct PlantDashboardView: View {
     
     // Managers
     @StateObject var shiftManager = ShiftManager()
-    @StateObject var plantManager = PlantManager() // <--- Necesario para descargar los turnos de la planta
+    @StateObject var plantManager = PlantManager()
     
     @State private var isMenuOpen = false
     @State private var selectedOption: String = "Calendario"
     @State private var selectedDate = Date()
-    
-    // REMOVIDO: @State private var showAddStaffSheet = false
     
     // Helper para obtener el staffScope de forma segura
     var staffScope: String {
@@ -96,7 +94,7 @@ struct PlantDashboardView: View {
                                 }
 
                             case "Lista de personal":
-                                // AHORA MUESTRA StaffListView
+                                // MUESTRA StaffListView (que ya incluye el botón de añadir)
                                 if !plantId.isEmpty && !staffScope.isEmpty {
                                     StaffListView(plantId: plantId, staffScope: staffScope)
                                         .padding(.horizontal)
@@ -133,7 +131,6 @@ struct PlantDashboardView: View {
             .disabled(isMenuOpen)
             
             if isMenuOpen {
-                // MODIFICADO: Eliminamos el binding showAddStaffSheet
                 PlantMenuDrawer(
                     isMenuOpen: $isMenuOpen,
                     selectedOption: $selectedOption,
@@ -148,12 +145,11 @@ struct PlantDashboardView: View {
         .onAppear {
             shiftManager.fetchUserShifts()
             if !authManager.userPlantId.isEmpty {
-                // NUEVO: Cargar los detalles de la planta para obtener el staffScope
+                // Cargar los detalles de la planta para obtener el staffScope
                 plantManager.fetchCurrentPlant(plantId: authManager.userPlantId)
                 plantManager.fetchDailyStaff(plantId: authManager.userPlantId, date: selectedDate)
             }
         }
-        // REMOVIDO: .sheet(isPresented: $showAddStaffSheet) { ... }
     }
     
     func getIconForOption(_ option: String) -> String {
@@ -289,8 +285,6 @@ struct PlantMenuDrawer: View {
     @Binding var selectedOption: String
     var onLogout: () -> Void
     
-    // REMOVIDO: @Binding var showAddStaffSheet: Bool
-    
     let menuBackground = Color(red: 26/255, green: 26/255, blue: 46/255)
     
     var body: some View {
@@ -311,9 +305,7 @@ struct PlantMenuDrawer: View {
                             Group {
                                 Text("ADMINISTRACIÓN").font(.caption2).bold().foregroundColor(.gray).padding(.leading, 10)
                                 
-                                // REMOVIDO: Botón "Añadir personal"
-                                
-                                // MODIFICADO: Lista de personal
+                                // ÚNICA OPCIÓN para añadir personal (a través de la vista StaffListView)
                                 PlantMenuRow(title: "Lista de personal", icon: "person.3.fill", selected: $selectedOption) { close() }
                                 
                                 PlantMenuRow(title: "Configuración de la planta", icon: "gearshape.2.fill", selected: $selectedOption) { close() }
@@ -350,7 +342,7 @@ struct PlantMenuRow: View {
             // MODIFICADO: Usar el nuevo helper de contenido
             PlantMenuRowContent(title: title, icon: icon, isSelected: selected == title)
         }
-        .buttonStyle(.plain) // Necesario para que el botón se vea como una fila de menú
+        .buttonStyle(.plain)
     }
 }
 

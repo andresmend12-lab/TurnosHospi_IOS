@@ -10,7 +10,7 @@ class PlantManager: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var joinSuccess: Bool = false
     
-    @Published var currentPlant: HospitalPlant? // <--- NUEVA PROPIEDAD
+    @Published var currentPlant: HospitalPlant?
     
     // Almacena los trabajadores del día seleccionado (Agrupados por turno: "Mañana" -> [Persona1, Persona2])
     @Published var dailyStaff: [String: [PlantShiftWorker]] = [:]
@@ -39,7 +39,7 @@ class PlantManager: ObservableObject {
                 for (key, data) in personalDict {
                     let staff = PlantStaff(
                         id: data["id"] as? String ?? key,
-                        name: data["name"] as? String ?? "Sin nombre",
+                        name: data["name"] as? String ?? "Personal",
                         role: data["role"] as? String ?? "Personal",
                         email: data["email"] as? String ?? "",
                         profileType: data["profileType"] as? String ?? ""
@@ -48,7 +48,7 @@ class PlantManager: ObservableObject {
                 }
             }
             
-            let staffScope = value["staffScope"] as? String ?? "nurses_only" // <--- OBTENER staffScope
+            let staffScope = value["staffScope"] as? String ?? "nurses_only"
             
             let plant = HospitalPlant(
                 id: plantId,
@@ -56,7 +56,7 @@ class PlantManager: ObservableObject {
                 hospitalName: value["hospitalName"] as? String ?? "Hospital",
                 accessPassword: realPassword,
                 staffList: staffMembers,
-                staffScope: staffScope // <--- ASIGNAR staffScope
+                staffScope: staffScope
             )
             
             DispatchQueue.main.async {
@@ -91,7 +91,7 @@ class PlantManager: ObservableObject {
         }
     }
     
-    // MARK: - Obtener Planta Actual (NUEVO)
+    // MARK: - Obtener Planta Actual
     func fetchCurrentPlant(plantId: String) {
         ref.child("plants").child(plantId).observeSingleEvent(of: .value) { snapshot in
             guard let value = snapshot.value as? [String: Any] else { return }
@@ -99,14 +99,13 @@ class PlantManager: ObservableObject {
             DispatchQueue.main.async {
                 let staffScope = value["staffScope"] as? String ?? "nurses_only"
                 
-                // Nota: Usamos una lista de staff vacía aquí, ya que StaffListView la carga por separado.
                 let plant = HospitalPlant(
                     id: plantId,
                     name: value["name"] as? String ?? "Planta",
                     hospitalName: value["hospitalName"] as? String ?? "Hospital",
-                    accessPassword: "", // No se necesita aquí
+                    accessPassword: "",
                     staffList: [],
-                    staffScope: staffScope // <--- Clave
+                    staffScope: staffScope
                 )
                 self.currentPlant = plant
             }
