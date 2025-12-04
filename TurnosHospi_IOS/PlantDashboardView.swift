@@ -132,6 +132,7 @@ struct PlantDashboardView: View {
 
                             default:
                                 ScrollView {
+                                    // Error 135: Uso de PlantPlaceholderView
                                     PlantPlaceholderView(iconName: getIconForOption(selectedOption), title: selectedOption)
                                         .padding(.top, 50)
                                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -156,6 +157,7 @@ struct PlantDashboardView: View {
             .disabled(isMenuOpen)
             
             if isMenuOpen {
+                // Error 159: Uso de PlantMenuDrawer
                 PlantMenuDrawer(
                     isMenuOpen: $isMenuOpen,
                     selectedOption: $selectedOption,
@@ -195,6 +197,7 @@ struct PlantDashboardView: View {
         }
     }
 }
+// ------------------------------------------------------------------------------------------------------------------
 
 // MARK: - NUEVAS VISTAS PARA ASIGNACIÓN DE TURNOS
 struct ShiftAssignmentView: View {
@@ -203,16 +206,30 @@ struct ShiftAssignmentView: View {
     @ObservedObject var plantManager: PlantManager
     let availableRoles: [String]
     
-    // Lista de turnos a mostrar
-    var shiftNames: [String] {
-        return plant.shiftTimes?.keys.sorted() ?? []
+    // MODIFICADO: Lista de turnos a mostrar en orden preferido (Mañana, Tarde, Noche)
+    var orderedShiftNames: [String] {
+        let preferredOrder = ["Mañana", "Media mañana", "Tarde", "Media tarde", "Noche", "Día"]
+        
+        // FIX: Se obtiene el Set<String> de claves del diccionario, asegurando un tipo compatible
+        let existingKeys = Set(plant.shiftTimes?.keys ?? [String: [String: String]]().keys)
+        
+        // 1. Filtrar el orden preferido por las claves que realmente existen
+        let filteredList = preferredOrder.filter { existingKeys.contains($0) }
+        
+        // 2. Añadir cualquier clave que exista pero no esté en el orden preferido (turnos custom)
+        let customKeys = existingKeys.filter { !filteredList.contains($0) }
+        
+        // Conversión a Array para la concatenación.
+        let finalOrder = filteredList + Array(customKeys)
+
+        return finalOrder
     }
     
     // Lista completa de staff para el Picker (incluye 'Ninguno')
     var assignableStaff: [PlantStaff?] {
         // Incluir una opción "Ninguno" (nil) para desasignar
         var list: [PlantStaff?] = [nil]
-        // Añadir solo Enfermero y TCAE a la lista de asignables (excluyendo Supervisor)
+        // Añadir solo Enfermero y TCAE a la lista de asignables (excluyendo Supervisor, que no debe ser asignado)
         let filteredStaff = plant.allStaffList.filter { $0.role != "Supervisor" }
         list.append(contentsOf: filteredStaff.map { $0 })
         return list
@@ -226,13 +243,15 @@ struct ShiftAssignmentView: View {
                 .padding(.horizontal)
             
             VStack(spacing: 15) {
-                ForEach(shiftNames, id: \.self) { shiftName in
+                // MODIFICADO: Usar orderedShiftNames para forzar el orden M-T-N
+                ForEach(orderedShiftNames, id: \.self) { shiftName in
                     // Asignación solo para turno completo (Mañana/Tarde/Noche o Día/Noche)
                     if shiftName.contains("Mañana") || shiftName.contains("Tarde") || shiftName.contains("Noche") || shiftName.contains("Día") {
                         ShiftAssignmentRow(
                             shiftName: shiftName,
                             plant: plant,
                             selectedDate: $selectedDate,
+                            plantManager: plantManager,
                             assignableStaff: assignableStaff,
                             dailyAssignments: plantManager.dailyAssignments,
                             availableRoles: availableRoles
@@ -256,49 +275,68 @@ struct ShiftAssignmentRow: View {
     let shiftName: String
     let plant: HospitalPlant
     @Binding var selectedDate: Date
+    @ObservedObject var plantManager: PlantManager
     let assignableStaff: [PlantStaff?]
     let dailyAssignments: [String: [PlantShiftWorker]]
     let availableRoles: [String]
     
-    // Función de guardado simplificada (sobrescribe todo el turno para este slot)
+    // MODIFICADO: Lógica de guardado simplificada (sobrescribe todo el turno para este slot)
     func handleAssignment(worker: PlantStaff?, forSlotIndex index: Int) {
         
         let dbRef = Database.database().reference()
         
-        // 1. Obtener la lista actual de PlantStaff
-        var currentWorkers = dailyAssignments[shiftName]?
-            .compactMap { worker in
-                plant.allStaffList.first(where: { $0.id == worker.id })
-            } ?? []
+        // 1. Obtener la lista local de PlantShiftWorker para este turno (copia)
+        var currentWorkers = dailyAssignments[shiftName] ?? []
         
-        // El número de slots es el requisito mínimo
+        // 2. Obtener el número total de slots (requisito mínimo)
         let totalSlots = plant.staffRequirements?[shiftName] ?? 0
-
-        if let newStaff = worker {
+        
+        // Asegurar que la lista no exceda el límite (aunque debería ser manejado por la UI)
+        if currentWorkers.count > totalSlots {
+            currentWorkers = Array(currentWorkers.prefix(totalSlots))
+        }
+        
+        // Convert PlantStaff to PlantShiftWorker for consistent array storage
+        let newWorkerShift: PlantShiftWorker? = worker.map { PlantShiftWorker(id: $0.id, name: $0.name, role: $0.role) }
+        
+        if let newStaff = newWorkerShift {
             // ASIGNAR/RE-ASIGNAR
             
-            // Si el nuevo trabajador ya está en la lista, lo quitamos para re-insertarlo o ignorar
+            // 2a. Remover el nuevo trabajador si ya estaba en la lista para evitar duplicados.
             currentWorkers.removeAll(where: { $0.id == newStaff.id })
             
-            // Insertar el nuevo trabajador en el "slot" (índice)
-            // Si el índice es mayor que el array, se añade al final (lo cual es aceptable para simular el siguiente slot disponible)
+            // 2b. Insertar en el slot, asegurando que se respete el índice.
+            
+            // Rellenamos con un trabajador temporal "VACÍO" si es necesario para alcanzar el índice
+            while currentWorkers.count < index {
+                // Usamos un ID único temporal que será filtrado al guardar
+                currentWorkers.append(PlantShiftWorker(id: UUID().uuidString, name: "VACÍO", role: "VACÍO"))
+            }
+            
+            // Si el índice existe (porque lo rellenamos o ya existía)
             if currentWorkers.indices.contains(index) {
-                currentWorkers.insert(newStaff, at: index)
-                currentWorkers.remove(at: index + 1) // Remove the old worker at the same index
-            } else if currentWorkers.count < totalSlots {
-                currentWorkers.append(newStaff) // Añadir al final si hay espacio
+                // Reemplazar el elemento en el slot (puede ser un "VACÍO" o un trabajador)
+                currentWorkers[index] = newStaff
+            } else if currentWorkers.count == index {
+                // Si el índice es exactamente el siguiente (y hay espacio)
+                currentWorkers.append(newStaff)
+            }
+            
+            // Aseguramos que solo haya 'totalSlots' elementos
+            if currentWorkers.count > totalSlots {
+                currentWorkers = Array(currentWorkers.prefix(totalSlots))
             }
             
         } else {
-            // DESASIGNAR (quitar el worker del slot si existe)
+            // DESASIGNAR (worker es nil)
+            // Si el slot contenía un trabajador real, lo quitamos por su ID.
             if currentWorkers.indices.contains(index) {
-                // Como no sabemos el ID del worker a desasignar directamente del Picker,
-                // eliminamos el elemento en el índice (slot)
-                currentWorkers.remove(at: index)
+                let workerToRemove = currentWorkers[index]
+                currentWorkers.removeAll(where: { $0.id == workerToRemove.id })
             }
         }
         
-        // 2. Guardar la lista COMPLETA de trabajadores en Firebase
+        // 3. Preparar el objeto para guardar el turno COMPLETO en Firebase (sobreescribir)
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateString = formatter.string(from: selectedDate)
@@ -311,15 +349,21 @@ struct ShiftAssignmentRow: View {
         
         var firebaseUpdates: [String: Any] = [:]
         
-        if !currentWorkers.isEmpty {
-            for worker in currentWorkers {
+        // Filtrar elementos 'VACÍO' o no asignados que hayan podido colarse
+        let finalWorkersToSave = currentWorkers.filter { $0.role != "VACÍO" && $0.name != "VACÍO" }
+        
+        if !finalWorkersToSave.isEmpty {
+            for worker in finalWorkersToSave {
+                // Convertimos la lista de vuelta al formato de diccionario de Firebase (ID como Key)
                 firebaseUpdates[worker.id] = [
                     "name": worker.name,
                     "role": worker.role
                 ]
             }
+            // Sobreescribir el nodo completo del turno
             shiftPath.setValue(firebaseUpdates)
         } else {
+            // Eliminar el turno si la lista queda vacía
             shiftPath.removeValue()
         }
     }
@@ -362,7 +406,7 @@ struct ShiftAssignmentRow: View {
     }
 }
 
-// Picker de selección de personal
+// MODIFICADO: Picker de selección de personal (ahora usa una propiedad calculada en lugar de @State)
 struct StaffSlotPicker: View {
     let index: Int
     let shiftName: String
@@ -371,31 +415,20 @@ struct StaffSlotPicker: View {
     let dailyAssignments: [String: [PlantShiftWorker]]
     let onAssign: (PlantStaff?) -> Void
     
-    // Estado local para el Picker (inicializado con el trabajador asignado)
-    @State private var selectedStaff: PlantStaff? = nil
-
-    init(index: Int, shiftName: String, plant: HospitalPlant, assignableStaff: [PlantStaff?], dailyAssignments: [String: [PlantShiftWorker]], onAssign: @escaping (PlantStaff?) -> Void) {
-        self.index = index
-        self.shiftName = shiftName
-        self.plant = plant
-        self.assignableStaff = assignableStaff
-        self.dailyAssignments = dailyAssignments
-        self.onAssign = onAssign
+    // Nueva propiedad calculada para el personal seleccionado en este slot
+    var selectedStaff: PlantStaff? {
+        // 1. Obtener los trabajadores asignados
+        let assignedWorkers = dailyAssignments[shiftName] ?? []
         
-        // Obtener el trabajador asignado al slot
-        let assignedList = dailyAssignments[shiftName]?.compactMap { worker in
+        // 2. Mapear los PlantShiftWorker a PlantStaff (con los detalles completos)
+        let assignedList = assignedWorkers.compactMap { worker in
             plant.allStaffList.first(where: { $0.id == worker.id })
-        } ?? []
-        
-        // Intentar inicializar el estado
-        if assignedList.indices.contains(index) {
-            _selectedStaff = State(initialValue: assignedList[index])
-        } else {
-            _selectedStaff = State(initialValue: nil)
         }
+        
+        // 3. Devolver el trabajador en el índice (slot) si existe
+        return assignedList.indices.contains(index) ? assignedList[index] : nil
     }
-    
-    // Define el rol esperado en este slot (simplificado a un solo tipo de slot)
+
     var expectedRole: String {
         // En una implementación real, se usaría una matriz de requisitos por rol.
         // Aquí, simplemente distinguimos si la planta tiene Auxiliares.
@@ -415,17 +448,12 @@ struct StaffSlotPicker: View {
             Menu {
                 // Opción para desasignar
                 Button("Ninguno") {
-                    selectedStaff = nil
                     onAssign(nil)
                 }
                 
                 // Opciones de personal
                 ForEach(assignableStaff.compactMap { $0 }, id: \.id) { staff in
-                    // Mostrar solo personal que NO esté ya asignado en otro slot (excepto el mismo)
-                    // Nota: Esta comprobación es limitada y requiere que el estado se refresque rápido.
-                    
                     Button("\(staff.name) (\(staff.role))") {
-                        selectedStaff = staff
                         onAssign(staff)
                     }
                 }
@@ -444,7 +472,7 @@ struct StaffSlotPicker: View {
         }
     }
 }
-
+// ------------------------------------------------------------------------------------------------------------------
 
 // MARK: - EXTENSIONES Y OTRAS SUBVISTAS (Mantienen la funcionalidad existente)
 
@@ -456,8 +484,6 @@ extension DateFormatter {
     }
 }
 
-// ... (rest of the supporting structs: DailyShiftSection, DailyStaffContent, PlantMenuDrawer, PlantMenuRow, PlantPlaceholderView)
-
 // MARK: - SUBVISTA PARA CADA BLOQUE DE TURNO
 struct DailyShiftSection: View {
     let title: String
@@ -468,6 +494,8 @@ struct DailyShiftSection: View {
         case "Mañana": return .yellow
         case "Tarde": return .orange
         case "Noche": return .blue
+        case "Día", "Turno de Día": return .yellow
+        case "Turno de Noche": return .blue
         default: return .white
         }
     }
@@ -533,7 +561,7 @@ struct DailyStaffContent: View {
                     .padding(.bottom, 20)
             } else {
                 // Mostramos los turnos en orden
-                let turnosOrdenados = ["Mañana", "Media mañana", "Tarde", "Media tarde", "Noche"]
+                let turnosOrdenados = ["Mañana", "Media mañana", "Tarde", "Media tarde", "Noche", "Día", "Turno de Día", "Turno de Noche"]
                 
                 ForEach(turnosOrdenados, id: \.self) { turno in
                     if let workers = plantManager.dailyAssignments[turno], !workers.isEmpty {
@@ -565,6 +593,8 @@ struct PlantMenuRowContent: View {
 }
 
 // MARK: - COMPONENTES AUXILIARES (Drawer, Placeholder)
+
+// Error 159: Definición de PlantMenuDrawer
 struct PlantMenuDrawer: View {
     @EnvironmentObject var authManager: AuthManager
     @Binding var isMenuOpen: Bool
@@ -630,7 +660,7 @@ struct PlantMenuRow: View {
     }
 }
 
-// Helper: Placeholder renombrado
+// Error 135: Definición de PlantPlaceholderView
 struct PlantPlaceholderView: View {
     let iconName: String; let title: String
     var body: some View {
