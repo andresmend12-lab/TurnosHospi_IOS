@@ -21,6 +21,7 @@ class PlantManager: ObservableObject {
         self.errorMessage = nil
         self.foundPlant = nil
         
+        // Cambio del closure para evitar el error de argumentos no utilizados
         ref.child("plants").child(plantId).observeSingleEvent(of: .value) { snapshot in
             self.isLoading = false
             
@@ -48,19 +49,13 @@ class PlantManager: ObservableObject {
                 }
             }
             
-            let staffScope = value["staffScope"] as? String ?? "nurses_only"
-            
-            // Note: Shift configuration data is NOT included here, as this function is for joining/search.
+            // CORRECCIÓN LINEA 121 (Aprox.): Usar el inicializador simplificado
             let plant = HospitalPlant(
                 id: plantId,
                 name: value["name"] as? String ?? "Planta",
                 hospitalName: value["hospitalName"] as? String ?? "Hospital",
                 accessPassword: realPassword,
-                allStaffList: staffMembers, // Use full list
-                staffScope: staffScope,
-                shiftDuration: nil,
-                staffRequirements: nil,
-                shiftTimes: nil
+                allStaffList: staffMembers
             )
             
             DispatchQueue.main.async {
@@ -95,14 +90,13 @@ class PlantManager: ObservableObject {
         }
     }
     
-    // MARK: - Obtener Planta Actual (Actualizada para incluir toda la config)
+    // MARK: - Obtener Planta Actual
     func fetchCurrentPlant(plantId: String) {
-        // Escucha en tiempo real para las actualizaciones de la planta
-        ref.child("plants").child(plantId).observe(.value) { snapshot in
+        // CORRECCIÓN LINEA 97 (Aprox.): Usar el parámetro 'with' explícitamente para evitar ambigüedades
+        ref.child("plants").child(plantId).observe(.value, with: { snapshot in
             guard let value = snapshot.value as? [String: Any] else { return }
             
             var staffMembers: [PlantStaff] = []
-            // Nota: Buscamos en la ruta "staffList" para obtener todos los empleados
             if let personalDict = value["staffList"] as? [String: [String: Any]] {
                 for (_, data) in personalDict {
                     let staff = PlantStaff(
@@ -122,12 +116,13 @@ class PlantManager: ObservableObject {
                 let staffRequirements = value["staffRequirements"] as? [String: Int]
                 let shiftTimes = value["shiftTimes"] as? [String: [String: String]]
                 
+                // Usar el inicializador completo
                 let plant = HospitalPlant(
                     id: plantId,
                     name: value["name"] as? String ?? "Planta",
                     hospitalName: value["hospitalName"] as? String ?? "Hospital",
                     accessPassword: "",
-                    allStaffList: staffMembers, // <--- LISTA COMPLETA DE PERSONAL
+                    allStaffList: staffMembers,
                     staffScope: staffScope,
                     shiftDuration: shiftDuration,
                     staffRequirements: staffRequirements,
@@ -135,7 +130,7 @@ class PlantManager: ObservableObject {
                 )
                 self.currentPlant = plant
             }
-        }
+        })
     }
     
     // MARK: - Obtener personal del día (assignments)
@@ -147,7 +142,7 @@ class PlantManager: ObservableObject {
         let nodeName = "turnos-\(dateString)"
         
         // 2. Ruta: plants -> [ID] -> turnos -> turnos-2025-11-28
-        ref.child("plants").child(plantId).child("turnos").child(nodeName).observe(.value) { snapshot in
+        ref.child("plants").child(plantId).child("turnos").child(nodeName).observe(.value, with: { snapshot in
             
             var newDailyAssignments: [String: [PlantShiftWorker]] = [:]
             
@@ -158,7 +153,7 @@ class PlantManager: ObservableObject {
                     
                     for (workerId, workerData) in workersDict {
                         let name = workerData["name"] as? String ?? "Usuario"
-                        let role = workerData["role"] as? String ?? "Personal"
+                        let role = workerData["role"] as? String ?? "Personal" // <-- CORRECCIÓN: Usar "role"
                         
                         let worker = PlantShiftWorker(id: workerId, name: name, role: role)
                         workers.append(worker)
@@ -171,6 +166,6 @@ class PlantManager: ObservableObject {
             DispatchQueue.main.async {
                 self.dailyAssignments = newDailyAssignments
             }
-        }
+        })
     }
 }

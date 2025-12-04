@@ -130,7 +130,8 @@ struct JoinPlantView: View {
                     // Filtro inteligente de roles
                     let targetRole = (authManager.userRole == "Enfermero") ? "Enfermera/o" : authManager.userRole
                     
-                    let filteredStaff = (plantManager.foundPlant?.staffList ?? []).filter { $0.role == targetRole }
+                    // CORRECCIÓN DE ERROR EN LA LÍNEA 133
+                    let filteredStaff = (plantManager.foundPlant?.allStaffList ?? []).filter { $0.role == targetRole }
                     
                     if filteredStaff.isEmpty {
                         Text("No hay puestos disponibles para tu rol en esta planta.")
