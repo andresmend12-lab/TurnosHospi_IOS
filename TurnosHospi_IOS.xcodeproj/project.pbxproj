@@ -7,32 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		97D023972EE1A5B900D9D1D1 /* ShiftRulesEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023962EE1A5B900D9D1D1 /* ShiftRulesEngine.swift */; };
-		97D023992EE1A5F400D9D1D1 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023982EE1A5F400D9D1D1 /* AuthService.swift */; };
-		97D0239B2EE1A60F00D9D1D1 /* ShiftRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D0239A2EE1A60F00D9D1D1 /* ShiftRepository.swift */; };
-		97D0239D2EE1AC3E00D9D1D1 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D0239C2EE1AC3E00D9D1D1 /* RootView.swift */; };
-		97D0239F2EE1AC5D00D9D1D1 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D0239E2EE1AC5D00D9D1D1 /* LoginView.swift */; };
-		97D023A12EE1AC7E00D9D1D1 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023A02EE1AC7E00D9D1D1 /* MainTabView.swift */; };
-		97D023A32EE1ACDF00D9D1D1 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023A22EE1ACDF00D9D1D1 /* CalendarView.swift */; };
-		97D023A52EE1ACF700D9D1D1 /* ShiftChangeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023A42EE1ACF700D9D1D1 /* ShiftChangeView.swift */; };
-		97D023A72EE1AD3B00D9D1D1 /* ShiftMarketplaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023A62EE1AD3B00D9D1D1 /* ShiftMarketplaceView.swift */; };
-		97D023A92EE1AD5D00D9D1D1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023A82EE1AD5D00D9D1D1 /* SettingsView.swift */; };
-		97D023B12EE1AF5E00D9D1D1 /* PlantDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023B02EE1AF5E00D9D1D1 /* PlantDetailView.swift */; };
-		97D023B32EE1AF8000D9D1D1 /* Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023B22EE1AF8000D9D1D1 /* Chat.swift */; };
-		97D023B52EE1AF9500D9D1D1 /* StatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023B42EE1AF9500D9D1D1 /* StatisticsView.swift */; };
-		97D023B72EE1AFCB00D9D1D1 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023B62EE1AFCB00D9D1D1 /* User.swift */; };
-		97D023B92EE1AFDE00D9D1D1 /* Shift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023B82EE1AFDE00D9D1D1 /* Shift.swift */; };
-		97D023BB2EE1AFF000D9D1D1 /* ShiftRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023BA2EE1AFF000D9D1D1 /* ShiftRequest.swift */; };
-		97D023BD2EE1B21800D9D1D1 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 97D023BC2EE1B21800D9D1D1 /* GoogleService-Info.plist */; };
-		97D023C32EE1B73600D9D1D1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 97D023C22EE1B73600D9D1D1 /* FirebaseAuth */; };
-		97D023C52EE1B73600D9D1D1 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 97D023C42EE1B73600D9D1D1 /* FirebaseDatabase */; };
-		97D023C72EE1B73600D9D1D1 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 97D023C62EE1B73600D9D1D1 /* FirebaseMessaging */; };
-		97D023CA2EE1B8CB00D9D1D1 /* TurnosHospi_IOSTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023C92EE1B8CB00D9D1D1 /* TurnosHospi_IOSTests.swift */; };
-		97D023CC2EE1C93800D9D1D1 /* HomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023CB2EE1C93800D9D1D1 /* HomeScreen.swift */; };
 		97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */; };
 		97E962CA2EE18973006E7707 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C92EE18973006E7707 /* ContentView.swift */; };
 		97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97E962CB2EE18976006E7707 /* Assets.xcassets */; };
 		97E962D02EE18976006E7707 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97E962CF2EE18976006E7707 /* Preview Assets.xcassets */; };
+		97E962DA2EE18976006E7707 /* TurnosHospi_IOSTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962D92EE18976006E7707 /* TurnosHospi_IOSTests.swift */; };
 		97E962E42EE18977006E7707 /* TurnosHospi_IOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962E32EE18977006E7707 /* TurnosHospi_IOSUITests.swift */; };
 		97E962E62EE18977006E7707 /* TurnosHospi_IOSUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962E52EE18977006E7707 /* TurnosHospi_IOSUITestsLaunchTests.swift */; };
 /* End PBXBuildFile section */
@@ -55,26 +34,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		97D023962EE1A5B900D9D1D1 /* ShiftRulesEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftRulesEngine.swift; sourceTree = "<group>"; };
-		97D023982EE1A5F400D9D1D1 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
-		97D0239A2EE1A60F00D9D1D1 /* ShiftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftRepository.swift; sourceTree = "<group>"; };
-		97D0239C2EE1AC3E00D9D1D1 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
-		97D0239E2EE1AC5D00D9D1D1 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
-		97D023A02EE1AC7E00D9D1D1 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		97D023A22EE1ACDF00D9D1D1 /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
-		97D023A42EE1ACF700D9D1D1 /* ShiftChangeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftChangeView.swift; sourceTree = "<group>"; };
-		97D023A62EE1AD3B00D9D1D1 /* ShiftMarketplaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftMarketplaceView.swift; sourceTree = "<group>"; };
-		97D023A82EE1AD5D00D9D1D1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		97D023B02EE1AF5E00D9D1D1 /* PlantDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantDetailView.swift; sourceTree = "<group>"; };
-		97D023B22EE1AF8000D9D1D1 /* Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chat.swift; sourceTree = "<group>"; };
-		97D023B42EE1AF9500D9D1D1 /* StatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsView.swift; sourceTree = "<group>"; };
-		97D023B62EE1AFCB00D9D1D1 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
-		97D023B82EE1AFDE00D9D1D1 /* Shift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shift.swift; sourceTree = "<group>"; };
-		97D023BA2EE1AFF000D9D1D1 /* ShiftRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftRequest.swift; sourceTree = "<group>"; };
-		97D023BC2EE1B21800D9D1D1 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "../../../../Downloads/GoogleService-Info.plist"; sourceTree = "<group>"; };
-		97D023C82EE1B8CB00D9D1D1 /* TurnosHospi_IOSTests-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TurnosHospi_IOSTests-Bridging-Header.h"; sourceTree = "<group>"; };
-		97D023C92EE1B8CB00D9D1D1 /* TurnosHospi_IOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSTests.swift; sourceTree = "<group>"; };
-		97D023CB2EE1C93800D9D1D1 /* HomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeScreen.swift; sourceTree = "<group>"; };
 		97E962C42EE18973006E7707 /* TurnosHospi_IOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TurnosHospi_IOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSApp.swift; sourceTree = "<group>"; };
 		97E962C92EE18973006E7707 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -82,6 +41,7 @@
 		97E962CD2EE18976006E7707 /* TurnosHospi_IOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TurnosHospi_IOS.entitlements; sourceTree = "<group>"; };
 		97E962CF2EE18976006E7707 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		97E962D52EE18976006E7707 /* TurnosHospi_IOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TurnosHospi_IOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		97E962D92EE18976006E7707 /* TurnosHospi_IOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSTests.swift; sourceTree = "<group>"; };
 		97E962DF2EE18976006E7707 /* TurnosHospi_IOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TurnosHospi_IOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		97E962E32EE18977006E7707 /* TurnosHospi_IOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSUITests.swift; sourceTree = "<group>"; };
 		97E962E52EE18977006E7707 /* TurnosHospi_IOSUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSUITestsLaunchTests.swift; sourceTree = "<group>"; };
@@ -92,9 +52,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				97D023C72EE1B73600D9D1D1 /* FirebaseMessaging in Frameworks */,
-				97D023C52EE1B73600D9D1D1 /* FirebaseDatabase in Frameworks */,
-				97D023C32EE1B73600D9D1D1 /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,28 +96,10 @@
 			isa = PBXGroup;
 			children = (
 				97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */,
-				97D023BC2EE1B21800D9D1D1 /* GoogleService-Info.plist */,
 				97E962C92EE18973006E7707 /* ContentView.swift */,
 				97E962CB2EE18976006E7707 /* Assets.xcassets */,
 				97E962CD2EE18976006E7707 /* TurnosHospi_IOS.entitlements */,
 				97E962CE2EE18976006E7707 /* Preview Content */,
-				97D023962EE1A5B900D9D1D1 /* ShiftRulesEngine.swift */,
-				97D023982EE1A5F400D9D1D1 /* AuthService.swift */,
-				97D023CB2EE1C93800D9D1D1 /* HomeScreen.swift */,
-				97D0239A2EE1A60F00D9D1D1 /* ShiftRepository.swift */,
-				97D0239C2EE1AC3E00D9D1D1 /* RootView.swift */,
-				97D023B02EE1AF5E00D9D1D1 /* PlantDetailView.swift */,
-				97D023B22EE1AF8000D9D1D1 /* Chat.swift */,
-				97D023B42EE1AF9500D9D1D1 /* StatisticsView.swift */,
-				97D0239E2EE1AC5D00D9D1D1 /* LoginView.swift */,
-				97D023A02EE1AC7E00D9D1D1 /* MainTabView.swift */,
-				97D023A22EE1ACDF00D9D1D1 /* CalendarView.swift */,
-				97D023A42EE1ACF700D9D1D1 /* ShiftChangeView.swift */,
-				97D023BA2EE1AFF000D9D1D1 /* ShiftRequest.swift */,
-				97D023B62EE1AFCB00D9D1D1 /* User.swift */,
-				97D023B82EE1AFDE00D9D1D1 /* Shift.swift */,
-				97D023A62EE1AD3B00D9D1D1 /* ShiftMarketplaceView.swift */,
-				97D023A82EE1AD5D00D9D1D1 /* SettingsView.swift */,
 			);
 			path = TurnosHospi_IOS;
 			sourceTree = "<group>";
@@ -176,8 +115,7 @@
 		97E962D82EE18976006E7707 /* TurnosHospi_IOSTests */ = {
 			isa = PBXGroup;
 			children = (
-				97D023C92EE1B8CB00D9D1D1 /* TurnosHospi_IOSTests.swift */,
-				97D023C82EE1B8CB00D9D1D1 /* TurnosHospi_IOSTests-Bridging-Header.h */,
+				97E962D92EE18976006E7707 /* TurnosHospi_IOSTests.swift */,
 			);
 			path = TurnosHospi_IOSTests;
 			sourceTree = "<group>";
@@ -207,11 +145,6 @@
 			dependencies = (
 			);
 			name = TurnosHospi_IOS;
-			packageProductDependencies = (
-				97D023C22EE1B73600D9D1D1 /* FirebaseAuth */,
-				97D023C42EE1B73600D9D1D1 /* FirebaseDatabase */,
-				97D023C62EE1B73600D9D1D1 /* FirebaseMessaging */,
-			);
 			productName = TurnosHospi_IOS;
 			productReference = 97E962C42EE18973006E7707 /* TurnosHospi_IOS.app */;
 			productType = "com.apple.product-type.application";
@@ -267,7 +200,6 @@
 					};
 					97E962D42EE18976006E7707 = {
 						CreatedOnToolsVersion = 14.3.1;
-						LastSwiftMigration = 1430;
 						TestTargetID = 97E962C32EE18973006E7707;
 					};
 					97E962DE2EE18976006E7707 = {
@@ -285,9 +217,6 @@
 				Base,
 			);
 			mainGroup = 97E962BB2EE18973006E7707;
-			packageReferences = (
-				97D023C12EE1B73600D9D1D1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
-			);
 			productRefGroup = 97E962C52EE18973006E7707 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -306,7 +235,6 @@
 			files = (
 				97E962D02EE18976006E7707 /* Preview Assets.xcassets in Resources */,
 				97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */,
-				97D023BD2EE1B21800D9D1D1 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -331,25 +259,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				97D023A32EE1ACDF00D9D1D1 /* CalendarView.swift in Sources */,
-				97D0239B2EE1A60F00D9D1D1 /* ShiftRepository.swift in Sources */,
-				97D023972EE1A5B900D9D1D1 /* ShiftRulesEngine.swift in Sources */,
-				97D023A12EE1AC7E00D9D1D1 /* MainTabView.swift in Sources */,
-				97D023B92EE1AFDE00D9D1D1 /* Shift.swift in Sources */,
-				97D023B72EE1AFCB00D9D1D1 /* User.swift in Sources */,
-				97D023BB2EE1AFF000D9D1D1 /* ShiftRequest.swift in Sources */,
 				97E962CA2EE18973006E7707 /* ContentView.swift in Sources */,
-				97D023B52EE1AF9500D9D1D1 /* StatisticsView.swift in Sources */,
-				97D023CC2EE1C93800D9D1D1 /* HomeScreen.swift in Sources */,
-				97D023992EE1A5F400D9D1D1 /* AuthService.swift in Sources */,
-				97D023B12EE1AF5E00D9D1D1 /* PlantDetailView.swift in Sources */,
-				97D0239D2EE1AC3E00D9D1D1 /* RootView.swift in Sources */,
-				97D023A72EE1AD3B00D9D1D1 /* ShiftMarketplaceView.swift in Sources */,
-				97D0239F2EE1AC5D00D9D1D1 /* LoginView.swift in Sources */,
-				97D023A52EE1ACF700D9D1D1 /* ShiftChangeView.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
-				97D023B32EE1AF8000D9D1D1 /* Chat.swift in Sources */,
-				97D023A92EE1AD5D00D9D1D1 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -357,7 +268,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				97D023CA2EE1B8CB00D9D1D1 /* TurnosHospi_IOSTests.swift in Sources */,
+				97E962DA2EE18976006E7707 /* TurnosHospi_IOSTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -500,7 +411,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = Yes;
 				CODE_SIGN_ENTITLEMENTS = TurnosHospi_IOS/TurnosHospi_IOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -539,7 +449,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = Yes;
 				CODE_SIGN_ENTITLEMENTS = TurnosHospi_IOS/TurnosHospi_IOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -578,7 +487,6 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = K4WSVHZ4S7;
@@ -591,8 +499,6 @@
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_OBJC_BRIDGING_HEADER = "TurnosHospi_IOSTests/TurnosHospi_IOSTests-Bridging-Header.h";
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TurnosHospi_IOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TurnosHospi_IOS";
@@ -604,7 +510,6 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = K4WSVHZ4S7;
@@ -617,7 +522,6 @@
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_OBJC_BRIDGING_HEADER = "TurnosHospi_IOSTests/TurnosHospi_IOSTests-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TurnosHospi_IOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TurnosHospi_IOS";
@@ -708,35 +612,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		97D023C12EE1B73600D9D1D1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 10.29.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		97D023C22EE1B73600D9D1D1 /* FirebaseAuth */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 97D023C12EE1B73600D9D1D1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAuth;
-		};
-		97D023C42EE1B73600D9D1D1 /* FirebaseDatabase */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 97D023C12EE1B73600D9D1D1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseDatabase;
-		};
-		97D023C62EE1B73600D9D1D1 /* FirebaseMessaging */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 97D023C12EE1B73600D9D1D1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseMessaging;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 97E962BC2EE18973006E7707 /* Project object */;
 }
