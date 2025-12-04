@@ -1,5 +1,5 @@
 import SwiftUI
-import FirebaseDatabase // Necesario para guardar en la base de datos
+import FirebaseDatabase
 
 struct CreatePlantView: View {
     @Environment(\.dismiss) var dismiss
@@ -8,7 +8,7 @@ struct CreatePlantView: View {
     @State private var plantName: String = ""
     @State private var unitType: String = ""
     @State private var hospitalName: String = ""
-    @State private var accessPassword: String = "" // <--- NUEVO: Contraseña requerida
+    @State private var accessPassword: String = "" // Se genera automáticamente
     
     // --- CONFIGURACIÓN DE TURNOS ---
     enum ShiftDuration: String, CaseIterable {
@@ -16,7 +16,7 @@ struct CreatePlantView: View {
         case twelveHours = "12 Horas"
     }
     @State private var selectedDuration: ShiftDuration = .eightHours
-    @State private var allowHalfDay: Bool = false // <--- NUEVO: Opción media jornada
+    @State private var allowHalfDay: Bool = false
     
     // Horarios 8h
     @State private var morningStart = defaultTime(8)
@@ -37,7 +37,6 @@ struct CreatePlantView: View {
         case nursesOnly = "Solo Enfermeros"
         case nursesAndAux = "Enfermeros y Auxiliares"
         
-        // Mapeo al valor que pide la base de datos
         var dbValue: String {
             switch self {
             case .nursesOnly: return "nurses_only"
@@ -54,6 +53,7 @@ struct CreatePlantView: View {
     
     // --- ESTADO DE CARGA ---
     @State private var isLoading = false
+    @State private var showCopyAlert = false
     
     // --- VALIDACIÓN ---
     var isValid: Bool {
@@ -98,7 +98,61 @@ struct CreatePlantView: View {
                         GlassTextField(icon: "cross.case.fill", placeholder: "Nombre de la Planta", text: $plantName)
                         GlassTextField(icon: "bed.double.fill", placeholder: "Tipo de Unidad", text: $unitType)
                         GlassTextField(icon: "building.columns.fill", placeholder: "Nombre del Hospital", text: $hospitalName)
-                        GlassTextField(icon: "key.fill", placeholder: "Contraseña de acceso", text: $accessPassword) // Campo contraseña
+                        
+                        // --- CONTRASEÑA GENERADA ---
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Contraseña de Acceso (Generada)")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .padding(.leading, 5)
+                            
+                            HStack {
+                                Image(systemName: "key.fill")
+                                    .foregroundColor(.neonViolet)
+                                
+                                Text(accessPassword)
+                                    .font(.system(.title3, design: .monospaced))
+                                    .bold()
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal)
+                                
+                                Spacer()
+                                
+                                // Botón Regenerar
+                                Button(action: generateRandomPassword) {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
+                                .padding(.trailing, 10)
+                                
+                                // Botón Copiar
+                                Button(action: {
+                                    UIPasteboard.general.string = accessPassword
+                                    showCopyAlert = true
+                                    // Ocultar alerta después de 2 seg
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                        showCopyAlert = false
+                                    }
+                                }) {
+                                    Image(systemName: "doc.on.doc.fill")
+                                        .foregroundColor(.electricBlue)
+                                }
+                            }
+                            .padding()
+                            .background(Color.black.opacity(0.3))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.neonViolet.opacity(0.3), lineWidth: 1)
+                            )
+                            
+                            if showCopyAlert {
+                                Text("¡Copiada al portapapeles!")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                    .transition(.opacity)
+                            }
+                        }
                     }
                     .padding()
                     .background(.ultraThinMaterial)
@@ -211,7 +265,7 @@ struct CreatePlantView: View {
                                 .shadow(color: isValid ? .neonViolet.opacity(0.5) : .clear, radius: 10, x: 0, y: 5)
                         }
                     }
-                    .disabled(!isValid || isLoading) // Validación impide pulsar
+                    .disabled(!isValid || isLoading)
                     .opacity(isValid ? 1.0 : 0.6)
                     .padding(.bottom, 40)
                     
@@ -219,9 +273,21 @@ struct CreatePlantView: View {
                 .padding(.horizontal)
             }
         }
+        .onAppear {
+            // Generar contraseña al abrir la vista
+            if accessPassword.isEmpty {
+                generateRandomPassword()
+            }
+        }
     }
     
     // --- LÓGICA Y HELPERS ---
+    
+    // Generador de contraseñas aleatorias
+    func generateRandomPassword() {
+        let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        accessPassword = String((0..<6).map { _ in chars.randomElement()! })
+    }
     
     private func binding(for key: String) -> Binding<Int> {
         return Binding(
@@ -239,7 +305,7 @@ struct CreatePlantView: View {
         
         let ref = Database.database().reference().child("plants")
         
-        // Generar ID automático (ej: -Of1C2YrGUi6B3-9o_gN)
+        // Generar ID automático
         guard let plantRef = ref.childByAutoId().key else { return }
         let plantId = plantRef
         
@@ -266,39 +332,33 @@ struct CreatePlantView: View {
             finalRequirements["Noche"] = minStaffRequirements["Noche12"]
         }
         
-        // Construcción del objeto JSON exacto
         let plantData: [String: Any] = [
             "id": plantId,
             "name": plantName,
             "hospitalName": hospitalName,
             "unitType": unitType,
             "accessPassword": accessPassword,
-            "shiftDuration": selectedDuration.rawValue.lowercased(), // "8 horas" o "12 horas"
+            "shiftDuration": selectedDuration.rawValue.lowercased(),
             "allowHalfDay": allowHalfDay,
             "staffScope": selectedStaffType.dbValue,
             "createdAt": ServerValue.timestamp(),
             "shiftTimes": shiftTimes,
             "staffRequirements": finalRequirements
-            // Las claves vacías (chat, balances, etc.) se crearán automáticamente cuando se inserten datos hijos en Firebase,
-            // no es necesario enviarlas como null o diccionarios vacíos en la creación inicial.
         ]
         
-        // Guardar en Firebase
         ref.child(plantId).setValue(plantData) { error, _ in
             isLoading = false
             if let error = error {
                 print("Error al crear planta: \(error.localizedDescription)")
-                // Aquí podrías mostrar una alerta de error
             } else {
                 print("Planta creada con éxito: \(plantId)")
-                dismiss() // Cerrar la pantalla
+                dismiss()
             }
         }
     }
 }
 
 // MARK: - Componentes Auxiliares
-// (Los mismos que antes, necesarios para que compile)
 
 struct SectionHeader: View {
     let title: String
