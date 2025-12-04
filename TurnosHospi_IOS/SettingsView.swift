@@ -65,7 +65,8 @@ struct SettingsView: View {
                 // --- Cerrar Sesión ---
                 Section {
                     Button(action: {
-                        authService.logout()
+                        // CORREGIDO: Usar signOut()
+                        authService.signOut()
                     }) {
                         HStack {
                             Spacer()
@@ -76,15 +77,13 @@ struct SettingsView: View {
                     }
                 }
             }
+            // Mantenemos la corrección de estilo para Mac/iOS que hicimos antes
+            #if os(iOS)
             .listStyle(InsetGroupedListStyle())
+            #else
+            .listStyle(GroupedListStyle())
+            #endif
             .navigationTitle("Perfil")
         }
-    }
-}
-
-struct SettingsView_Previews: PreviewProvider {
-    static var previews: some View {
-        SettingsView()
-            .environmentObject(AuthService()) // Inyección para preview
     }
 }
