@@ -15,8 +15,13 @@ struct HospitalPlant {
     let name: String
     let hospitalName: String
     let accessPassword: String
-    let staffList: [PlantStaff]
+    let allStaffList: [PlantStaff] // <--- MODIFICADO: Lista completa de personal
     let staffScope: String
+    
+    // NUEVOS CAMPOS DE CONFIGURACIÓN
+    let shiftDuration: String?
+    let staffRequirements: [String: Int]?
+    let shiftTimes: [String: [String: String]]?
 }
 
 // --- NUEVO: Representa a un trabajador en un turno específico ---

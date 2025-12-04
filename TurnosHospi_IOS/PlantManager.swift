@@ -12,8 +12,8 @@ class PlantManager: ObservableObject {
     
     @Published var currentPlant: HospitalPlant?
     
-    // Almacena los trabajadores del día seleccionado (Agrupados por turno: "Mañana" -> [Persona1, Persona2])
-    @Published var dailyStaff: [String: [PlantShiftWorker]] = [:]
+    // Almacena los trabajadores del día seleccionado (para visualización y edición)
+    @Published var dailyAssignments: [String: [PlantShiftWorker]] = [:]
     
     // MARK: - Buscar Planta
     func searchPlant(plantId: String, password: String) {
@@ -50,13 +50,17 @@ class PlantManager: ObservableObject {
             
             let staffScope = value["staffScope"] as? String ?? "nurses_only"
             
+            // Note: Shift configuration data is NOT included here, as this function is for joining/search.
             let plant = HospitalPlant(
                 id: plantId,
                 name: value["name"] as? String ?? "Planta",
                 hospitalName: value["hospitalName"] as? String ?? "Hospital",
                 accessPassword: realPassword,
-                staffList: staffMembers,
-                staffScope: staffScope
+                allStaffList: staffMembers, // Use full list
+                staffScope: staffScope,
+                shiftDuration: nil,
+                staffRequirements: nil,
+                shiftTimes: nil
             )
             
             DispatchQueue.main.async {
@@ -91,28 +95,50 @@ class PlantManager: ObservableObject {
         }
     }
     
-    // MARK: - Obtener Planta Actual
+    // MARK: - Obtener Planta Actual (Actualizada para incluir toda la config)
     func fetchCurrentPlant(plantId: String) {
-        ref.child("plants").child(plantId).observeSingleEvent(of: .value) { snapshot in
+        // Escucha en tiempo real para las actualizaciones de la planta
+        ref.child("plants").child(plantId).observe(.value) { snapshot in
             guard let value = snapshot.value as? [String: Any] else { return }
+            
+            var staffMembers: [PlantStaff] = []
+            // Nota: Buscamos en la ruta "staffList" para obtener todos los empleados
+            if let personalDict = value["staffList"] as? [String: [String: Any]] {
+                for (_, data) in personalDict {
+                    let staff = PlantStaff(
+                        id: data["id"] as? String ?? "",
+                        name: data["name"] as? String ?? "Personal",
+                        role: data["role"] as? String ?? "Personal",
+                        email: data["email"] as? String ?? "",
+                        profileType: data["profileType"] as? String ?? ""
+                    )
+                    staffMembers.append(staff)
+                }
+            }
             
             DispatchQueue.main.async {
                 let staffScope = value["staffScope"] as? String ?? "nurses_only"
+                let shiftDuration = value["shiftDuration"] as? String
+                let staffRequirements = value["staffRequirements"] as? [String: Int]
+                let shiftTimes = value["shiftTimes"] as? [String: [String: String]]
                 
                 let plant = HospitalPlant(
                     id: plantId,
                     name: value["name"] as? String ?? "Planta",
                     hospitalName: value["hospitalName"] as? String ?? "Hospital",
                     accessPassword: "",
-                    staffList: [],
-                    staffScope: staffScope
+                    allStaffList: staffMembers, // <--- LISTA COMPLETA DE PERSONAL
+                    staffScope: staffScope,
+                    shiftDuration: shiftDuration,
+                    staffRequirements: staffRequirements,
+                    shiftTimes: shiftTimes
                 )
                 self.currentPlant = plant
             }
         }
     }
     
-    // MARK: - NUEVO: Obtener personal del día
+    // MARK: - Obtener personal del día (assignments)
     func fetchDailyStaff(plantId: String, date: Date) {
         // 1. Formatear la fecha a "YYYY-MM-DD"
         let formatter = DateFormatter()
@@ -123,11 +149,7 @@ class PlantManager: ObservableObject {
         // 2. Ruta: plants -> [ID] -> turnos -> turnos-2025-11-28
         ref.child("plants").child(plantId).child("turnos").child(nodeName).observe(.value) { snapshot in
             
-            var newDailyStaff: [String: [PlantShiftWorker]] = [:]
-            
-            // Estructura esperada:
-            // "Mañana": { "uid1": {name: "Pepe", role: "Enfermero"}, ... }
-            // "Tarde": { ... }
+            var newDailyAssignments: [String: [PlantShiftWorker]] = [:]
             
             if let shiftsDict = snapshot.value as? [String: [String: [String: Any]]] {
                 
@@ -142,12 +164,12 @@ class PlantManager: ObservableObject {
                         workers.append(worker)
                     }
                     
-                    newDailyStaff[shiftName] = workers
+                    newDailyAssignments[shiftName] = workers
                 }
             }
             
             DispatchQueue.main.async {
-                self.dailyStaff = newDailyStaff
+                self.dailyAssignments = newDailyAssignments
             }
         }
     }
