@@ -42,8 +42,21 @@ struct JoinPlantView: View {
                 }
             }
         }
+        // --- AQUÍ ESTÁ LA SOLUCIÓN ---
         .onChange(of: plantManager.joinSuccess) { success in
-            if success { dismiss() }
+            if success {
+                // 1. Actualizamos el AuthManager AL INSTANTE
+                if let plant = plantManager.foundPlant {
+                    authManager.userPlantId = plant.id
+                    // También podemos actualizar el rol si cambió
+                    if let staff = selectedStaff {
+                        authManager.userRole = staff.role
+                    }
+                }
+                
+                // 2. Cerramos la pantalla
+                dismiss()
+            }
         }
     }
     
@@ -106,7 +119,6 @@ struct JoinPlantView: View {
                     .font(.subheadline)
                     .foregroundColor(.white)
                 
-                // Normalización del rol para visualización
                 let displayRole = authManager.userRole == "Enfermero" ? "Enfermera/o" : authManager.userRole
                 Text("(Solo se muestran puestos de \(displayRole))")
                     .font(.caption)
@@ -115,8 +127,7 @@ struct JoinPlantView: View {
             
             ScrollView {
                 VStack(spacing: 10) {
-                    // --- FILTRO INTELIGENTE ---
-                    // Si el usuario es "Enfermero", buscamos también "Enfermera/o"
+                    // Filtro inteligente de roles
                     let targetRole = (authManager.userRole == "Enfermero") ? "Enfermera/o" : authManager.userRole
                     
                     let filteredStaff = (plantManager.foundPlant?.staffList ?? []).filter { $0.role == targetRole }
@@ -175,6 +186,7 @@ struct JoinPlantView: View {
     }
 }
 
+// Subvista auxiliar
 struct StaffRow: View {
     let staff: PlantStaff
     let isSelected: Bool

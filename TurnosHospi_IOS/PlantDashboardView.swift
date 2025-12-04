@@ -1,25 +1,25 @@
 import SwiftUI
 
 struct PlantDashboardView: View {
+    // Para volver al menú principal
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     
+    // Estado para controlar el menú lateral
     @State private var isMenuOpen = false
     @State private var selectedOption: String = "Calendario"
     
     var body: some View {
         ZStack {
-            // 1. Drawer Menu
-            PlantMenuDrawer(isMenuOpen: $isMenuOpen, selectedOption: $selectedOption, onLogout: {
-                dismiss() // Vuelve al menú principal de la app
-            })
+            // Fondo base
+            Color.black.ignoresSafeArea()
             
-            // 2. Contenido Principal
+            // --- CAPA 1: CONTENIDO DEL DASHBOARD ---
             ZStack {
                 Color.deepSpace.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Header
+                    // HEADER
                     HStack {
                         Button(action: {
                             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
@@ -46,7 +46,7 @@ struct PlantDashboardView: View {
                     }
                     .background(Color.black.opacity(0.3))
                     
-                    // Contenido Dinámico
+                    // CONTENIDO DINÁMICO
                     ScrollView {
                         VStack(spacing: 20) {
                             HStack {
@@ -58,6 +58,7 @@ struct PlantDashboardView: View {
                             .padding(.horizontal)
                             .padding(.top)
                             
+                            // Mostramos la vista correspondiente según la opción
                             if selectedOption == "Calendario" {
                                 CalendarPreviewView()
                             } else {
@@ -68,45 +69,62 @@ struct PlantDashboardView: View {
                     }
                 }
             }
+            // Efectos al abrir el menú
             .cornerRadius(isMenuOpen ? 30 : 0)
             .offset(x: isMenuOpen ? 280 : 0, y: isMenuOpen ? 40 : 0)
             .scaleEffect(isMenuOpen ? 0.9 : 1)
             .shadow(color: .black.opacity(0.5), radius: 20, x: -10, y: 0)
             .ignoresSafeArea()
             .onTapGesture {
-                if isMenuOpen { withAnimation { isMenuOpen = false } }
+                if isMenuOpen {
+                    withAnimation { isMenuOpen = false }
+                }
+            }
+            .disabled(isMenuOpen)
+            
+            // --- CAPA 2: MENÚ LATERAL ---
+            if isMenuOpen {
+                PlantMenuDrawer(isMenuOpen: $isMenuOpen, selectedOption: $selectedOption, onLogout: {
+                    dismiss()
+                })
+                .transition(.move(edge: .leading))
+                .zIndex(1)
             }
         }
     }
     
+    // Iconos para el título
     func getIconForOption(_ option: String) -> String {
         switch option {
-        case "Días de vacaciones": return "sun.max.fill"
-        case "Chat de grupo": return "bubble.left.and.bubble.right.fill"
-        case "Cambio de turnos": return "arrow.triangle.2.circlepath"
-        case "Bolsa de Turnos": return "briefcase.fill"
-        case "Estadísticas": return "chart.bar.xaxis"
         case "Añadir personal": return "person.badge.plus"
         case "Lista de personal": return "person.3.fill"
-        case "Configuración": return "gearshape.fill"
-        case "Importar turnos": return "square.and.arrow.down.fill"
+        case "Configuración de la planta": return "gearshape.2.fill"
+        case "Importar turnos": return "square.and.arrow.down"
         case "Gestión de cambios": return "arrow.triangle.2.circlepath"
         case "Invitar compañeros": return "envelope.fill"
+        case "Días de vacaciones": return "sun.max.fill"
+        case "Chat de grupo": return "bubble.left.and.bubble.right.fill"
+        case "Estadísticas": return "chart.bar.xaxis"
+        case "Cambio de turnos": return "arrow.triangle.2.circlepath"
+        case "Bolsa de Turnos": return "briefcase.fill"
         default: return "calendar"
         }
     }
 }
 
-// MARK: - DRAWER DEL MENÚ
+// MARK: - MENÚ LATERAL (DRAWER)
 struct PlantMenuDrawer: View {
     @EnvironmentObject var authManager: AuthManager
     @Binding var isMenuOpen: Bool
     @Binding var selectedOption: String
     var onLogout: () -> Void
     
+    // Color de fondo del menú (Azul muy oscuro)
+    let menuBackground = Color(red: 26/255, green: 26/255, blue: 46/255)
+    
     var body: some View {
         ZStack {
-            Color(hex: "1A1A2E").ignoresSafeArea()
+            menuBackground.ignoresSafeArea()
             
             VStack(alignment: .leading, spacing: 20) {
                 
@@ -115,7 +133,11 @@ struct PlantMenuDrawer: View {
                     Circle()
                         .fill(LinearGradient(colors: [.electricBlue, .neonViolet], startPoint: .top, endPoint: .bottom))
                         .frame(width: 50, height: 50)
-                        .overlay(Text(String(authManager.currentUserName.prefix(1))).bold().foregroundColor(.white))
+                        .overlay(
+                            Text(String(authManager.currentUserName.prefix(1)))
+                                .bold()
+                                .foregroundColor(.white)
+                        )
                     
                     VStack(alignment: .leading) {
                         Text(authManager.currentUserName)
@@ -129,31 +151,40 @@ struct PlantMenuDrawer: View {
                 .padding(.top, 50)
                 .padding(.bottom, 20)
                 
+                // Opciones
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 5) {
                         
                         PlantMenuRow(title: "Calendario", icon: "calendar", selected: $selectedOption) { close() }
                         
-                        Divider().background(Color.white.opacity(0.2))
+                        Divider().background(Color.white.opacity(0.2)).padding(.vertical, 5)
                         
                         if authManager.userRole == "Supervisor" {
                             // --- SUPERVISOR ---
                             Group {
-                                Text("GESTIÓN").font(.caption2).bold().foregroundColor(.gray).padding(.top, 5)
+                                Text("ADMINISTRACIÓN").font(.caption2).bold().foregroundColor(.gray).padding(.leading, 10)
+                                
                                 PlantMenuRow(title: "Añadir personal", icon: "person.badge.plus", selected: $selectedOption) { close() }
                                 PlantMenuRow(title: "Lista de personal", icon: "person.3.fill", selected: $selectedOption) { close() }
-                                PlantMenuRow(title: "Configuración", icon: "gearshape.fill", selected: $selectedOption) { close() }
-                                PlantMenuRow(title: "Importar turnos", icon: "square.and.arrow.down.fill", selected: $selectedOption) { close() }
+                                PlantMenuRow(title: "Configuración de la planta", icon: "gearshape.2.fill", selected: $selectedOption) { close() }
+                                PlantMenuRow(title: "Importar turnos", icon: "square.and.arrow.down", selected: $selectedOption) { close() }
                                 PlantMenuRow(title: "Gestión de cambios", icon: "arrow.triangle.2.circlepath", selected: $selectedOption) { close() }
                                 PlantMenuRow(title: "Invitar compañeros", icon: "envelope.fill", selected: $selectedOption) { close() }
                             }
-                            PlantMenuRow(title: "Días de vacaciones", icon: "sun.max.fill", selected: $selectedOption) { close() }
-                            PlantMenuRow(title: "Chat de grupo", icon: "bubble.left.and.bubble.right.fill", selected: $selectedOption) { close() }
-                            PlantMenuRow(title: "Estadísticas", icon: "chart.bar.xaxis", selected: $selectedOption) { close() }
+                            
+                            Divider().background(Color.white.opacity(0.2)).padding(.vertical, 5)
+                            
+                            Group {
+                                Text("PERSONAL").font(.caption2).bold().foregroundColor(.gray).padding(.leading, 10)
+                                PlantMenuRow(title: "Días de vacaciones", icon: "sun.max.fill", selected: $selectedOption) { close() }
+                                PlantMenuRow(title: "Chat de grupo", icon: "bubble.left.and.bubble.right.fill", selected: $selectedOption) { close() }
+                                PlantMenuRow(title: "Estadísticas", icon: "chart.bar.xaxis", selected: $selectedOption) { close() }
+                            }
                             
                         } else {
-                            // --- NO ADMINISTRADOR (Enfermero/Auxiliar) ---
-                            Text("PERSONAL").font(.caption2).bold().foregroundColor(.gray).padding(.top, 5)
+                            // --- PERSONAL ---
+                            Text("PERSONAL").font(.caption2).bold().foregroundColor(.gray).padding(.leading, 10)
+                            
                             PlantMenuRow(title: "Días de vacaciones", icon: "sun.max.fill", selected: $selectedOption) { close() }
                             PlantMenuRow(title: "Chat de grupo", icon: "bubble.left.and.bubble.right.fill", selected: $selectedOption) { close() }
                             PlantMenuRow(title: "Cambio de turnos", icon: "arrow.triangle.2.circlepath", selected: $selectedOption) { close() }
@@ -169,10 +200,13 @@ struct PlantMenuDrawer: View {
                     HStack {
                         Image(systemName: "arrow.left.circle.fill")
                         Text("Volver al menú principal")
+                            .bold()
                     }
-                    .foregroundColor(.red.opacity(0.8))
+                    .foregroundColor(.red.opacity(0.9))
                     .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .padding(.bottom, 30)
             }
             .padding(.horizontal)
             .frame(maxWidth: 280, alignment: .leading)
@@ -185,7 +219,7 @@ struct PlantMenuDrawer: View {
     }
 }
 
-// Helper Row
+// Fila del menú
 struct PlantMenuRow: View {
     let title: String
     let icon: String
@@ -199,7 +233,7 @@ struct PlantMenuRow: View {
         }) {
             HStack(spacing: 15) {
                 Image(systemName: icon)
-                    .font(.system(size: 20))
+                    .font(.system(size: 18))
                     .frame(width: 30)
                     .foregroundColor(selected == title ? .neonViolet : .white.opacity(0.7))
                 
@@ -210,7 +244,7 @@ struct PlantMenuRow: View {
                 
                 Spacer()
             }
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
             .padding(.horizontal, 10)
             .background(selected == title ? Color.white.opacity(0.1) : Color.clear)
             .cornerRadius(10)
@@ -218,27 +252,57 @@ struct PlantMenuRow: View {
     }
 }
 
-// Calendar Mock
+// Calendario Visual
 struct CalendarPreviewView: View {
     let days = ["L", "M", "X", "J", "V", "S", "D"]
     let dates = Array(1...31)
+    
     var body: some View {
         VStack(spacing: 15) {
             HStack {
-                Text("Diciembre 2025").font(.title3.bold()).foregroundColor(.white)
+                Text("Diciembre 2025")
+                    .font(.title3.bold())
+                    .foregroundColor(.white)
                 Spacer()
-                HStack { Image(systemName: "chevron.left"); Image(systemName: "chevron.right") }.foregroundColor(.electricBlue)
-            }.padding(.horizontal)
-            HStack { ForEach(days, id: \.self) { day in Text(day).font(.caption.bold()).foregroundColor(.gray).frame(maxWidth: .infinity) } }
+                HStack {
+                    Image(systemName: "chevron.left")
+                    Image(systemName: "chevron.right")
+                }
+                .foregroundColor(.electricBlue)
+            }
+            .padding(.horizontal)
+            
+            HStack {
+                ForEach(days, id: \.self) { day in
+                    Text(day)
+                        .font(.caption.bold())
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 15) {
                 ForEach(dates, id: \.self) { date in
                     let isToday = date == 4
                     VStack {
-                        Text("\(date)").foregroundColor(isToday ? .black : .white).font(.system(size: 14)).frame(width: 30, height: 30).background(isToday ? Color.white : Color.clear).clipShape(Circle())
-                    }.frame(height: 40).background(Color.white.opacity(0.05)).cornerRadius(8)
+                        Text("\(date)")
+                            .foregroundColor(isToday ? .black : .white)
+                            .font(.system(size: 14))
+                            .frame(width: 30, height: 30)
+                            .background(isToday ? Color.white : Color.clear)
+                            .clipShape(Circle())
+                    }
+                    .frame(height: 40)
+                    .background(Color.white.opacity(0.05))
+                    .cornerRadius(8)
                 }
             }
-        }.padding().background(.ultraThinMaterial).cornerRadius(20).overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.1), lineWidth: 1)).padding(.horizontal)
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .cornerRadius(20)
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.1), lineWidth: 1))
+        .padding(.horizontal)
     }
 }
 
@@ -246,29 +310,23 @@ struct CalendarPreviewView: View {
 struct PlaceholderView: View {
     let iconName: String
     let title: String
+    
     var body: some View {
         VStack(spacing: 20) {
             Spacer()
-            Image(systemName: iconName).font(.system(size: 60)).foregroundColor(.white.opacity(0.3))
-            Text(title).font(.title3).foregroundColor(.white.opacity(0.5))
+            Image(systemName: iconName)
+                .font(.system(size: 60))
+                .foregroundColor(.white.opacity(0.3))
+            
+            Text("Sección: \(title)")
+                .font(.title2)
+                .foregroundColor(.white.opacity(0.5))
+            
+            Text("Esta funcionalidad está en desarrollo.")
+                .font(.caption)
+                .foregroundColor(.gray)
             Spacer()
-        }.frame(height: 300)
-    }
-}
-
-// Color Hex Extension (Importante si no la tienes en otro sitio)
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default: (a, r, g, b) = (1, 1, 1, 0)
         }
-        self.init(.sRGB, red: Double(r) / 255, green: Double(g) / 255, blue:  Double(b) / 255, opacity: Double(a) / 255)
+        .frame(height: 300)
     }
 }

@@ -1,8 +1,14 @@
-//
-//  Extensions.swift
-//  TurnosHospi_IOS
-//
-//  Created by Andrés Mendoza Domínguez on 4/12/25.
-//
+import SwiftUI
 
-import Foundation
+// Esto habilita el gesto de "swipe back" incluso con la barra de navegación oculta
+extension UINavigationController: UIGestureRecognizerDelegate {
+    override open func viewDidLoad() {
+        super.viewDidLoad()
+        interactivePopGestureRecognizer?.delegate = self
+    }
+
+    public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        // Solo permite el gesto si hay más de una vista en la pila
+        return viewControllers.count > 1
+    }
+}
