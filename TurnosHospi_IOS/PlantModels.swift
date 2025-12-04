@@ -55,4 +55,9 @@ struct PlantShiftWorker: Identifiable, Hashable {
     let id: String
     let name: String
     let role: String
+    
+    // Helper para la inicial
+    var initial: String {
+        return String(name.prefix(1))
+    }
 }

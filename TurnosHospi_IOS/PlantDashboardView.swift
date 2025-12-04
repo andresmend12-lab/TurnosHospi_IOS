@@ -90,12 +90,24 @@ struct PlantDashboardView: View {
                                 ScrollView {
                                     VStack(spacing: 20) {
                                         // 1. CALENDARIO
-                                        CalendarWithShiftsView(selectedDate: $selectedDate, shifts: shiftManager.userShifts)
-                                            .onChange(of: selectedDate) { newDate in
+                                        // MODIFICADO: Ahora pasa monthlyAssignments
+                                        CalendarWithShiftsView(
+                                            selectedDate: $selectedDate,
+                                            shifts: shiftManager.userShifts,
+                                            monthlyAssignments: plantManager.monthlyAssignments
+                                        )
+                                        .onChange(of: selectedDate) { newDate in
+                                            if !plantId.isEmpty {
+                                                // Cargar staff del día seleccionado para la lista de abajo
+                                                plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
+                                            }
+                                            // NUEVO: Recargar el calendario si el mes cambia
+                                            if !Calendar.current.isDate(newDate, equalTo: selectedDate, toGranularity: .month) {
                                                 if !plantId.isEmpty {
-                                                    plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
+                                                    plantManager.fetchMonthlyAssignments(plantId: plantId, month: newDate)
                                                 }
                                             }
+                                        }
                                         
                                         // NUEVO: Menú de Asignación de Turnos para Supervisor
                                         if authManager.userRole == "Supervisor" {
@@ -132,7 +144,6 @@ struct PlantDashboardView: View {
 
                             default:
                                 ScrollView {
-                                    // Error 135: Uso de PlantPlaceholderView
                                     PlantPlaceholderView(iconName: getIconForOption(selectedOption), title: selectedOption)
                                         .padding(.top, 50)
                                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -157,7 +168,6 @@ struct PlantDashboardView: View {
             .disabled(isMenuOpen)
             
             if isMenuOpen {
-                // Error 159: Uso de PlantMenuDrawer
                 PlantMenuDrawer(
                     isMenuOpen: $isMenuOpen,
                     selectedOption: $selectedOption,
@@ -174,7 +184,10 @@ struct PlantDashboardView: View {
             if !authManager.userPlantId.isEmpty {
                 // Cargar los detalles de la planta y la lista de staff completa
                 plantManager.fetchCurrentPlant(plantId: authManager.userPlantId)
+                // Cargar el staff del día seleccionado
                 plantManager.fetchDailyStaff(plantId: authManager.userPlantId, date: selectedDate)
+                // NUEVO: Cargar el staff del mes para el calendario
+                plantManager.fetchMonthlyAssignments(plantId: authManager.userPlantId, month: selectedDate)
             }
         }
     }
@@ -197,6 +210,7 @@ struct PlantDashboardView: View {
         }
     }
 }
+
 // ------------------------------------------------------------------------------------------------------------------
 
 // MARK: - NUEVAS VISTAS PARA ASIGNACIÓN DE TURNOS
@@ -210,7 +224,7 @@ struct ShiftAssignmentView: View {
     var orderedShiftNames: [String] {
         let preferredOrder = ["Mañana", "Media mañana", "Tarde", "Media tarde", "Noche", "Día"]
         
-        // FIX: Se obtiene el Set<String> de claves del diccionario, asegurando un tipo compatible
+        // Se obtiene el Set<String> de claves del diccionario, asegurando un tipo compatible
         let existingKeys = Set(plant.shiftTimes?.keys ?? [String: [String: String]]().keys)
         
         // 1. Filtrar el orden preferido por las claves que realmente existen
@@ -277,7 +291,7 @@ struct ShiftAssignmentRow: View {
     @Binding var selectedDate: Date
     @ObservedObject var plantManager: PlantManager
     let assignableStaff: [PlantStaff?]
-    let dailyAssignments: [String: [PlantShiftWorker]]
+    let dailyAssignments: [String: [PlantShiftWorker]] // <--- PROPIEDAD REQUERIDA
     let availableRoles: [String]
     
     // MODIFICADO: Lógica de guardado simplificada (sobrescribe todo el turno para este slot)
@@ -594,7 +608,6 @@ struct PlantMenuRowContent: View {
 
 // MARK: - COMPONENTES AUXILIARES (Drawer, Placeholder)
 
-// Error 159: Definición de PlantMenuDrawer
 struct PlantMenuDrawer: View {
     @EnvironmentObject var authManager: AuthManager
     @Binding var isMenuOpen: Bool
@@ -660,7 +673,6 @@ struct PlantMenuRow: View {
     }
 }
 
-// Error 135: Definición de PlantPlaceholderView
 struct PlantPlaceholderView: View {
     let iconName: String; let title: String
     var body: some View {

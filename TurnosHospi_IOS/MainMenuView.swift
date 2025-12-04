@@ -51,8 +51,13 @@ struct MainMenuView: View {
                         ScrollView {
                             VStack(spacing: 20) {
                                 
-                                // CALENDARIO (Ahora lo lee desde CalendarComponents.swift)
-                                CalendarWithShiftsView(selectedDate: $selectedDate, shifts: shiftManager.userShifts)
+                                // CALENDARIO
+                                // FIX: Se añade el parámetro 'monthlyAssignments' con un diccionario vacío.
+                                CalendarWithShiftsView(
+                                    selectedDate: $selectedDate,
+                                    shifts: shiftManager.userShifts,
+                                    monthlyAssignments: [:]
+                                )
                                 
                                 // INFO DEL DÍA
                                 VStack(alignment: .leading, spacing: 15) {

@@ -15,6 +15,9 @@ class PlantManager: ObservableObject {
     // Almacena los trabajadores del día seleccionado (para visualización y edición)
     @Published var dailyAssignments: [String: [PlantShiftWorker]] = [:]
     
+    // NUEVO: Almacena los trabajadores del mes (para la vista de calendario)
+    @Published var monthlyAssignments: [Date: [PlantShiftWorker]] = [:]
+    
     // MARK: - Buscar Planta
     func searchPlant(plantId: String, password: String) {
         self.isLoading = true
@@ -36,7 +39,6 @@ class PlantManager: ObservableObject {
             }
             
             var staffMembers: [PlantStaff] = []
-            // Ya usa "personal_de_planta" para la búsqueda inicial
             if let personalDict = value["personal_de_planta"] as? [String: [String: Any]] {
                 for (key, data) in personalDict {
                     let staff = PlantStaff(
@@ -167,6 +169,66 @@ class PlantManager: ObservableObject {
             
             DispatchQueue.main.async {
                 self.dailyAssignments = newDailyAssignments
+            }
+        })
+    }
+    
+    // NUEVO: Obtener asignaciones del mes (para el calendario)
+    func fetchMonthlyAssignments(plantId: String, month: Date) {
+        
+        // La obtención de datos para todo el mes se hace observando el nodo "turnos" completo,
+        // y filtrando las fechas localmente.
+        
+        let calendar = Calendar.current
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        // Observamos el nodo padre "turnos" que contiene todos los "turnos-yyyy-MM-dd"
+        ref.child("plants").child(plantId).child("turnos").observe(.value, with: { snapshot in
+            
+            var newMonthlyAssignments: [Date: [PlantShiftWorker]] = [:]
+            
+            // El snapshot contiene todos los nodos "turnos-yyyy-MM-dd"
+            if let allMonthsData = snapshot.value as? [String: [String: [String: [String: Any]]]] {
+                
+                // Iterar sobre todos los nodos de turno (turnos-yyyy-MM-dd)
+                for (dateNode, shiftsDict) in allMonthsData {
+                    
+                    // Extraer la fecha del nombre del nodo (turnos-yyyy-MM-dd)
+                    guard dateNode.hasPrefix("turnos-") else { continue }
+                    let dateString = String(dateNode.dropFirst(7))
+                    
+                    guard let date = dateFormatter.date(from: dateString) else { continue }
+                    
+                    // Filtrar solo las fechas que caen en el mes actual que estamos viendo
+                    if !calendar.isDate(date, equalTo: month, toGranularity: .month) && !calendar.isDate(date, equalTo: month, toGranularity: .year) {
+                        continue
+                    }
+                    
+                    var totalWorkersForDay: [PlantShiftWorker] = []
+                    
+                    // Sumar todos los trabajadores de CADA turno para ese día
+                    for (_, workersDict) in shiftsDict {
+                        for (workerId, workerData) in workersDict {
+                            let name = workerData["name"] as? String ?? "Usuario"
+                            let role = workerData["role"] as? String ?? "Personal"
+                            
+                            // Usamos un Set temporal para evitar contar un mismo trabajador dos veces en turnos diferentes
+                            let worker = PlantShiftWorker(id: workerId, name: name, role: role)
+                            totalWorkersForDay.append(worker)
+                        }
+                    }
+                    
+                    if !totalWorkersForDay.isEmpty {
+                        // Usamos la fecha limpia (sin hora) como clave para el diccionario
+                        let startOfDay = calendar.startOfDay(for: date)
+                        newMonthlyAssignments[startOfDay] = Array(Set(totalWorkersForDay)) // Aseguramos no duplicados
+                    }
+                }
+            }
+            
+            DispatchQueue.main.async {
+                self.monthlyAssignments = newMonthlyAssignments
             }
         })
     }

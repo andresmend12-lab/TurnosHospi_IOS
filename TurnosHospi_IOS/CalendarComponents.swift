@@ -3,7 +3,9 @@ import SwiftUI
 // MARK: - CALENDARIO COMPARTIDO
 struct CalendarWithShiftsView: View {
     @Binding var selectedDate: Date
-    var shifts: [Shift] // Recibe la lista de turnos desde Firebase
+    var shifts: [Shift] // Recibe la lista de turnos desde Firebase (uso original)
+    // NUEVO: Datos de asignación de personal para la planta
+    var monthlyAssignments: [Date: [PlantShiftWorker]]
     
     let days = ["L", "M", "X", "J", "V", "S", "D"]
     
@@ -18,7 +20,7 @@ struct CalendarWithShiftsView: View {
         let components = Calendar.current.dateComponents([.year, .month], from: selectedDate)
         guard let firstDay = Calendar.current.date(from: components) else { return 0 }
         let weekday = Calendar.current.component(.weekday, from: firstDay)
-        // Ajuste para lunes (Dom=1 -> 7, Lun=2 -> 1)
+        // Ajuste para lunes (Dom=1 -> 6, Lun=2 -> 0)
         return weekday == 1 ? 6 : weekday - 2
     }
     
@@ -62,8 +64,11 @@ struct CalendarWithShiftsView: View {
                     let date = getDate(for: day)
                     let isSelected = Calendar.current.isDate(date, inSameDayAs: selectedDate)
                     
-                    // ¿Hay turno este día?
-                    let shift = shifts.first { Calendar.current.isDate($0.date, inSameDayAs: date) }
+                    // Obtener el inicio del día para la búsqueda en el diccionario (NUEVO)
+                    let startOfDay = Calendar.current.startOfDay(for: date)
+                    let workers = monthlyAssignments[startOfDay] ?? []
+                    let workerCount = workers.count
+                    let workerInitials = workers.prefix(2).map { $0.initial } // Tomar las iniciales de los 2 primeros
                     
                     Button(action: {
                         withAnimation { selectedDate = date }
@@ -76,17 +81,32 @@ struct CalendarWithShiftsView: View {
                                 .background(isSelected ? Color.white : Color.clear)
                                 .clipShape(Circle())
                             
-                            // PUNTO DE COLOR SI HAY TURNO
-                            if let shift = shift {
-                                Circle()
-                                    .fill(shift.type.color)
-                                    .frame(width: 6, height: 6)
-                                    .shadow(color: shift.type.color, radius: 3)
+                            // Mostrar las iniciales si hay trabajadores asignados (NUEVO)
+                            if workerCount > 0 {
+                                HStack(spacing: 2) {
+                                    ForEach(workerInitials, id: \.self) { initial in
+                                        Text(initial)
+                                            .font(.system(size: 8).bold())
+                                            .foregroundColor(.white)
+                                    }
+                                    if workerCount > 2 {
+                                         Text("+\(workerCount - 2)")
+                                            .font(.system(size: 8).bold())
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                                .frame(height: 10)
+                                .padding(.horizontal, 2)
+                                .background(Color.neonViolet.opacity(0.8)) // Usamos un color de la app
+                                .cornerRadius(4)
+                                
                             } else {
-                                Circle().fill(Color.clear).frame(width: 6, height: 6)
+                                // Relleno si no hay asignaciones
+                                Spacer().frame(height: 10)
                             }
+                            
                         }
-                        .frame(height: 45)
+                        .frame(height: 45) // Ajuste de altura para acomodar el nuevo contenido
                         .frame(maxWidth: .infinity)
                         .background(Color.white.opacity(0.05))
                         .cornerRadius(8)
