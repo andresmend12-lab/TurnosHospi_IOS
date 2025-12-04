@@ -104,7 +104,8 @@ struct AddEditStaffView: View {
     
     func saveStaff() {
         isLoading = true
-        let ref = Database.database().reference().child("plants").child(plantId).child("staffList")
+        // MODIFICADO: Carga desde "personal_de_planta"
+        let ref = Database.database().reference().child("plants").child(plantId).child("personal_de_planta")
         
         // Si editamos, usamos el ID existente. Si es nuevo, generamos uno.
         let staffId = staffToEdit?.id ?? ref.childByAutoId().key ?? UUID().uuidString

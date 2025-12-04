@@ -76,7 +76,8 @@ struct StaffListView: View {
     
     // --- LÓGICA DE FIREBASE ---
     func fetchStaff() {
-        let ref = Database.database().reference().child("plants").child(plantId).child("staffList")
+        // MODIFICADO: Carga desde "personal_de_planta"
+        let ref = Database.database().reference().child("plants").child(plantId).child("personal_de_planta")
         
         ref.observe(.value) { snapshot in
             var loadedStaff: [PlantStaff] = []
@@ -85,7 +86,7 @@ struct StaffListView: View {
             for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
                 if let dict = child.value as? [String: Any] {
                     
-                    let id = dict["id"] as? String ?? ""
+                    let id = dict["id"] as? String ?? child.key // Usar child.key si no hay 'id' en el dict
                     let name = dict["name"] as? String ?? "Desconocido"
                     let role = dict["role"] as? String ?? ""
                     // Campos extra que requiere tu struct original en PlantModels.swift

@@ -36,6 +36,7 @@ class PlantManager: ObservableObject {
             }
             
             var staffMembers: [PlantStaff] = []
+            // Ya usa "personal_de_planta" para la búsqueda inicial
             if let personalDict = value["personal_de_planta"] as? [String: [String: Any]] {
                 for (key, data) in personalDict {
                     let staff = PlantStaff(
@@ -97,7 +98,8 @@ class PlantManager: ObservableObject {
             guard let value = snapshot.value as? [String: Any] else { return }
             
             var staffMembers: [PlantStaff] = []
-            if let personalDict = value["staffList"] as? [String: [String: Any]] {
+            // MODIFICADO: Cargar desde "personal_de_planta"
+            if let personalDict = value["personal_de_planta"] as? [String: [String: Any]] {
                 for (_, data) in personalDict {
                     let staff = PlantStaff(
                         id: data["id"] as? String ?? "",
