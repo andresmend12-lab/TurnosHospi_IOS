@@ -3,44 +3,100 @@ import FirebaseAuth
 import FirebaseDatabase
 
 class AuthManager: ObservableObject {
-    // Variables publicadas para que las vistas se actualicen solas
     @Published var user: User?
     @Published var currentUserName: String = ""
-    @Published var userRole: String = "" // <--- Guardamos el rol aquí
+    @Published var currentUserLastName: String = "" // <--- NUEVO: Para guardar el apellido
+    @Published var userRole: String = ""
     
     private let ref = Database.database().reference()
     
     init() {
-        // Escuchar cambios de sesión
         Auth.auth().addStateDidChangeListener { [weak self] auth, user in
             self?.user = user
             if let user = user {
-                // Si hay usuario, descargamos sus datos
                 self?.fetchUserData(uid: user.uid)
             } else {
-                // Si cerramos sesión, limpiamos todo
                 self?.currentUserName = ""
+                self?.currentUserLastName = ""
                 self?.userRole = ""
             }
         }
     }
     
-    // MARK: - Obtener datos (Nombre y Rol)
+    // MARK: - Obtener datos
     func fetchUserData(uid: String) {
         ref.child("users").child(uid).observeSingleEvent(of: .value) { snapshot in
             guard let value = snapshot.value as? [String: Any] else { return }
             
-            // 1. Obtener Nombre
-            if let firstName = value["firstName"] as? String {
-                DispatchQueue.main.async {
+            DispatchQueue.main.async {
+                if let firstName = value["firstName"] as? String {
                     self.currentUserName = firstName
                 }
+                if let lastName = value["lastName"] as? String {
+                    self.currentUserLastName = lastName
+                }
+                if let role = value["role"] as? String {
+                    self.userRole = role
+                }
+            }
+        }
+    }
+    
+    // MARK: - Actualizar Perfil (NUEVO)
+    func updateUserProfile(firstName: String, lastName: String, role: String, completion: @escaping (Bool, String?) -> Void) {
+        guard let uid = user?.uid else { return }
+        
+        let updates = [
+            "firstName": firstName,
+            "lastName": lastName,
+            "role": role
+        ]
+        
+        ref.child("users").child(uid).updateChildValues(updates) { error, _ in
+            if let error = error {
+                completion(false, error.localizedDescription)
+            } else {
+                // Actualizamos los datos locales al instante
+                DispatchQueue.main.async {
+                    self.currentUserName = firstName
+                    self.currentUserLastName = lastName
+                    self.userRole = role
+                }
+                completion(true, nil)
+            }
+        }
+    }
+    
+    // MARK: - Registro
+    func register(email: String, pass: String, firstName: String, lastName: String, gender: String, role: String, completion: @escaping (String?) -> Void) {
+        Auth.auth().createUser(withEmail: email, password: pass) { result, error in
+            if let error = error {
+                completion(error.localizedDescription)
+                return
             }
             
-            // 2. Obtener Rol (Supervisor, Enfermero, etc.)
-            if let role = value["role"] as? String {
-                DispatchQueue.main.async {
-                    self.userRole = role
+            guard let uid = result?.user.uid else { return }
+            
+            let userData: [String: Any] = [
+                "uid": uid,
+                "firstName": firstName,
+                "lastName": lastName,
+                "email": email,
+                "gender": gender,
+                "role": role,
+                "createdAt": ServerValue.timestamp()
+            ]
+            
+            self.ref.child("users").child(uid).setValue(userData) { error, _ in
+                if let error = error {
+                    completion(error.localizedDescription)
+                } else {
+                    DispatchQueue.main.async {
+                        self.currentUserName = firstName
+                        self.currentUserLastName = lastName
+                        self.userRole = role
+                    }
+                    completion(nil)
                 }
             }
         }
@@ -57,52 +113,15 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // MARK: - Registro
-    func register(email: String, pass: String, firstName: String, lastName: String, gender: String, role: String, completion: @escaping (String?) -> Void) {
-        
-        Auth.auth().createUser(withEmail: email, password: pass) { result, error in
-            if let error = error {
-                completion(error.localizedDescription)
-                return
-            }
-            
-            guard let uid = result?.user.uid else { return }
-            
-            // Guardamos todos los datos, incluido el ROL
-            let userData: [String: Any] = [
-                "uid": uid,
-                "firstName": firstName,
-                "lastName": lastName,
-                "email": email,
-                "gender": gender,
-                "role": role, // <--- Importante
-                "createdAt": ServerValue.timestamp()
-            ]
-            
-            self.ref.child("users").child(uid).setValue(userData) { error, _ in
-                if let error = error {
-                    completion(error.localizedDescription)
-                } else {
-                    // Actualizamos localmente para no esperar
-                    DispatchQueue.main.async {
-                        self.currentUserName = firstName
-                        self.userRole = role
-                    }
-                    completion(nil)
-                }
-            }
-        }
-    }
-    
     // MARK: - Cerrar Sesión
     func signOut() {
         do {
             try Auth.auth().signOut()
-            // Limpiamos variables locales
             self.currentUserName = ""
+            self.currentUserLastName = ""
             self.userRole = ""
         } catch {
-            print("Error al cerrar sesión: \(error.localizedDescription)")
+            print("Error logout: \(error.localizedDescription)")
         }
     }
 }

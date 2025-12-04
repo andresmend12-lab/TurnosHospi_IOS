@@ -4,18 +4,18 @@ struct SideMenuView: View {
     @Binding var isShowing: Bool
     @EnvironmentObject var authManager: AuthManager
     
-    // Estado para mostrar la pantalla de unirse a planta
+    // Estados para las hojas modales
     @State private var showJoinPlantSheet = false
+    @State private var showEditProfileSheet = false // <--- NUEVO ESTADO
     
     var body: some View {
         ZStack {
-            // Fondo degradado oscuro
             LinearGradient(colors: [Color.black, Color.deepSpace], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
             
             VStack(alignment: .leading, spacing: 30) {
                 
-                // --- CABECERA ---
+                // Cabecera
                 VStack(alignment: .leading, spacing: 10) {
                     Image(systemName: "person.crop.circle.fill")
                         .resizable()
@@ -38,29 +38,30 @@ struct SideMenuView: View {
                 
                 Divider().background(Color.white.opacity(0.3))
                 
-                // --- OPCIONES ---
+                // Opciones
                 VStack(alignment: .leading, spacing: 25) {
                     
-                    // Opción solo para Supervisores
                     if authManager.userRole == "Supervisor" {
                         MenuOptionRow(icon: "plus.app.fill", text: "Crear nueva planta")
                     }
                     
-                    // Botón Mi planta / Unirse
-                    Button(action: {
-                        showJoinPlantSheet = true
-                    }) {
+                    // Botón Mi planta
+                    Button(action: { showJoinPlantSheet = true }) {
                         MenuOptionRow(icon: "bed.double.fill", text: "Mi planta / Unirse")
                     }
                     
-                    MenuOptionRow(icon: "person.text.rectangle.fill", text: "Editar perfil")
+                    // Botón Editar Perfil (ACTUALIZADO)
+                    Button(action: { showEditProfileSheet = true }) {
+                        MenuOptionRow(icon: "person.text.rectangle.fill", text: "Editar perfil")
+                    }
+                    
                     MenuOptionRow(icon: "gearshape.fill", text: "Configuración")
                 }
                 .padding(.leading, 10)
                 
                 Spacer()
                 
-                // --- CERRAR SESIÓN ---
+                // Cerrar Sesión
                 Button(action: {
                     authManager.signOut()
                     withAnimation { isShowing = false }
@@ -79,14 +80,17 @@ struct SideMenuView: View {
             .padding(.horizontal)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        // Navegación a la pantalla de unirse
+        // Modales
         .sheet(isPresented: $showJoinPlantSheet) {
             JoinPlantView()
+        }
+        .sheet(isPresented: $showEditProfileSheet) { // <--- NUEVA MODAL
+            EditProfileView()
         }
     }
 }
 
-// MARK: - Componente Auxiliar (IMPORTANTE: Copiar esto también)
+// Subvista auxiliar (Necesaria dentro del archivo o en uno común)
 struct MenuOptionRow: View {
     var icon: String
     var text: String
@@ -102,6 +106,6 @@ struct MenuOptionRow: View {
                 .font(.headline)
                 .foregroundColor(.white.opacity(0.9))
         }
-        .contentShape(Rectangle()) // Hace que toda la fila sea pulsable
+        .contentShape(Rectangle())
     }
 }
