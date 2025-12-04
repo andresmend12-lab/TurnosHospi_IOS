@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		97D023952EE1A57D00D9D1D1 /* ShiftModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023942EE1A57D00D9D1D1 /* ShiftModels.swift */; };
 		97D023972EE1A5B900D9D1D1 /* ShiftRulesEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023962EE1A5B900D9D1D1 /* ShiftRulesEngine.swift */; };
 		97D023992EE1A5F400D9D1D1 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023982EE1A5F400D9D1D1 /* AuthService.swift */; };
 		97D0239B2EE1A60F00D9D1D1 /* ShiftRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D0239A2EE1A60F00D9D1D1 /* ShiftRepository.swift */; };
@@ -18,7 +17,13 @@
 		97D023A52EE1ACF700D9D1D1 /* ShiftChangeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023A42EE1ACF700D9D1D1 /* ShiftChangeView.swift */; };
 		97D023A72EE1AD3B00D9D1D1 /* ShiftMarketplaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023A62EE1AD3B00D9D1D1 /* ShiftMarketplaceView.swift */; };
 		97D023A92EE1AD5D00D9D1D1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023A82EE1AD5D00D9D1D1 /* SettingsView.swift */; };
-		97D023AB2EE1ADCE00D9D1D1 /* TurnosApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023AA2EE1ADCE00D9D1D1 /* TurnosApp.swift */; };
+		97D023B12EE1AF5E00D9D1D1 /* PlantDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023B02EE1AF5E00D9D1D1 /* PlantDetailView.swift */; };
+		97D023B32EE1AF8000D9D1D1 /* Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023B22EE1AF8000D9D1D1 /* Chat.swift */; };
+		97D023B52EE1AF9500D9D1D1 /* StatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023B42EE1AF9500D9D1D1 /* StatisticsView.swift */; };
+		97D023B72EE1AFCB00D9D1D1 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023B62EE1AFCB00D9D1D1 /* User.swift */; };
+		97D023B92EE1AFDE00D9D1D1 /* Shift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023B82EE1AFDE00D9D1D1 /* Shift.swift */; };
+		97D023BB2EE1AFF000D9D1D1 /* ShiftRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D023BA2EE1AFF000D9D1D1 /* ShiftRequest.swift */; };
+		97D023BD2EE1B21800D9D1D1 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 97D023BC2EE1B21800D9D1D1 /* GoogleService-Info.plist */; };
 		97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */; };
 		97E962CA2EE18973006E7707 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C92EE18973006E7707 /* ContentView.swift */; };
 		97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97E962CB2EE18976006E7707 /* Assets.xcassets */; };
@@ -46,7 +51,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		97D023942EE1A57D00D9D1D1 /* ShiftModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftModels.swift; sourceTree = "<group>"; };
 		97D023962EE1A5B900D9D1D1 /* ShiftRulesEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftRulesEngine.swift; sourceTree = "<group>"; };
 		97D023982EE1A5F400D9D1D1 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		97D0239A2EE1A60F00D9D1D1 /* ShiftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftRepository.swift; sourceTree = "<group>"; };
@@ -57,7 +61,13 @@
 		97D023A42EE1ACF700D9D1D1 /* ShiftChangeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftChangeView.swift; sourceTree = "<group>"; };
 		97D023A62EE1AD3B00D9D1D1 /* ShiftMarketplaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftMarketplaceView.swift; sourceTree = "<group>"; };
 		97D023A82EE1AD5D00D9D1D1 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		97D023AA2EE1ADCE00D9D1D1 /* TurnosApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosApp.swift; sourceTree = "<group>"; };
+		97D023B02EE1AF5E00D9D1D1 /* PlantDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantDetailView.swift; sourceTree = "<group>"; };
+		97D023B22EE1AF8000D9D1D1 /* Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chat.swift; sourceTree = "<group>"; };
+		97D023B42EE1AF9500D9D1D1 /* StatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsView.swift; sourceTree = "<group>"; };
+		97D023B62EE1AFCB00D9D1D1 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		97D023B82EE1AFDE00D9D1D1 /* Shift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shift.swift; sourceTree = "<group>"; };
+		97D023BA2EE1AFF000D9D1D1 /* ShiftRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftRequest.swift; sourceTree = "<group>"; };
+		97D023BC2EE1B21800D9D1D1 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "../../../../Downloads/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		97E962C42EE18973006E7707 /* TurnosHospi_IOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TurnosHospi_IOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSApp.swift; sourceTree = "<group>"; };
 		97E962C92EE18973006E7707 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -120,20 +130,25 @@
 			isa = PBXGroup;
 			children = (
 				97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */,
+				97D023BC2EE1B21800D9D1D1 /* GoogleService-Info.plist */,
 				97E962C92EE18973006E7707 /* ContentView.swift */,
 				97E962CB2EE18976006E7707 /* Assets.xcassets */,
 				97E962CD2EE18976006E7707 /* TurnosHospi_IOS.entitlements */,
 				97E962CE2EE18976006E7707 /* Preview Content */,
-				97D023942EE1A57D00D9D1D1 /* ShiftModels.swift */,
 				97D023962EE1A5B900D9D1D1 /* ShiftRulesEngine.swift */,
 				97D023982EE1A5F400D9D1D1 /* AuthService.swift */,
 				97D0239A2EE1A60F00D9D1D1 /* ShiftRepository.swift */,
 				97D0239C2EE1AC3E00D9D1D1 /* RootView.swift */,
+				97D023B02EE1AF5E00D9D1D1 /* PlantDetailView.swift */,
+				97D023B22EE1AF8000D9D1D1 /* Chat.swift */,
+				97D023B42EE1AF9500D9D1D1 /* StatisticsView.swift */,
 				97D0239E2EE1AC5D00D9D1D1 /* LoginView.swift */,
 				97D023A02EE1AC7E00D9D1D1 /* MainTabView.swift */,
-				97D023AA2EE1ADCE00D9D1D1 /* TurnosApp.swift */,
 				97D023A22EE1ACDF00D9D1D1 /* CalendarView.swift */,
 				97D023A42EE1ACF700D9D1D1 /* ShiftChangeView.swift */,
+				97D023BA2EE1AFF000D9D1D1 /* ShiftRequest.swift */,
+				97D023B62EE1AFCB00D9D1D1 /* User.swift */,
+				97D023B82EE1AFDE00D9D1D1 /* Shift.swift */,
 				97D023A62EE1AD3B00D9D1D1 /* ShiftMarketplaceView.swift */,
 				97D023A82EE1AD5D00D9D1D1 /* SettingsView.swift */,
 			);
@@ -271,6 +286,7 @@
 			files = (
 				97E962D02EE18976006E7707 /* Preview Assets.xcassets in Resources */,
 				97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */,
+				97D023BD2EE1B21800D9D1D1 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -299,15 +315,19 @@
 				97D0239B2EE1A60F00D9D1D1 /* ShiftRepository.swift in Sources */,
 				97D023972EE1A5B900D9D1D1 /* ShiftRulesEngine.swift in Sources */,
 				97D023A12EE1AC7E00D9D1D1 /* MainTabView.swift in Sources */,
+				97D023B92EE1AFDE00D9D1D1 /* Shift.swift in Sources */,
+				97D023B72EE1AFCB00D9D1D1 /* User.swift in Sources */,
+				97D023BB2EE1AFF000D9D1D1 /* ShiftRequest.swift in Sources */,
 				97E962CA2EE18973006E7707 /* ContentView.swift in Sources */,
+				97D023B52EE1AF9500D9D1D1 /* StatisticsView.swift in Sources */,
 				97D023992EE1A5F400D9D1D1 /* AuthService.swift in Sources */,
+				97D023B12EE1AF5E00D9D1D1 /* PlantDetailView.swift in Sources */,
 				97D0239D2EE1AC3E00D9D1D1 /* RootView.swift in Sources */,
 				97D023A72EE1AD3B00D9D1D1 /* ShiftMarketplaceView.swift in Sources */,
-				97D023AB2EE1ADCE00D9D1D1 /* TurnosApp.swift in Sources */,
-				97D023952EE1A57D00D9D1D1 /* ShiftModels.swift in Sources */,
 				97D0239F2EE1AC5D00D9D1D1 /* LoginView.swift in Sources */,
 				97D023A52EE1ACF700D9D1D1 /* ShiftChangeView.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
+				97D023B32EE1AF8000D9D1D1 /* Chat.swift in Sources */,
 				97D023A92EE1AD5D00D9D1D1 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
