@@ -7,6 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		97D3B7EB2EE1966D000D4604 /* ShiftRulesEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D3B7EA2EE1966D000D4604 /* ShiftRulesEngine.swift */; };
+		97D3B7ED2EE19680000D4604 /* PlantMembership.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D3B7EC2EE19680000D4604 /* PlantMembership.swift */; };
+		97D3B7EF2EE19690000D4604 /* DirectChatModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D3B7EE2EE19690000D4604 /* DirectChatModels.swift */; };
+		97D3B7F12EE196A0000D4604 /* ShiftModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D3B7F02EE196A0000D4604 /* ShiftModels.swift */; };
+		97D3B7F72EE19937000D4604 /* ThemeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D3B7F62EE19937000D4604 /* ThemeUtils.swift */; };
+		97D3B7F92EE19947000D4604 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D3B7F82EE19947000D4604 /* LoginView.swift */; };
+		97D3B7FB2EE19955000D4604 /* CreateAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D3B7FA2EE19955000D4604 /* CreateAccountView.swift */; };
+		97D3B7FE2EE1998C000D4604 /* MainMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D3B7FD2EE1998C000D4604 /* MainMenuView.swift */; };
+		97D3B8012EE19A61000D4604 /* MyPlantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D3B8002EE19A61000D4604 /* MyPlantView.swift */; };
+		97D3B8032EE19A73000D4604 /* PlantDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D3B8022EE19A73000D4604 /* PlantDetailView.swift */; };
+		97D3B8062EE19AA5000D4604 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97D3B8052EE19AA5000D4604 /* SettingsView.swift */; };
 		97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */; };
 		97E962CA2EE18973006E7707 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C92EE18973006E7707 /* ContentView.swift */; };
 		97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97E962CB2EE18976006E7707 /* Assets.xcassets */; };
@@ -34,6 +45,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		97D3B7EA2EE1966D000D4604 /* ShiftRulesEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftRulesEngine.swift; sourceTree = "<group>"; };
+		97D3B7EC2EE19680000D4604 /* PlantMembership.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantMembership.swift; sourceTree = "<group>"; };
+		97D3B7EE2EE19690000D4604 /* DirectChatModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectChatModels.swift; sourceTree = "<group>"; };
+		97D3B7F02EE196A0000D4604 /* ShiftModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftModels.swift; sourceTree = "<group>"; };
+		97D3B7F62EE19937000D4604 /* ThemeUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeUtils.swift; sourceTree = "<group>"; };
+		97D3B7F82EE19947000D4604 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		97D3B7FA2EE19955000D4604 /* CreateAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAccountView.swift; sourceTree = "<group>"; };
+		97D3B7FD2EE1998C000D4604 /* MainMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainMenuView.swift; sourceTree = "<group>"; };
+		97D3B8002EE19A61000D4604 /* MyPlantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPlantView.swift; sourceTree = "<group>"; };
+		97D3B8022EE19A73000D4604 /* PlantDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlantDetailView.swift; sourceTree = "<group>"; };
+		97D3B8052EE19AA5000D4604 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		97E962C42EE18973006E7707 /* TurnosHospi_IOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TurnosHospi_IOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSApp.swift; sourceTree = "<group>"; };
 		97E962C92EE18973006E7707 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -72,6 +94,82 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		97D3B7E72EE19603000D4604 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				97D3B7EC2EE19680000D4604 /* PlantMembership.swift */,
+				97D3B7EE2EE19690000D4604 /* DirectChatModels.swift */,
+				97D3B7F02EE196A0000D4604 /* ShiftModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		97D3B7E82EE1961E000D4604 /* Logic */ = {
+			isa = PBXGroup;
+			children = (
+				97D3B7EA2EE1966D000D4604 /* ShiftRulesEngine.swift */,
+			);
+			path = Logic;
+			sourceTree = "<group>";
+		};
+		97D3B7E92EE19630000D4604 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		97D3B7F22EE198A0000D4604 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				97D3B8042EE19A8B000D4604 /* Settings */,
+				97D3B7FF2EE19A45000D4604 /* Plant */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		97D3B7F32EE198B1000D4604 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				97D3B7F82EE19947000D4604 /* LoginView.swift */,
+				97D3B7FA2EE19955000D4604 /* CreateAccountView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		97D3B7F42EE198CD000D4604 /* Main */ = {
+			isa = PBXGroup;
+			children = (
+				97D3B7FD2EE1998C000D4604 /* MainMenuView.swift */,
+			);
+			path = Main;
+			sourceTree = "<group>";
+		};
+		97D3B7F52EE19922000D4604 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				97D3B7F62EE19937000D4604 /* ThemeUtils.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		97D3B7FF2EE19A45000D4604 /* Plant */ = {
+			isa = PBXGroup;
+			children = (
+				97D3B8002EE19A61000D4604 /* MyPlantView.swift */,
+				97D3B8022EE19A73000D4604 /* PlantDetailView.swift */,
+			);
+			path = Plant;
+			sourceTree = "<group>";
+		};
+		97D3B8042EE19A8B000D4604 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				97D3B8052EE19AA5000D4604 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
 		97E962BB2EE18973006E7707 = {
 			isa = PBXGroup;
 			children = (
@@ -95,6 +193,13 @@
 		97E962C62EE18973006E7707 /* TurnosHospi_IOS */ = {
 			isa = PBXGroup;
 			children = (
+				97D3B7F52EE19922000D4604 /* Utils */,
+				97D3B7F42EE198CD000D4604 /* Main */,
+				97D3B7F32EE198B1000D4604 /* Auth */,
+				97D3B7F22EE198A0000D4604 /* Views */,
+				97D3B7E92EE19630000D4604 /* Services */,
+				97D3B7E82EE1961E000D4604 /* Logic */,
+				97D3B7E72EE19603000D4604 /* Models */,
 				97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */,
 				97E962C92EE18973006E7707 /* ContentView.swift */,
 				97E962CB2EE18976006E7707 /* Assets.xcassets */,
@@ -259,8 +364,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				97D3B8012EE19A61000D4604 /* MyPlantView.swift in Sources */,
+				97D3B8032EE19A73000D4604 /* PlantDetailView.swift in Sources */,
+				97D3B7FE2EE1998C000D4604 /* MainMenuView.swift in Sources */,
+				97D3B7EB2EE1966D000D4604 /* ShiftRulesEngine.swift in Sources */,
 				97E962CA2EE18973006E7707 /* ContentView.swift in Sources */,
+				97D3B7EF2EE19690000D4604 /* DirectChatModels.swift in Sources */,
+				97D3B7FB2EE19955000D4604 /* CreateAccountView.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
+				97D3B7F12EE196A0000D4604 /* ShiftModels.swift in Sources */,
+				97D3B7F72EE19937000D4604 /* ThemeUtils.swift in Sources */,
+				97D3B7F92EE19947000D4604 /* LoginView.swift in Sources */,
+				97D3B7ED2EE19680000D4604 /* PlantMembership.swift in Sources */,
+				97D3B8062EE19AA5000D4604 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
