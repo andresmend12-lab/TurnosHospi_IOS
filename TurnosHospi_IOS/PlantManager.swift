@@ -46,7 +46,7 @@ class PlantManager: ObservableObject {
                 }
             }
             
-            // Creamos el objeto planta localmente con el personal cargado
+            // Creamos el objeto planta localmente
             let plant = HospitalPlant(
                 id: plantId,
                 name: value["name"] as? String ?? "Planta",
@@ -66,7 +66,7 @@ class PlantManager: ObservableObject {
         guard let user = Auth.auth().currentUser else { return }
         self.isLoading = true
         
-        // Estructura que me pediste para 'userPlants'
+        // Datos a guardar
         let userPlantData: [String: Any] = [
             "plantId": plant.id,
             "staffId": selectedStaff.id,
@@ -74,15 +74,21 @@ class PlantManager: ObservableObject {
             "staffRole": selectedStaff.role
         ]
         
-        // Guardamos en: userPlants -> UID_DEL_USUARIO -> Datos
-        ref.child("userPlants").child(user.uid).setValue(userPlantData) { error, _ in
+        // CAMBIO AQUÍ: Guardamos DENTRO de la planta
+        // Ruta: plants -> [ID_PLANTA] -> userPlants -> [ID_USUARIO]
+        let userPlantRef = ref.child("plants").child(plant.id).child("userPlants").child(user.uid)
+        
+        userPlantRef.setValue(userPlantData) { error, _ in
             self.isLoading = false
+            
             if let error = error {
                 self.errorMessage = "Error al unirse: \(error.localizedDescription)"
             } else {
-                self.joinSuccess = true // Esto disparará el cierre de la vista
+                // Éxito
+                self.joinSuccess = true
                 
-                // Opcional: Actualizar el perfil del usuario en 'users' para indicar que ya tiene planta
+                // Actualizamos también el rol del usuario en su perfil general ('users')
+                // Esto es útil para que la app sepa qué rol tiene nada más entrar
                 self.ref.child("users").child(user.uid).updateChildValues(["role": selectedStaff.role])
             }
         }
