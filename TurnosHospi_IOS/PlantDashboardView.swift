@@ -228,6 +228,25 @@ struct PlantDashboardView: View {
             }
         }
     }
+    private func reloadPlantDataIfPossible() {
+        let plantId = authManager.userPlantId
+        guard !plantId.isEmpty else { return }
+        
+        // Cargar info de la planta
+        plantManager.fetchCurrentPlant(plantId: plantId)
+        
+        // Cargar turnos del día seleccionado
+        plantManager.fetchDailyStaff(plantId: plantId, date: selectedDate)
+        
+        // Cargar asignaciones del mes para el calendario
+        currentMonth = selectedDate
+        plantManager.fetchMonthlyAssignments(plantId: plantId, month: selectedDate)
+        
+        // Si es supervisor, cargar también las asignaciones editables
+        if authManager.userRole == "Supervisor" {
+            loadSupervisorAssignments()
+        }
+    }
     
     // MARK: - Lógica Supervisor: carga / guardado (formato Android)
     
