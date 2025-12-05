@@ -15,8 +15,6 @@ class PlantManager: ObservableObject {
     
     // Datos para la vista
     @Published var dailyAssignments: [String: [PlantShiftWorker]] = [:]
-    
-    // Diccionario con TODOS los turnos cargados (Fecha -> Trabajadores)
     @Published var monthlyAssignments: [Date: [PlantShiftWorker]] = [:]
     
     // MARK: - Buscar Planta
@@ -139,7 +137,7 @@ class PlantManager: ObservableObject {
                 shiftTimes: shiftTimes
             )
             
-            // Identificar al usuario actual en la planta
+            // Identificar usuario actual
             var identifiedName: String? = nil
             if let userPlants = value["userPlants"] as? [String: [String: Any]],
                let uid = Auth.auth().currentUser?.uid,
@@ -208,9 +206,8 @@ class PlantManager: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateString = formatter.string(from: date)
-        let nodeName = "turnos-\(dateString)"
         
-        ref.child("plants").child(plantId).child("turnos").child(nodeName)
+        ref.child("plants").child(plantId).child("turnos").child("turnos-\(dateString)")
             .observe(.value) { snapshot in
                 var newDailyAssignments: [String: [PlantShiftWorker]] = [:]
                 
@@ -231,15 +228,12 @@ class PlantManager: ObservableObject {
             }
     }
     
-    // MARK: - Fetch GLOBAL (Carga todos los turnos de la historia)
-    // Nota: Mantenemos el parámetro 'month' por compatibilidad con las llamadas existentes,
-    // pero lo ignoramos para cargar todo el calendario de golpe.
+    // MARK: - Fetch GLOBAL (Sin filtrar por mes)
     func fetchMonthlyAssignments(plantId: String, month: Date) {
         let calendar = Calendar.current
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         
-        // Descargamos todo el nodo 'turnos'
         ref.child("plants").child(plantId).child("turnos")
             .observeSingleEvent(of: .value) { snapshot in
                 
@@ -251,14 +245,10 @@ class PlantManager: ObservableObject {
                 }
                 
                 for (nodeName, value) in allDatesDict {
-                    // Procesamos cada fecha encontrada en la base de datos
                     guard nodeName.hasPrefix("turnos-") else { continue }
                     let dateString = String(nodeName.dropFirst("turnos-".count))
                     
                     guard let date = formatter.date(from: dateString) else { continue }
-                    
-                    // --- CORRECCIÓN: ELIMINADO EL FILTRO DE MES ---
-                    // Antes había un guard aquí que filtraba por 'month'. Lo hemos quitado.
                     
                     guard let shiftsDict = value as? [String: Any] else { continue }
                     
@@ -274,14 +264,12 @@ class PlantManager: ObservableObject {
                     }
                     
                     if !workersForDay.isEmpty {
-                        // Eliminar duplicados (misma persona en mismo turno)
                         var unique: [String: PlantShiftWorker] = [:]
                         for w in workersForDay {
                             let key = "\(w.name)_\(w.shiftName ?? "")"
                             unique[key] = w
                         }
                         
-                        // Usamos startOfDay para que coincida con la clave del calendario
                         let startOfDay = calendar.startOfDay(for: date)
                         allAssignments[startOfDay] = Array(unique.values)
                     }
@@ -292,12 +280,168 @@ class PlantManager: ObservableObject {
                 }
             }
     }
-}
-
-// MARK: - Extensions
-extension DateFormatter {
-    func dateString(from date: Date) -> String {
-        self.dateFormat = "yyyy-MM-dd"
-        return self.string(from: date)
+    
+    // MARK: - IMPORTACIÓN CSV MATRICIAL (NUEVO)
+    func processMatrixCSVImport(csvContent: String, plant: HospitalPlant, completion: @escaping (Bool, String) -> Void) {
+        // Separar líneas, eliminando retornos de carro \r
+        let rows = csvContent.replacingOccurrences(of: "\r", with: "").components(separatedBy: "\n")
+        
+        guard rows.count > 1 else {
+            completion(false, "El archivo está vacío o no tiene cabeceras.")
+            return
+        }
+        
+        // 1. Procesar Cabecera (Fechas)
+        let headerRow = rows[0].components(separatedBy: ",")
+        var dateMap: [Int: String] = [:] // Índice Columna -> Fecha (yyyy-MM-dd)
+        
+        // Empezamos en 1 porque la columna 0 es el nombre
+        for i in 1..<headerRow.count {
+            let dateStr = headerRow[i].trimmingCharacters(in: .whitespacesAndNewlines)
+            if !dateStr.isEmpty {
+                if let normalizedDate = normalizeDate(dateStr) {
+                    dateMap[i] = normalizedDate
+                }
+            }
+        }
+        
+        if dateMap.isEmpty {
+            completion(false, "No se encontraron fechas válidas en la primera fila (formato esperado: yyyy-MM-dd).")
+            return
+        }
+        
+        // Mapa rápido de personal: NombreNormalizado -> Rol
+        var staffRoleMap: [String: String] = [:]
+        for staff in plant.allStaffList {
+            let normalizedName = staff.name.trimmingCharacters(in: .whitespaces).lowercased()
+            staffRoleMap[normalizedName] = staff.role
+        }
+        
+        // Estructura temporal para agrupar actualizaciones
+        // [Fecha: [Turno: (nurses: [Nombres], auxs: [Nombres])]]
+        var updatesByDate: [String: [String: (nurses: [String], auxs: [String])]] = [:]
+        
+        // 2. Procesar Filas de Personal
+        for rowIndex in 1..<rows.count {
+            let rowStr = rows[rowIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+            if rowStr.isEmpty { continue }
+            
+            // Dividir por comas, pero cuidado si el nombre tiene comas (asumimos que no por simplicidad en CSV estándar)
+            let cols = rowStr.components(separatedBy: ",")
+            if cols.isEmpty { continue }
+            
+            let rawName = cols[0].trimmingCharacters(in: .whitespaces)
+            if rawName.isEmpty { continue }
+            
+            // Buscar rol de la persona
+            guard let role = staffRoleMap[rawName.lowercased()] else {
+                print("Aviso: \(rawName) no encontrado en personal de planta. Se ignora.")
+                continue
+            }
+            
+            let isNurse = role.lowercased().contains("enfermer")
+            let isAux = role.lowercased().contains("auxiliar") || role.lowercased().contains("tcae")
+            
+            if !isNurse && !isAux { continue } // Rol desconocido
+            
+            // Recorrer columnas de días para esta persona
+            for (colIndex, dateKey) in dateMap {
+                if colIndex >= cols.count { break }
+                
+                let shiftValue = cols[colIndex].trimmingCharacters(in: .whitespacesAndNewlines)
+                // Si la celda está vacía o es "Libre", ignoramos (no asignamos nada)
+                if shiftValue.isEmpty || shiftValue.lowercased() == "libre" { continue }
+                
+                // Normalizar nombre del turno (Capitalizar primera letra)
+                // Ej: "tarde" -> "Tarde", "MAÑANA" -> "Mañana"
+                let shiftName = shiftValue.prefix(1).uppercased() + shiftValue.dropFirst().lowercased()
+                
+                // Inicializar estructura si no existe
+                if updatesByDate[dateKey] == nil { updatesByDate[dateKey] = [:] }
+                if updatesByDate[dateKey]![shiftName] == nil {
+                    updatesByDate[dateKey]![shiftName] = (nurses: [], auxs: [])
+                }
+                
+                // Añadir persona a la lista correspondiente
+                if isNurse {
+                    updatesByDate[dateKey]![shiftName]?.nurses.append(rawName)
+                } else {
+                    updatesByDate[dateKey]![shiftName]?.auxs.append(rawName)
+                }
+            }
+        }
+        
+        // 3. Convertir a Payload de Firebase y Subir
+        if updatesByDate.isEmpty {
+            completion(false, "No se encontraron asignaciones válidas para importar.")
+            return
+        }
+        
+        var firebaseUpdates: [String: Any] = [:]
+        
+        for (dateKey, shiftsMap) in updatesByDate {
+            for (shiftName, lists) in shiftsMap {
+                let path = "plants/\(plant.id)/turnos/turnos-\(dateKey)/\(shiftName)"
+                
+                // Convertir lista de nombres a objetos de Firebase
+                // NOTA: Sobrescribe lo que hubiera en ese turno/día
+                
+                var nursesArray: [[String: Any]] = []
+                for (i, name) in lists.nurses.enumerated() {
+                    nursesArray.append([
+                        "halfDay": false,
+                        "primary": name,
+                        "secondary": "",
+                        "primaryLabel": "enfermero\(i+1)",
+                        "secondaryLabel": ""
+                    ])
+                }
+                
+                var auxArray: [[String: Any]] = []
+                for (i, name) in lists.auxs.enumerated() {
+                    auxArray.append([
+                        "halfDay": false,
+                        "primary": name,
+                        "secondary": "",
+                        "primaryLabel": "auxiliar\(i+1)",
+                        "secondaryLabel": ""
+                    ])
+                }
+                
+                if !nursesArray.isEmpty {
+                    firebaseUpdates["\(path)/nurses"] = nursesArray
+                }
+                if !auxArray.isEmpty {
+                    firebaseUpdates["\(path)/auxiliaries"] = auxArray
+                }
+            }
+        }
+        
+        // Subida masiva
+        ref.updateChildValues(firebaseUpdates) { error, _ in
+            if let error = error {
+                completion(false, "Error al guardar en BD: \(error.localizedDescription)")
+            } else {
+                completion(true, "Importación completada con éxito.")
+            }
+        }
+    }
+    
+    // Helper para normalizar fechas de entrada a yyyy-MM-dd
+    private func normalizeDate(_ dateStr: String) -> String? {
+        let inputFormats = ["yyyy-MM-dd", "dd/MM/yyyy", "dd-MM-yyyy", "d/M/yyyy"]
+        let outputFormatter = DateFormatter()
+        outputFormatter.dateFormat = "yyyy-MM-dd"
+        
+        for format in inputFormats {
+            let inputFormatter = DateFormatter()
+            inputFormatter.dateFormat = format
+            // Importante: setear locale para evitar conflictos regionales
+            inputFormatter.locale = Locale(identifier: "en_US_POSIX")
+            if let date = inputFormatter.date(from: dateStr) {
+                return outputFormatter.string(from: date)
+            }
+        }
+        return nil
     }
 }

@@ -9,7 +9,8 @@ struct SideMenuView: View {
     @State private var showPlantDashboard = false
     @State private var showEditProfileSheet = false
     @State private var showCreatePlantSheet = false
-    @State private var showSettingsSheet = false // <--- NUEVO: Estado para configuración
+    @State private var showSettingsSheet = false
+    @State private var showImportShiftsSheet = false // <--- NUEVO
     
     var body: some View {
         ZStack {
@@ -17,7 +18,6 @@ struct SideMenuView: View {
                 .ignoresSafeArea()
             
             VStack(alignment: .leading, spacing: 30) {
-                
                 // Cabecera
                 VStack(alignment: .leading, spacing: 10) {
                     Image(systemName: "person.crop.circle.fill")
@@ -29,7 +29,6 @@ struct SideMenuView: View {
                         Text(authManager.currentUserName.isEmpty ? "Usuario" : authManager.currentUserName)
                             .font(.title2.bold())
                             .foregroundColor(.white)
-                        
                         Text(authManager.userRole)
                             .font(.subheadline)
                             .foregroundColor(.neonViolet)
@@ -41,14 +40,16 @@ struct SideMenuView: View {
                 
                 Divider().background(Color.white.opacity(0.3))
                 
-                // Opciones del Menú
+                // Opciones
                 VStack(alignment: .leading, spacing: 25) {
                     
                     if authManager.userRole == "Supervisor" {
-                        Button(action: {
-                            showCreatePlantSheet = true
-                        }) {
+                        Button(action: { showCreatePlantSheet = true }) {
                             MenuOptionRow(icon: "plus.app.fill", text: "Crear nueva planta")
+                        }
+                        // NUEVO BOTÓN IMPORTAR
+                        Button(action: { showImportShiftsSheet = true }) {
+                            MenuOptionRow(icon: "square.and.arrow.down", text: "Importar turnos")
                         }
                     }
                     
@@ -66,11 +67,7 @@ struct SideMenuView: View {
                         MenuOptionRow(icon: "person.text.rectangle.fill", text: "Editar perfil")
                     }
                     
-                    // --- AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
-                    // Antes era solo texto, ahora es un botón funcional
-                    Button(action: {
-                        showSettingsSheet = true
-                    }) {
+                    Button(action: { showSettingsSheet = true }) {
                         MenuOptionRow(icon: "gearshape.fill", text: "Configuración")
                     }
                 }
@@ -96,27 +93,16 @@ struct SideMenuView: View {
             .padding(.horizontal)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        // --- Modales ---
-        .sheet(isPresented: $showJoinPlantSheet) {
-            JoinPlantView()
-        }
-        .fullScreenCover(isPresented: $showPlantDashboard) {
-            PlantDashboardView()
-        }
-        .sheet(isPresented: $showEditProfileSheet) {
-            EditProfileView()
-        }
-        .sheet(isPresented: $showCreatePlantSheet) {
-            CreatePlantView()
-        }
-        // Modal de Configuración
-        .sheet(isPresented: $showSettingsSheet) {
-            SettingsView()
-        }
+        // Modales
+        .sheet(isPresented: $showJoinPlantSheet) { JoinPlantView() }
+        .fullScreenCover(isPresented: $showPlantDashboard) { PlantDashboardView() }
+        .sheet(isPresented: $showEditProfileSheet) { EditProfileView() }
+        .sheet(isPresented: $showCreatePlantSheet) { CreatePlantView() }
+        .sheet(isPresented: $showSettingsSheet) { SettingsView() }
+        .sheet(isPresented: $showImportShiftsSheet) { ImportShiftsView() } // <--- MODAL IMPORTAR
     }
 }
 
-// Subvista fila de menú (igual que antes)
 struct MenuOptionRow: View {
     var icon: String
     var text: String

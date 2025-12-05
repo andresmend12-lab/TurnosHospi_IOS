@@ -28,6 +28,7 @@ struct PlantDashboardView: View {
     @State private var selectedOption: String = "Calendario"
     @State private var selectedDate = Date()
     @State private var currentMonth = Date()
+    @State private var showImportShiftsSheet = false // Estado para importar turnos
     
     // Estado de edición para supervisor
     @State private var supervisorAssignments: [String: ShiftAssignmentState] = [:]
@@ -209,7 +210,8 @@ struct PlantDashboardView: View {
                 PlantMenuDrawer(
                     isMenuOpen: $isMenuOpen,
                     selectedOption: $selectedOption,
-                    onLogout: { dismiss() }
+                    onLogout: { dismiss() },
+                    onImportShifts: { showImportShiftsSheet = true }
                 )
                 .transition(.move(edge: .leading))
                 .zIndex(2)
@@ -217,6 +219,9 @@ struct PlantDashboardView: View {
         }
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
+        .sheet(isPresented: $showImportShiftsSheet) {
+            ImportShiftsView()
+        }
         .onAppear {
             if !authManager.userPlantId.isEmpty {
                 let plantId = authManager.userPlantId
@@ -242,7 +247,7 @@ struct PlantDashboardView: View {
         }
     }
     
-    // MARK: - Lógica Supervisor: carga / guardado (formato Android)
+    // MARK: - Lógica Supervisor
     
     private func loadSupervisorAssignments() {
         guard authManager.userRole == "Supervisor",
@@ -419,24 +424,9 @@ struct PlantDashboardView: View {
 extension SlotAssignment {
     func toFirebaseMap(unassigned: String, base: String) -> [String: Any] {
         let primaryValue = primaryName.isEmpty ? unassigned : primaryName
-        let secondaryValue: String
-        let secondaryLabel: String
-        
-        if hasHalfDay {
-            secondaryValue = secondaryName.isEmpty ? unassigned : secondaryName
-            secondaryLabel = "\(base) media jornada"
-        } else {
-            secondaryValue = ""
-            secondaryLabel = ""
-        }
-        
-        return [
-            "halfDay": hasHalfDay,
-            "primary": primaryValue,
-            "secondary": secondaryValue,
-            "primaryLabel": base,
-            "secondaryLabel": secondaryLabel
-        ]
+        let secondaryValue = hasHalfDay ? (secondaryName.isEmpty ? unassigned : secondaryName) : ""
+        let secondaryLabel = hasHalfDay ? "\(base) media jornada" : ""
+        return ["halfDay": hasHalfDay, "primary": primaryValue, "secondary": secondaryValue, "primaryLabel": base, "secondaryLabel": secondaryLabel]
     }
 }
 
@@ -449,6 +439,7 @@ struct PlantDashboardCalendarView: View {
     
     private let daysSymbols = ["L", "M", "X", "J", "V", "S", "D"]
     
+    // Calendario robusto
     private var calendar: Calendar {
         var cal = Calendar(identifier: .gregorian)
         cal.firstWeekday = 2 // Lunes
@@ -510,7 +501,7 @@ struct PlantDashboardCalendarView: View {
                 columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7),
                 spacing: 8
             ) {
-                // Huecos iniciales - CORRECCIÓN DE IDs ÚNICOS
+                // Huecos iniciales - ID ÚNICO CORRECTO
                 ForEach(0..<firstWeekdayOffset, id: \.self) { index in
                     Color.clear
                         .frame(height: 40)
@@ -543,7 +534,7 @@ struct PlantDashboardCalendarView: View {
                             }
                             .frame(height: 32)
                             
-                            // Puntito si hay personal asignado ese día (sin iniciales)
+                            // Puntito si hay personal asignado ese día
                             if hasAssignments {
                                 Circle()
                                     .fill(Color(red: 0.33, green: 0.8, blue: 0.95))
@@ -609,7 +600,7 @@ struct PlantDashboardCalendarView: View {
     }
 }
 
-// MARK: - Vista Supervisor
+// MARK: - Vista Supervisor (editor tipo Android, bajo calendario)
 
 struct SupervisorAssignmentsSection: View {
     let plant: HospitalPlant
@@ -751,6 +742,7 @@ struct SupervisorShiftRow: View {
                     .foregroundColor(.gray)
             }
             
+            // Enfermería
             VStack(alignment: .leading, spacing: 8) {
                 Text("Enfermería")
                     .font(.subheadline.bold())
@@ -768,6 +760,7 @@ struct SupervisorShiftRow: View {
                 }
             }
             
+            // Auxiliares
             if allowAux {
                 Divider().background(Color.white.opacity(0.2))
                 
@@ -1011,6 +1004,7 @@ struct PlantMenuDrawer: View {
     @Binding var isMenuOpen: Bool
     @Binding var selectedOption: String
     var onLogout: () -> Void
+    var onImportShifts: (() -> Void)? = nil // Callback opcional para importar
     
     let menuBackground = Color(red: 26/255, green: 26/255, blue: 46/255)
     
@@ -1077,11 +1071,14 @@ struct PlantMenuDrawer: View {
                                     selected: $selectedOption
                                 ) { close() }
                                 
-                                PlantMenuRow(
-                                    title: "Importar turnos",
-                                    icon: "square.and.arrow.down",
-                                    selected: $selectedOption
-                                ) { close() }
+                                // Botón Importar con callback
+                                Button(action: {
+                                    close()
+                                    onImportShifts?()
+                                }) {
+                                    PlantMenuRowContent(title: "Importar turnos", icon: "square.and.arrow.down", isSelected: false)
+                                }
+                                .buttonStyle(.plain)
                                 
                                 PlantMenuRow(
                                     title: "Gestión de cambios",
