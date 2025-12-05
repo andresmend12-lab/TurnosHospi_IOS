@@ -41,6 +41,15 @@ struct PlantDashboardView: View {
         plantManager.currentPlant?.staffScope ?? "nurses_only"
     }
     
+    // Calendario robusto (Español / Lunes)
+    private var calendar: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.firstWeekday = 2 // Lunes
+        cal.locale = Locale(identifier: "es_ES")
+        cal.timeZone = TimeZone.current
+        return cal
+    }
+    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -105,20 +114,21 @@ struct PlantDashboardView: View {
                                         // CALENDARIO PROPIO DE LA PLANTA
                                         PlantDashboardCalendarView(
                                             selectedDate: $selectedDate,
+                                            currentMonth: $currentMonth,
                                             monthlyAssignments: plantManager.monthlyAssignments
                                         )
                                         .onChange(of: selectedDate) { newDate in
-                                            let calendar = Calendar.current
-                                            
-                                            if !plantId.isEmpty {
-                                                plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
+                                            // Recarga mes si cambia
+                                            if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
+                                                resetCurrentMonthToFirstDay(of: newDate)
+                                                if !plantId.isEmpty {
+                                                    plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
+                                                }
                                             }
                                             
-                                            if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
-                                                currentMonth = newDate
-                                                if !plantId.isEmpty {
-                                                    plantManager.fetchMonthlyAssignments(plantId: plantId, month: newDate)
-                                                }
+                                            // Recarga día
+                                            if !plantId.isEmpty {
+                                                plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
                                             }
                                             
                                             if authManager.userRole == "Supervisor" {
@@ -208,43 +218,27 @@ struct PlantDashboardView: View {
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
         .onAppear {
-            shiftManager.fetchUserShifts()
-            
             if !authManager.userPlantId.isEmpty {
                 let plantId = authManager.userPlantId
                 plantManager.fetchCurrentPlant(plantId: plantId)
+                
+                // Asegurar mes correcto al día 1
+                resetCurrentMonthToFirstDay(of: selectedDate)
+                
+                plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
                 plantManager.fetchDailyStaff(plantId: plantId, date: selectedDate)
-                currentMonth = selectedDate
-                plantManager.fetchMonthlyAssignments(plantId: plantId, month: selectedDate)
             }
             
-            if authManager.userRole == "Supervisor" {
-                loadSupervisorAssignments()
-            }
-        }
-        .onChange(of: selectedDate) { _ in
             if authManager.userRole == "Supervisor" {
                 loadSupervisorAssignments()
             }
         }
     }
-    private func reloadPlantDataIfPossible() {
-        let plantId = authManager.userPlantId
-        guard !plantId.isEmpty else { return }
-        
-        // Cargar info de la planta
-        plantManager.fetchCurrentPlant(plantId: plantId)
-        
-        // Cargar turnos del día seleccionado
-        plantManager.fetchDailyStaff(plantId: plantId, date: selectedDate)
-        
-        // Cargar asignaciones del mes para el calendario
-        currentMonth = selectedDate
-        plantManager.fetchMonthlyAssignments(plantId: plantId, month: selectedDate)
-        
-        // Si es supervisor, cargar también las asignaciones editables
-        if authManager.userRole == "Supervisor" {
-            loadSupervisorAssignments()
+    
+    func resetCurrentMonthToFirstDay(of date: Date) {
+        let components = calendar.dateComponents([.year, .month], from: date)
+        if let firstOfMonth = calendar.date(from: components) {
+            currentMonth = firstOfMonth
         }
     }
     
@@ -446,35 +440,42 @@ extension SlotAssignment {
     }
 }
 
-// MARK: - Calendario específico para PlantDashboard (sin iniciales)
+// MARK: - Calendario específico para PlantDashboard
 
 struct PlantDashboardCalendarView: View {
     @Binding var selectedDate: Date
+    @Binding var currentMonth: Date
     var monthlyAssignments: [Date: [PlantShiftWorker]]
     
     private let daysSymbols = ["L", "M", "X", "J", "V", "S", "D"]
     
+    private var calendar: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.firstWeekday = 2 // Lunes
+        cal.locale = Locale(identifier: "es_ES")
+        cal.timeZone = TimeZone.current
+        return cal
+    }
+    
     private var daysInMonth: [Int] {
-        let calendar = Calendar.current
-        guard let range = calendar.range(of: .day, in: .month, for: selectedDate) else {
+        guard let range = calendar.range(of: .day, in: .month, for: currentMonth) else {
             return []
         }
         return Array(range)
     }
     
     private var firstWeekdayOffset: Int {
-        let calendar = Calendar.current
-        let components = calendar.dateComponents([.year, .month], from: selectedDate)
+        let components = calendar.dateComponents([.year, .month], from: currentMonth)
         guard let firstDay = calendar.date(from: components) else { return 0 }
         let weekday = calendar.component(.weekday, from: firstDay) // 1=Domingo, 2=Lunes...
-        return weekday == 1 ? 6 : weekday - 2  // Lunes=0, Domingo=6
+        return (weekday + 5) % 7 // Lunes=0
     }
     
     var body: some View {
         VStack(spacing: 15) {
             // Cabecera de mes
             HStack {
-                Text(selectedDate.formatted(.dateTime.month(.wide).year()))
+                Text(currentMonth.formatted(.dateTime.month(.wide).year()))
                     .font(.title3.bold())
                     .foregroundColor(.white)
                     .textCase(.uppercase)
@@ -508,10 +509,11 @@ struct PlantDashboardCalendarView: View {
                 columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7),
                 spacing: 8
             ) {
-                // Huecos iniciales
-                ForEach(0..<firstWeekdayOffset, id: \.self) { _ in
+                // Huecos iniciales - ID ÚNICO
+                ForEach(0..<firstWeekdayOffset, id: \.self) { index in
                     Color.clear
                         .frame(height: 40)
+                        .id("dash-blank-\(index)")
                 }
                 
                 // Días reales
@@ -586,19 +588,27 @@ struct PlantDashboardCalendarView: View {
     // MARK: - Helpers calendario
     
     private func dateFor(day: Int) -> Date {
-        var components = Calendar.current.dateComponents([.year, .month], from: selectedDate)
+        var components = calendar.dateComponents([.year, .month], from: currentMonth)
         components.day = day
-        return Calendar.current.date(from: components) ?? selectedDate
+        return calendar.date(from: components) ?? currentMonth
     }
     
     private func changeMonth(by value: Int) {
-        if let newDate = Calendar.current.date(byAdding: .month, value: value, to: selectedDate) {
-            selectedDate = newDate
+        if let newDate = calendar.date(byAdding: .month, value: value, to: currentMonth) {
+            let comps = calendar.dateComponents([.year, .month], from: newDate)
+            if let firstOfMonth = calendar.date(from: comps) {
+                currentMonth = firstOfMonth
+            }
         }
+    }
+    
+    private func monthYearString(for date: Date) -> String {
+        let f = DateFormatter(); f.locale = Locale(identifier: "es_ES"); f.dateFormat = "LLLL yyyy"
+        return f.string(from: date)
     }
 }
 
-// MARK: - Vista Supervisor (editor tipo Android, bajo calendario)
+// MARK: - Vista Supervisor
 
 struct SupervisorAssignmentsSection: View {
     let plant: HospitalPlant
@@ -609,7 +619,6 @@ struct SupervisorAssignmentsSection: View {
     let statusMessage: String?
     let onSave: () -> Void
     
-    // Opciones de personal
     var nurseOptions: [String] {
         plant.allStaffList
             .filter { $0.role.lowercased().contains("enfermer") }
@@ -627,7 +636,6 @@ struct SupervisorAssignmentsSection: View {
             .sorted()
     }
     
-    // Orden de turnos visual
     var orderedShiftNames: [String] {
         let preferred = [
             "Mañana",
@@ -641,7 +649,6 @@ struct SupervisorAssignmentsSection: View {
         ]
         
         let existingKeys = Set(plant.shiftTimes?.keys ?? [:].keys)
-        
         let orderedExisting = preferred.filter { existingKeys.contains($0) }
         let extra = existingKeys.subtracting(orderedExisting).sorted()
         
@@ -743,7 +750,6 @@ struct SupervisorShiftRow: View {
                     .foregroundColor(.gray)
             }
             
-            // Enfermería
             VStack(alignment: .leading, spacing: 8) {
                 Text("Enfermería")
                     .font(.subheadline.bold())
@@ -761,7 +767,6 @@ struct SupervisorShiftRow: View {
                 }
             }
             
-            // Auxiliares
             if allowAux {
                 Divider().background(Color.white.opacity(0.2))
                 
@@ -1205,3 +1210,4 @@ struct PlantPlaceholderView: View {
         .frame(height: 300)
     }
 }
+// FIN DEL ARCHIVO
