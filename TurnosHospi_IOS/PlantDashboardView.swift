@@ -1,7 +1,7 @@
 import SwiftUI
 import FirebaseDatabase
 
-// MARK: - MODELOS LOCALES PARA LA ASIGNACIÓN (iOS, análogo a Android)
+// MARK: - Modelos locales para edición de turnos (iOS)
 
 struct SlotAssignment: Identifiable, Equatable {
     let id = UUID()
@@ -21,6 +21,7 @@ struct PlantDashboardView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     
+    // Managers
     @StateObject var shiftManager = ShiftManager()
     @StateObject var plantManager = PlantManager()
     
@@ -29,15 +30,16 @@ struct PlantDashboardView: View {
     @State private var selectedDate = Date()
     @State private var currentMonth = Date()
     
-    // Estado local de asignaciones para el día seleccionado (como en Android)
-    @State private var currentAssignments: [String: ShiftAssignmentState] = [:]
-    @State private var isLoadingAssignments = false
-    @State private var isAssignmentsLoaded = false
-    @State private var isSavingAssignments = false
-    @State private var saveStatusMessage: String?
+    // Estado de edición para supervisor (como en Android)
+    @State private var supervisorAssignments: [String: ShiftAssignmentState] = [:]
+    @State private var isLoadingSupervisorAssignments = false
+    @State private var isSupervisorAssignmentsLoaded = false
+    @State private var isSavingSupervisorAssignments = false
+    @State private var supervisorStatusMessage: String?
     
+    // Helper para obtener el staffScope de forma segura
     var staffScope: String {
-        plantManager.currentPlant?.staffScope ?? "nurses_only"
+        return plantManager.currentPlant?.staffScope ?? "nurses_only"
     }
     
     var body: some View {
@@ -62,6 +64,7 @@ struct PlantDashboardView: View {
                                 .padding(10)
                                 .contentShape(Rectangle())
                         }
+                        .zIndex(100)
                         
                         Spacer()
                         
@@ -82,6 +85,7 @@ struct PlantDashboardView: View {
                     // CONTENIDO
                     VStack(spacing: 20) {
                         
+                        // Título de la sección
                         HStack {
                             Text(selectedOption)
                                 .font(.largeTitle.bold())
@@ -119,8 +123,9 @@ struct PlantDashboardView: View {
                                                 }
                                             }
                                             
-                                            // Cargar asignaciones detalladas para el supervisor (como Android)
-                                            loadAssignmentsForSelectedDate()
+                                            if authManager.userRole == "Supervisor" {
+                                                loadSupervisorAssignments()
+                                            }
                                         }
                                         
                                         // CONTENIDO BAJO EL CALENDARIO
@@ -130,19 +135,18 @@ struct PlantDashboardView: View {
                                             
                                             SupervisorAssignmentsSection(
                                                 plant: plant,
-                                                assignments: $currentAssignments,
+                                                assignments: $supervisorAssignments,
                                                 selectedDate: selectedDate,
-                                                isLoading: isLoadingAssignments,
-                                                isSaving: isSavingAssignments,
-                                                statusMessage: saveStatusMessage,
+                                                isLoading: isLoadingSupervisorAssignments,
+                                                isSaving: isSavingSupervisorAssignments,
+                                                statusMessage: supervisorStatusMessage,
                                                 onSave: {
-                                                    saveAssignmentsForSelectedDate(plant: plant, plantId: plantId)
+                                                    saveSupervisorAssignments(plant: plant, plantId: plantId)
                                                 }
                                             )
                                             .padding(.bottom, 40)
                                             
                                         } else {
-                                            // Vista para personal no supervisor: listado del equipo en turno
                                             DailyStaffContent(
                                                 selectedDate: $selectedDate,
                                                 plantManager: plantManager
@@ -207,6 +211,7 @@ struct PlantDashboardView: View {
         .navigationBarHidden(true)
         .onAppear {
             shiftManager.fetchUserShifts()
+            
             if !authManager.userPlantId.isEmpty {
                 let plantId = authManager.userPlantId
                 plantManager.fetchCurrentPlant(plantId: plantId)
@@ -214,20 +219,21 @@ struct PlantDashboardView: View {
                 currentMonth = selectedDate
                 plantManager.fetchMonthlyAssignments(plantId: plantId, month: selectedDate)
             }
+            
             if authManager.userRole == "Supervisor" {
-                loadAssignmentsForSelectedDate()
+                loadSupervisorAssignments()
             }
         }
         .onChange(of: selectedDate) { _ in
             if authManager.userRole == "Supervisor" {
-                loadAssignmentsForSelectedDate()
+                loadSupervisorAssignments()
             }
         }
     }
     
-    // MARK: - Helpers de lógica
+    // MARK: - Lógica Supervisor: carga / guardado (formato Android)
     
-    private func loadAssignmentsForSelectedDate() {
+    private func loadSupervisorAssignments() {
         guard authManager.userRole == "Supervisor",
               let plant = plantManager.currentPlant else {
             return
@@ -237,9 +243,9 @@ struct PlantDashboardView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         let dateKey = formatter.string(from: selectedDate)
         
-        isLoadingAssignments = true
-        isAssignmentsLoaded = false
-        saveStatusMessage = nil
+        isLoadingSupervisorAssignments = true
+        isSupervisorAssignmentsLoaded = false
+        supervisorStatusMessage = nil
         
         let dbRef = Database.database().reference()
         let dayRef = dbRef
@@ -252,19 +258,14 @@ struct PlantDashboardView: View {
             var result: [String: ShiftAssignmentState] = [:]
             let unassigned = "Sin asignar"
             
-            if snapshot.exists() {
-                for child in snapshot.children {
-                    guard let shiftSnap = child as? DataSnapshot else { continue }
-                    let shiftName = shiftSnap.key
+            if let shiftsDict = snapshot.value as? [String: Any] {
+                for (shiftName, shiftValue) in shiftsDict {
+                    guard let shiftData = shiftValue as? [String: Any] else { continue }
                     
                     // NURSES
                     var nurseSlots: [SlotAssignment] = []
-                    let nursesSnap = shiftSnap.childSnapshot(forPath: "nurses")
-                    let nurseChildren = (nursesSnap.children.allObjects as? [DataSnapshot])?
-                        .sorted { (Int($0.key) ?? 0) < (Int($1.key) ?? 0) } ?? []
-                    
-                    for slotSnap in nurseChildren {
-                        if let dict = slotSnap.value as? [String: Any] {
+                    if let nursesArray = shiftData["nurses"] as? [[String: Any]] {
+                        for dict in nursesArray {
                             let halfDay = dict["halfDay"] as? Bool ?? false
                             let primary = (dict["primary"] as? String ?? "")
                             let secondary = (dict["secondary"] as? String ?? "")
@@ -279,12 +280,8 @@ struct PlantDashboardView: View {
                     
                     // AUXILIARIES
                     var auxSlots: [SlotAssignment] = []
-                    let auxSnap = shiftSnap.childSnapshot(forPath: "auxiliaries")
-                    let auxChildren = (auxSnap.children.allObjects as? [DataSnapshot])?
-                        .sorted { (Int($0.key) ?? 0) < (Int($1.key) ?? 0) } ?? []
-                    
-                    for slotSnap in auxChildren {
-                        if let dict = slotSnap.value as? [String: Any] {
+                    if let auxArray = shiftData["auxiliaries"] as? [[String: Any]] {
+                        for dict in auxArray {
                             let halfDay = dict["halfDay"] as? Bool ?? false
                             let primary = (dict["primary"] as? String ?? "")
                             let secondary = (dict["secondary"] as? String ?? "")
@@ -304,11 +301,11 @@ struct PlantDashboardView: View {
                 }
             }
             
-            // Asegurar que todos los turnos definidos en la planta aparecen
+            // Asegurar que todos los turnos definidos en la planta aparecen, aunque vacíos
             if let shiftTimes = plant.shiftTimes {
                 for shiftName in shiftTimes.keys {
                     if result[shiftName] == nil {
-                        let required = plant.staffRequirements?[shiftName] ?? 1
+                        let required = plant.staffRequirements?[shiftName] ?? 0
                         let nurseSlots = Array(repeating: SlotAssignment(), count: max(1, required))
                         let auxSlots: [SlotAssignment] =
                             plant.staffScope == "nurses_and_aux"
@@ -323,19 +320,20 @@ struct PlantDashboardView: View {
             }
             
             DispatchQueue.main.async {
-                self.currentAssignments = result
-                self.isLoadingAssignments = false
-                self.isAssignmentsLoaded = true
+                self.supervisorAssignments = result
+                self.isLoadingSupervisorAssignments = false
+                self.isSupervisorAssignmentsLoaded = true
             }
         }
     }
     
-    private func saveAssignmentsForSelectedDate(plant: HospitalPlant, plantId: String) {
+    private func saveSupervisorAssignments(plant: HospitalPlant, plantId: String) {
         guard authManager.userRole == "Supervisor" else { return }
         
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateKey = formatter.string(from: selectedDate)
+        
         let dbRef = Database.database().reference()
         let dayRef = dbRef
             .child("plants")
@@ -346,17 +344,19 @@ struct PlantDashboardView: View {
         let unassigned = "Sin asignar"
         var payload: [String: Any] = [:]
         
-        for (shiftName, state) in currentAssignments {
+        for (shiftName, state) in supervisorAssignments {
             var nursesArray: [[String: Any]] = []
             for (index, slot) in state.nurseSlots.enumerated() {
-                nursesArray.append(slot.toFirebaseMap(unassigned: unassigned,
-                                                      base: "enfermero\(index + 1)"))
+                nursesArray.append(
+                    slot.toFirebaseMap(unassigned: unassigned, base: "enfermero\(index + 1)")
+                )
             }
             
             var auxArray: [[String: Any]] = []
             for (index, slot) in state.auxSlots.enumerated() {
-                auxArray.append(slot.toFirebaseMap(unassigned: unassigned,
-                                                   base: "auxiliar\(index + 1)"))
+                auxArray.append(
+                    slot.toFirebaseMap(unassigned: unassigned, base: "auxiliar\(index + 1)")
+                )
             }
             
             payload[shiftName] = [
@@ -365,23 +365,25 @@ struct PlantDashboardView: View {
             ]
         }
         
-        isSavingAssignments = true
-        saveStatusMessage = nil
+        isSavingSupervisorAssignments = true
+        supervisorStatusMessage = nil
         
         dayRef.setValue(payload) { error, _ in
             DispatchQueue.main.async {
-                self.isSavingAssignments = false
+                self.isSavingSupervisorAssignments = false
                 if let error = error {
-                    self.saveStatusMessage = "Error al guardar: \(error.localizedDescription)"
+                    self.supervisorStatusMessage = "Error al guardar: \(error.localizedDescription)"
                 } else {
-                    self.saveStatusMessage = "Cambios guardados"
-                    // Refrescar vistas de solo lectura
+                    self.supervisorStatusMessage = "Cambios guardados"
+                    // Refrescar vistas de solo lectura / calendario
                     self.plantManager.fetchDailyStaff(plantId: plantId, date: self.selectedDate)
                     self.plantManager.fetchMonthlyAssignments(plantId: plantId, month: self.selectedDate)
                 }
             }
         }
     }
+    
+    // MARK: - Helpers
     
     func getIconForOption(_ option: String) -> String {
         switch option {
@@ -401,7 +403,7 @@ struct PlantDashboardView: View {
     }
 }
 
-// MARK: - EXTENSIÓN SlotAssignment (a Firebase)
+// MARK: - Extensión SlotAssignment → mapa Firebase
 
 extension SlotAssignment {
     func toFirebaseMap(unassigned: String, base: String) -> [String: Any] {
@@ -427,7 +429,150 @@ extension SlotAssignment {
     }
 }
 
-// MARK: - VISTA SUPERVISOR (editor tipo Android)
+// MARK: - CALENDARIO CON INDICADOR (SIN INICIALES)
+
+/// Versión simplificada: muestra días del mes y un puntito si hay asignaciones en monthlyAssignments.
+/// ShiftType es genérico porque no usamos `shifts` aquí, solo lo recibimos para mantener la firma.
+struct CalendarWithShiftsView<ShiftType>: View {
+    @Binding var selectedDate: Date
+    let shifts: [ShiftType]
+    let monthlyAssignments: [Date: [PlantShiftWorker]]
+    
+    @State private var currentMonth: Date = Date()
+    
+    private var calendar: Calendar { Calendar.current }
+    
+    private var monthInterval: DateInterval {
+        calendar.dateInterval(of: .month, for: currentMonth) ?? DateInterval()
+    }
+    
+    private var daysInMonth: [Date] {
+        guard monthInterval.start <= monthInterval.end else { return [] }
+        var days: [Date] = []
+        var date = monthInterval.start
+        while date < monthInterval.end {
+            days.append(date)
+            date = calendar.date(byAdding: .day, value: 1, to: date) ?? date
+        }
+        return days
+    }
+    
+    private var monthTitle: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "es_ES")
+        formatter.dateFormat = "LLLL yyyy"
+        return formatter.string(from: currentMonth).capitalized
+    }
+    
+    private let weekdaySymbols = ["L", "M", "X", "J", "V", "S", "D"]
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Button {
+                    if let newDate = calendar.date(byAdding: .month, value: -1, to: currentMonth) {
+                        currentMonth = newDate
+                    }
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .foregroundColor(.white)
+                }
+                
+                Spacer()
+                
+                Text(monthTitle)
+                    .foregroundColor(.white)
+                    .font(.headline)
+                
+                Spacer()
+                
+                Button {
+                    if let newDate = calendar.date(byAdding: .month, value: 1, to: currentMonth) {
+                        currentMonth = newDate
+                    }
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.white)
+                }
+            }
+            .padding(.horizontal)
+            
+            // Cabecera días de la semana
+            HStack {
+                ForEach(weekdaySymbols, id: \.self) { symbol in
+                    Text(symbol)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.horizontal, 4)
+            
+            // Grid de días
+            let firstWeekday = calendar.component(.weekday, from: monthInterval.start) // 1 = Sunday
+            let leadingEmpty = (firstWeekday + 5) % 7 // ajustar para Lunes como primer día
+            
+            let totalSlots = leadingEmpty + daysInMonth.count
+            let rows = Int(ceil(Double(totalSlots) / 7.0))
+            
+            VStack(spacing: 6) {
+                ForEach(0..<rows, id: \.self) { row in
+                    HStack(spacing: 4) {
+                        ForEach(0..<7, id: \.self) { col in
+                            let index = row * 7 + col
+                            if index < leadingEmpty || index - leadingEmpty >= daysInMonth.count {
+                                // Celda vacía
+                                Spacer()
+                                    .frame(maxWidth: .infinity, minHeight: 40)
+                            } else {
+                                let dayIndex = index - leadingEmpty
+                                let date = daysInMonth[dayIndex]
+                                let dayNumber = calendar.component(.day, from: date)
+                                let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
+                                let dayKey = calendar.startOfDay(for: date)
+                                let hasAssignments = (monthlyAssignments[dayKey]?.isEmpty == false)
+                                
+                                Button {
+                                    selectedDate = date
+                                } label: {
+                                    VStack(spacing: 4) {
+                                        Text("\(dayNumber)")
+                                            .foregroundColor(isSelected ? .black : .white)
+                                            .fontWeight(isSelected ? .bold : .regular)
+                                        
+                                        if hasAssignments {
+                                            Circle()
+                                                .fill(Color(red: 0.33, green: 0.8, blue: 0.95))
+                                                .frame(width: 6, height: 6)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, minHeight: 40)
+                                    .padding(4)
+                                    .background(
+                                        isSelected
+                                        ? Color.white
+                                        : Color.white.opacity(0.08)
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(18)
+        .onAppear {
+            currentMonth = selectedDate
+        }
+    }
+}
+
+// MARK: - Vista Supervisor (editor tipo Android, bajo calendario)
 
 struct SupervisorAssignmentsSection: View {
     let plant: HospitalPlant
@@ -438,6 +583,7 @@ struct SupervisorAssignmentsSection: View {
     let statusMessage: String?
     let onSave: () -> Void
     
+    // Opciones de personal
     var nurseOptions: [String] {
         plant.allStaffList
             .filter { $0.role.lowercased().contains("enfermer") }
@@ -455,13 +601,25 @@ struct SupervisorAssignmentsSection: View {
             .sorted()
     }
     
+    // Orden de turnos visual
     var orderedShiftNames: [String] {
-        let preferred = ["Mañana", "Media mañana", "Tarde", "Media tarde", "Noche", "Día", "Turno de Día", "Turno de Noche"]
-        let keys = Array(plant.shiftTimes?.keys ?? [])
-        let sorted = keys.sorted {
-            (preferred.firstIndex(of: $0) ?? 999) < (preferred.firstIndex(of: $1) ?? 999)
-        }
-        return sorted
+        let preferred = [
+            "Mañana",
+            "Media mañana",
+            "Tarde",
+            "Media tarde",
+            "Noche",
+            "Día",
+            "Turno de Día",
+            "Turno de Noche"
+        ]
+        
+        let existingKeys = Set(plant.shiftTimes?.keys ?? [String: [String: String]]().keys)
+        
+        let orderedExisting = preferred.filter { existingKeys.contains($0) }
+        let extra = existingKeys.subtracting(orderedExisting).sorted()
+        
+        return orderedExisting + extra
     }
     
     var body: some View {
@@ -481,9 +639,14 @@ struct SupervisorAssignmentsSection: View {
             
             ForEach(orderedShiftNames, id: \.self) { shiftName in
                 let timing = plant.shiftTimes?[shiftName]
+                
                 let stateBinding = Binding<ShiftAssignmentState>(
-                    get: { assignments[shiftName] ?? ShiftAssignmentState() },
-                    set: { assignments[shiftName] = $0 }
+                    get: {
+                        assignments[shiftName] ?? ShiftAssignmentState()
+                    },
+                    set: { newValue in
+                        assignments[shiftName] = newValue
+                    }
                 )
                 
                 SupervisorShiftRow(
@@ -499,11 +662,12 @@ struct SupervisorAssignmentsSection: View {
             
             if let status = statusMessage {
                 Text(status)
-                    .foregroundColor(status.contains("Error") ? .red : .green)
+                    .foregroundColor(status.localizedCaseInsensitiveContains("error") ? .red : .green)
                     .font(.footnote)
                     .padding(.horizontal)
             }
             
+            // Botón Guardar
             Button(action: onSave) {
                 HStack {
                     if isSaving {
@@ -534,6 +698,14 @@ struct SupervisorShiftRow: View {
     let nurseOptions: [String]
     let auxOptions: [String]
     
+    private var startText: String {
+        timing?["start"] ?? "--"
+    }
+    
+    private var endText: String {
+        timing?["end"] ?? "--"
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -541,7 +713,7 @@ struct SupervisorShiftRow: View {
                     .font(.headline)
                     .foregroundColor(.white)
                 Spacer()
-                Text((timing?["start"] ?? "--") + " - " + (timing?["end"] ?? "--"))
+                Text("\(startText) - \(endText)")
                     .font(.caption)
                     .foregroundColor(.gray)
             }
@@ -552,11 +724,7 @@ struct SupervisorShiftRow: View {
                     .font(.subheadline.bold())
                     .foregroundColor(.white.opacity(0.9))
                 
-                if state.nurseSlots.isEmpty {
-                    state.nurseSlots = [SlotAssignment()]
-                }
-                
-                ForEach(Array(state.nurseSlots.enumerated()), id: \.element.id) { index, slot in
+                ForEach(state.nurseSlots.indices, id: \.self) { index in
                     SlotAssignmentEditorRow(
                         label: "Enfermero \(index + 1)",
                         slot: Binding(
@@ -571,16 +739,13 @@ struct SupervisorShiftRow: View {
             // Auxiliares
             if allowAux {
                 Divider().background(Color.white.opacity(0.2))
+                
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Auxiliares")
                         .font(.subheadline.bold())
                         .foregroundColor(.white.opacity(0.9))
                     
-                    if state.auxSlots.isEmpty {
-                        state.auxSlots = [SlotAssignment()]
-                    }
-                    
-                    ForEach(Array(state.auxSlots.enumerated()), id: \.element.id) { index, slot in
+                    ForEach(state.auxSlots.indices, id: \.self) { index in
                         SlotAssignmentEditorRow(
                             label: "TCAE \(index + 1)",
                             slot: Binding(
@@ -673,7 +838,7 @@ struct StaffPickerField: View {
     }
 }
 
-// MARK: - SUBVISTAS EXISTENTES (DailyStaff, Drawer, etc.)
+// MARK: - Vistas de lista diaria (no supervisor)
 
 struct DailyShiftSection: View {
     let title: String
@@ -784,7 +949,7 @@ struct DailyStaffContent: View {
     }
 }
 
-// Drawer y resto de helpers igual que ya tenías
+// MARK: - Drawer y componentes auxiliares
 
 struct PlantMenuRowContent: View {
     let title: String
@@ -796,11 +961,7 @@ struct PlantMenuRowContent: View {
             Image(systemName: icon)
                 .font(.system(size: 18))
                 .frame(width: 30)
-                .foregroundColor(
-                    isSelected
-                    ? Color(red: 0.7, green: 0.5, blue: 1.0)
-                    : .white.opacity(0.7)
-                )
+                .foregroundColor(isSelected ? Color(red: 0.7, green: 0.5, blue: 1.0) : .white.opacity(0.7))
             Text(title)
                 .font(.subheadline)
                 .foregroundColor(isSelected ? .white : .white.opacity(0.7))
@@ -991,7 +1152,11 @@ struct PlantMenuRow: View {
             selected = title
             action()
         }) {
-            PlantMenuRowContent(title: title, icon: icon, isSelected: selected == title)
+            PlantMenuRowContent(
+                title: title,
+                icon: icon,
+                isSelected: selected == title
+            )
         }
         .buttonStyle(.plain)
     }
