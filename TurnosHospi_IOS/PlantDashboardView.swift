@@ -212,7 +212,8 @@ struct PlantDashboardView: View {
                     isMenuOpen: $isMenuOpen,
                     selectedOption: $selectedOption,
                     onLogout: { dismiss() },
-                    onImportShifts: { showImportShiftsSheet = true }
+                    onImportShifts: { showImportShiftsSheet = true },
+                    onOpenStatistics: { showStatisticsSheet = true }
                 )
                 .transition(.move(edge: .leading))
                 .zIndex(2)
@@ -222,15 +223,20 @@ struct PlantDashboardView: View {
         .navigationBarHidden(true)
         .sheet(isPresented: $showImportShiftsSheet) {
             ImportShiftsView()
-                .sheet(isPresented: $showStatisticsSheet) {
-                    if let plantId = authManager.userPlantId {
-                        StatisticsView(
-                            plantId: plantId,
-                            isSupervisor: authManager.userRole == "Supervisor"
-                        )
-                    }
-                }
         }
+        .sheet(isPresented: $showImportShiftsSheet) {
+            ImportShiftsView()
+        }
+        // El sheet de estadísticas debe ir SEPARADO, encadenado al anterior o a la vista principal
+        .sheet(isPresented: $showStatisticsSheet) {
+            if !authManager.userPlantId.isEmpty {
+                StatisticsView(
+                    plantId: authManager.userPlantId,
+                    isSupervisor: authManager.userRole == "Supervisor"
+                )
+            }
+        }
+        
         .onAppear {
             if !authManager.userPlantId.isEmpty {
                 let plantId = authManager.userPlantId

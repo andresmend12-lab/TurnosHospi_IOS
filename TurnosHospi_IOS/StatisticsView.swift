@@ -110,7 +110,7 @@ struct StatisticsView: View {
             }
         }
         .onAppear {
-            // Asegurar que tenemos la info de la planta (para duraciones de turnos)
+            // Asegurar que tenemos la info de la planta (para duraciones de turnos y mi nombre real)
             if plantManager.currentPlant == nil {
                 plantManager.fetchCurrentPlant(plantId: plantId)
             }
@@ -129,10 +129,6 @@ struct StatisticsView: View {
     func calculateStatistics() {
         isLoading = true
         
-        // Necesitamos la configuración de turnos de la planta
-        // Si no está cargada, la intentamos recuperar del manager (que debería tenerla si venimos del Dashboard)
-        // O hacemos un fetch rápido si es nil.
-        
         // Rango del mes seleccionado
         let components = calendar.dateComponents([.year, .month], from: currentMonth)
         guard let startOfMonth = calendar.date(from: components),
@@ -144,11 +140,7 @@ struct StatisticsView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         
-        // Descargar turnos del mes (Optimizacion: descargar solo el nodo del mes sería mejor,
-        // pero Firebase Realtime DB no permite queries parciales de keys fácilmente sin una estructura específica.
-        // Lo más sencillo es descargar todo el nodo "turnos" y filtrar, o hacer un rango de strings si las keys son fechas ISO).
-        
-        // Usaremos queryOrderedByKey para filtrar por fecha (string)
+        // Descargar turnos del mes
         let startKey = "turnos-" + formatter.string(from: startOfMonth)
         let endKey = "turnos-" + formatter.string(from: endOfMonth)
         
@@ -159,8 +151,6 @@ struct StatisticsView: View {
             .observeSingleEvent(of: .value) { snapshot in
                 
                 guard let plant = plantManager.currentPlant else {
-                    // Si no hay planta cargada, intentamos recargar y reintentar o salir
-                    // Por simplicidad, asumimos que viene cargada del dashboard.
                     self.isLoading = false
                     return
                 }
@@ -189,10 +179,15 @@ struct StatisticsView: View {
                     var myTotalShifts: Int = 0
                     var breakdown: [String: Double] = [:]
                     
+                    // --- CORRECCIÓN IMPORTANTE ---
+                    // Usar el nombre registrado en la planta (myPlantName) si está disponible.
+                    // Esto asegura que coincida con el nombre guardado en los turnos.
+                    let targetName = plantManager.myPlantName ?? authManager.currentUserName
+                    
                     for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
                         processDaySnapshotForUser(
                             child,
-                            targetName: authManager.currentUserName,
+                            targetName: targetName, // <--- Usamos el nombre corregido
                             shiftDurations: shiftDurations,
                             totalHours: &myTotalHours,
                             totalShifts: &myTotalShifts,
