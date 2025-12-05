@@ -12,10 +12,11 @@ class PlantManager: ObservableObject {
     
     @Published var currentPlant: HospitalPlant?
     
-    // Almacena los trabajadores del día seleccionado (para visualización)
-    @Published var dailyAssignments: [String: [PlantShiftWorker]] = [:]
+    // Nombre exacto del usuario en ESTA planta (ej: "Andrés Mendoza")
+    @Published var myPlantName: String? = nil
     
-    // Almacena los trabajadores del mes (para la vista de calendario)
+    // Datos para la vista
+    @Published var dailyAssignments: [String: [PlantShiftWorker]] = [:]
     @Published var monthlyAssignments: [Date: [PlantShiftWorker]] = [:]
     
     // MARK: - Buscar Planta
@@ -73,7 +74,7 @@ class PlantManager: ObservableObject {
         
         let userPlantData: [String: Any] = [
             "plantId": plant.id,
-            "staffId": selectedStaff.id,
+            "staffId": selectedStaff.id, // Guardamos el ID del personal
             "staffName": selectedStaff.name,
             "staffRole": selectedStaff.role
         ]
@@ -101,11 +102,12 @@ class PlantManager: ObservableObject {
             }
     }
     
-    // MARK: - Obtener Planta Actual
+    // MARK: - Obtener Planta Actual e Identidad
     func fetchCurrentPlant(plantId: String) {
         ref.child("plants").child(plantId).observe(.value, with: { snapshot in
             guard let value = snapshot.value as? [String: Any] else { return }
             
+            // 1. Parsear personal
             var staffMembers: [PlantStaff] = []
             if let personalDict = value["personal_de_planta"] as? [String: [String: Any]] {
                 for (_, data) in personalDict {
@@ -120,211 +122,160 @@ class PlantManager: ObservableObject {
                 }
             }
             
-            DispatchQueue.main.async {
-                let staffScope = value["staffScope"] as? String ?? "nurses_only"
-                let shiftDuration = value["shiftDuration"] as? String
-                let staffRequirements = value["staffRequirements"] as? [String: Int]
-                let shiftTimes = value["shiftTimes"] as? [String: [String: String]]
+            // 2. Parsear configuración planta
+            let staffScope = value["staffScope"] as? String ?? "nurses_only"
+            let shiftDuration = value["shiftDuration"] as? String
+            let staffRequirements = value["staffRequirements"] as? [String: Int]
+            let shiftTimes = value["shiftTimes"] as? [String: [String: String]]
+            
+            let plant = HospitalPlant(
+                id: plantId,
+                name: value["name"] as? String ?? "Planta",
+                hospitalName: value["hospitalName"] as? String ?? "Hospital",
+                accessPassword: "",
+                allStaffList: staffMembers,
+                staffScope: staffScope,
+                shiftDuration: shiftDuration,
+                staffRequirements: staffRequirements,
+                shiftTimes: shiftTimes
+            )
+            
+            // 3. IDENTIFICAR USUARIO ACTUAL
+            // Buscamos en userPlants -> mi UID -> obtenemos staffId -> buscamos nombre en staffMembers
+            var identifiedName: String? = nil
+            if let userPlants = value["userPlants"] as? [String: [String: Any]],
+               let uid = Auth.auth().currentUser?.uid,
+               let myData = userPlants[uid] {
                 
-                let plant = HospitalPlant(
-                    id: plantId,
-                    name: value["name"] as? String ?? "Planta",
-                    hospitalName: value["hospitalName"] as? String ?? "Hospital",
-                    accessPassword: "",
-                    allStaffList: staffMembers,
-                    staffScope: staffScope,
-                    shiftDuration: shiftDuration,
-                    staffRequirements: staffRequirements,
-                    shiftTimes: shiftTimes
-                )
+                // Intento 1: Buscar por staffId (lo más seguro)
+                if let myStaffId = myData["staffId"] as? String,
+                   let me = staffMembers.first(where: { $0.id == myStaffId }) {
+                    identifiedName = me.name
+                }
+                // Intento 2: Si no hay staffId, usar el nombre guardado (fallback)
+                else if let savedName = myData["staffName"] as? String {
+                    identifiedName = savedName
+                }
+            }
+            
+            DispatchQueue.main.async {
                 self.currentPlant = plant
+                self.myPlantName = identifiedName // <--- Aquí guardamos el nombre real
             }
         })
     }
     
-    // MARK: - Helper: parsear un turno (Mañana/Tarde/Noche...) al modelo PlantShiftWorker
-    private func parseWorkersForShift(
-        shiftName: String,
-        shiftData: [String: Any]
-    ) -> [PlantShiftWorker] {
+    // MARK: - Parsers
+    private func parseWorkersForShift(shiftName: String, shiftData: [String: Any]) -> [PlantShiftWorker] {
         var workers: [PlantShiftWorker] = []
         let unassigned = "Sin asignar"
         
-        // NURSES
-        if let nursesArray = shiftData["nurses"] as? [[String: Any]] {
-            for (index, slot) in nursesArray.enumerated() {
+        // Función auxiliar interna para procesar arrays (nurses/auxiliaries)
+        func processArray(_ list: [[String: Any]], roleName: String) {
+            for (index, slot) in list.enumerated() {
                 let halfDay = slot["halfDay"] as? Bool ?? false
                 let primary = (slot["primary"] as? String) ?? ""
                 let secondary = (slot["secondary"] as? String) ?? ""
                 
                 if !primary.isEmpty && primary != unassigned {
-                    workers.append(
-                        PlantShiftWorker(
-                            id: "nurse_\(shiftName)_\(index)_P",
-                            name: primary,
-                            role: halfDay ? "Enfermero (media jornada)" : "Enfermero"
-                        )
-                    )
+                    workers.append(PlantShiftWorker(
+                        id: "\(roleName)_\(shiftName)_\(index)_P",
+                        name: primary,
+                        role: halfDay ? "\(roleName) (media)" : roleName,
+                        shiftName: shiftName
+                    ))
                 }
-                
-                if halfDay,
-                   !secondary.isEmpty,
-                   secondary != unassigned {
-                    workers.append(
-                        PlantShiftWorker(
-                            id: "nurse_\(shiftName)_\(index)_S",
-                            name: secondary,
-                            role: "Enfermero (media jornada)"
-                        )
-                    )
+                if halfDay, !secondary.isEmpty, secondary != unassigned {
+                    workers.append(PlantShiftWorker(
+                        id: "\(roleName)_\(shiftName)_\(index)_S",
+                        name: secondary,
+                        role: "\(roleName) (media)",
+                        shiftName: shiftName
+                    ))
                 }
             }
         }
         
-        // AUXILIARIES / TCAE
-        if let auxArray = shiftData["auxiliaries"] as? [[String: Any]] {
-            for (index, slot) in auxArray.enumerated() {
-                let halfDay = slot["halfDay"] as? Bool ?? false
-                let primary = (slot["primary"] as? String) ?? ""
-                let secondary = (slot["secondary"] as? String) ?? ""
-                
-                if !primary.isEmpty && primary != unassigned {
-                    workers.append(
-                        PlantShiftWorker(
-                            id: "aux_\(shiftName)_\(index)_P",
-                            name: primary,
-                            role: halfDay ? "TCAE (media jornada)" : "TCAE"
-                        )
-                    )
-                }
-                
-                if halfDay,
-                   !secondary.isEmpty,
-                   secondary != unassigned {
-                    workers.append(
-                        PlantShiftWorker(
-                            id: "aux_\(shiftName)_\(index)_S",
-                            name: secondary,
-                            role: "TCAE (media jornada)"
-                        )
-                    )
-                }
-            }
+        if let nurses = shiftData["nurses"] as? [[String: Any]] {
+            processArray(nurses, roleName: "Enfermero")
+        }
+        if let auxs = shiftData["auxiliaries"] as? [[String: Any]] {
+            processArray(auxs, roleName: "TCAE")
         }
         
         return workers
     }
     
-    // MARK: - Obtener personal del día (assignments) – LECTURA FORMATO ANDROID
+    // MARK: - Fetch Diario
     func fetchDailyStaff(plantId: String, date: Date) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateString = formatter.string(from: date)
-        let nodeName = "turnos-\(dateString)"
         
-        ref.child("plants")
-            .child(plantId)
-            .child("turnos")
-            .child(nodeName)
-            .observe(.value, with: { snapshot in
+        ref.child("plants").child(plantId).child("turnos").child("turnos-\(dateString)")
+            .observe(.value) { snapshot in
+                var result: [String: [PlantShiftWorker]] = [:]
                 
-                var newDailyAssignments: [String: [PlantShiftWorker]] = [:]
-                
-                guard let shiftsDict = snapshot.value as? [String: Any] else {
-                    DispatchQueue.main.async {
-                        self.dailyAssignments = [:]
-                    }
-                    return
-                }
-                
-                for (shiftName, value) in shiftsDict {
-                    guard let shiftData = value as? [String: Any] else { continue }
-                    
-                    let workers = self.parseWorkersForShift(
-                        shiftName: shiftName,
-                        shiftData: shiftData
-                    )
-                    
-                    if !workers.isEmpty {
-                        newDailyAssignments[shiftName] = workers
+                if let shiftsDict = snapshot.value as? [String: Any] {
+                    for (shiftName, val) in shiftsDict {
+                        if let data = val as? [String: Any] {
+                            let workers = self.parseWorkersForShift(shiftName: shiftName, shiftData: data)
+                            if !workers.isEmpty { result[shiftName] = workers }
+                        }
                     }
                 }
                 
                 DispatchQueue.main.async {
-                    self.dailyAssignments = newDailyAssignments
+                    self.dailyAssignments = result
                 }
-            })
+            }
     }
     
-    // MARK: - Obtener asignaciones del mes (para el calendario) – LECTURA FORMATO ANDROID
+    // MARK: - Fetch Mensual
     func fetchMonthlyAssignments(plantId: String, month: Date) {
         let calendar = Calendar.current
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         
-        // Observamos todos los turnos y filtramos por mes en cliente
-        ref.child("plants")
-            .child(plantId)
-            .child("turnos")
-            .observeSingleEvent(of: .value, with: { snapshot in
+        ref.child("plants").child(plantId).child("turnos")
+            .observeSingleEvent(of: .value) { snapshot in
+                var result: [Date: [PlantShiftWorker]] = [:]
                 
-                var newMonthlyAssignments: [Date: [PlantShiftWorker]] = [:]
-                
-                guard let allDatesDict = snapshot.value as? [String: Any] else {
-                    DispatchQueue.main.async {
-                        self.monthlyAssignments = [:]
-                    }
+                guard let allDates = snapshot.value as? [String: Any] else {
+                    DispatchQueue.main.async { self.monthlyAssignments = [:] }
                     return
                 }
                 
-                for (nodeName, value) in allDatesDict {
-                    // nodeName = "turnos-2025-11-30"
-                    guard nodeName.hasPrefix("turnos-") else { continue }
-                    let dateString = String(nodeName.dropFirst("turnos-".count))
+                for (key, val) in allDates {
+                    guard key.hasPrefix("turnos-") else { continue }
+                    let dateStr = String(key.dropFirst(7)) // Quitar "turnos-"
+                    guard let date = formatter.date(from: dateStr) else { continue }
                     
-                    guard let date = formatter.date(from: dateString) else { continue }
+                    // Filtrar por mes
+                    if !calendar.isDate(date, equalTo: month, toGranularity: .month) { continue }
                     
-                    // Solo fechas del mismo mes y año que `month`
-                    guard calendar.isDate(date, equalTo: month, toGranularity: .month) else {
-                        continue
-                    }
+                    guard let shiftsDict = val as? [String: Any] else { continue }
+                    var dayWorkers: [PlantShiftWorker] = []
                     
-                    guard let shiftsDict = value as? [String: Any] else { continue }
-                    
-                    var workersForDay: [PlantShiftWorker] = []
-                    
-                    for (shiftName, shiftValue) in shiftsDict {
-                        guard let shiftData = shiftValue as? [String: Any] else { continue }
-                        let shiftWorkers = self.parseWorkersForShift(
-                            shiftName: shiftName,
-                            shiftData: shiftData
-                        )
-                        workersForDay.append(contentsOf: shiftWorkers)
-                    }
-                    
-                    if !workersForDay.isEmpty {
-                        // Eliminar duplicados por (name + role)
-                        var unique: [String: PlantShiftWorker] = [:]
-                        for w in workersForDay {
-                            let key = "\(w.name)_\(w.role)"
-                            unique[key] = w
+                    for (shiftName, sVal) in shiftsDict {
+                        if let sData = sVal as? [String: Any] {
+                            dayWorkers.append(contentsOf: self.parseWorkersForShift(shiftName: shiftName, shiftData: sData))
                         }
-                        let startOfDay = calendar.startOfDay(for: date)
-                        newMonthlyAssignments[startOfDay] = Array(unique.values)
+                    }
+                    
+                    if !dayWorkers.isEmpty {
+                        // Eliminar duplicados (misma persona en mismo turno)
+                        var unique: [String: PlantShiftWorker] = [:]
+                        for w in dayWorkers {
+                            unique["\(w.name)_\(w.shiftName ?? "")"] = w
+                        }
+                        result[calendar.startOfDay(for: date)] = Array(unique.values)
                     }
                 }
                 
                 DispatchQueue.main.async {
-                    self.monthlyAssignments = newMonthlyAssignments
+                    self.monthlyAssignments = result
                 }
-            })
-    }
-}
-
-// MARK: - Extensión para formato de fecha (ya la tenías, la mantengo por compatibilidad)
-extension DateFormatter {
-    func dateString(from date: Date) -> String {
-        self.dateFormat = "yyyy-MM-dd"
-        return self.string(from: date)
+            }
     }
 }

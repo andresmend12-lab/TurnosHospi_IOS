@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		979C54FD2EE3077300F21427 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C54FC2EE3077300F21427 /* ThemeManager.swift */; };
+		979C54FF2EE3078D00F21427 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C54FE2EE3078D00F21427 /* SettingsView.swift */; };
 		97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */; };
 		97E962CA2EE18973006E7707 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C92EE18973006E7707 /* ContentView.swift */; };
 		97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97E962CB2EE18976006E7707 /* Assets.xcassets */; };
@@ -55,6 +57,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		979C54FC2EE3077300F21427 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		979C54FE2EE3078D00F21427 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		97E962C42EE18973006E7707 /* TurnosHospi_IOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TurnosHospi_IOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSApp.swift; sourceTree = "<group>"; };
 		97E962C92EE18973006E7707 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -145,6 +149,8 @@
 				97E962CE2EE18976006E7707 /* Preview Content */,
 				97FB93692EE1D55700F5490F /* LoginView.swift */,
 				97FB936D2EE1DAF300F5490F /* MainMenuView.swift */,
+				979C54FC2EE3077300F21427 /* ThemeManager.swift */,
+				979C54FE2EE3078D00F21427 /* SettingsView.swift */,
 				97FB937E2EE1F26100F5490F /* PlantModels.swift */,
 				97FB93802EE1F27C00F5490F /* PlantManager.swift */,
 				97FB93822EE1F29F00F5490F /* JoinPlantView.swift */,
@@ -333,6 +339,7 @@
 				97FB938D2EE20B7600F5490F /* ShiftManager.swift in Sources */,
 				97FB93832EE1F29F00F5490F /* JoinPlantView.swift in Sources */,
 				97FB936A2EE1D55700F5490F /* LoginView.swift in Sources */,
+				979C54FF2EE3078D00F21427 /* SettingsView.swift in Sources */,
 				97FB93812EE1F27C00F5490F /* PlantManager.swift in Sources */,
 				97FB93932EE2182600F5490F /* StaffListView.swift in Sources */,
 				97FB93872EE1FC7B00F5490F /* PlantDashboardView.swift in Sources */,
@@ -343,6 +350,7 @@
 				97E962CA2EE18973006E7707 /* ContentView.swift in Sources */,
 				97FB93912EE212C400F5490F /* CreatePlantView.swift in Sources */,
 				97FB938B2EE20B4F00F5490F /* Shift.swift in Sources */,
+				979C54FD2EE3077300F21427 /* ThemeManager.swift in Sources */,
 				97FB937B2EE1E19700F5490F /* SignUpView.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
 				97FB937F2EE1F26100F5490F /* PlantModels.swift in Sources */,

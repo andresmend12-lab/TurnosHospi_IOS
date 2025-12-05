@@ -9,7 +9,7 @@ struct PlantStaff: Identifiable, Hashable {
     let profileType: String
 }
 
-// Representa la planta básica para la búsqueda
+// Representa la planta básica
 struct HospitalPlant {
     let id: String
     let name: String
@@ -17,13 +17,13 @@ struct HospitalPlant {
     let accessPassword: String
     let allStaffList: [PlantStaff]
     
-    // Campos añadidos en flujos anteriores (opcionales)
+    // Campos de configuración
     let staffScope: String?
     let shiftDuration: String?
     let staffRequirements: [String: Int]?
     let shiftTimes: [String: [String: String]]?
     
-    // Inicializador simplificado para la búsqueda inicial (JoinPlantView/searchPlant)
+    // Inicializador simplificado (JoinPlantView)
     init(id: String, name: String, hospitalName: String, accessPassword: String, allStaffList: [PlantStaff]) {
         self.id = id
         self.name = name
@@ -36,7 +36,7 @@ struct HospitalPlant {
         self.shiftTimes = nil
     }
     
-    // Inicializador completo (para fetchCurrentPlant)
+    // Inicializador completo (Fetch)
     init(id: String, name: String, hospitalName: String, accessPassword: String, allStaffList: [PlantStaff], staffScope: String?, shiftDuration: String?, staffRequirements: [String: Int]?, shiftTimes: [String: [String: String]]?) {
         self.id = id
         self.name = name
@@ -50,13 +50,13 @@ struct HospitalPlant {
     }
 }
 
-// --- NUEVO: Representa a un trabajador en un turno específico ---
+// Representa a un trabajador en un turno específico (Calendario)
 struct PlantShiftWorker: Identifiable, Hashable {
     let id: String
     let name: String
     let role: String
+    var shiftName: String? = nil // <--- IMPORTANTE: Para saber el color del turno
     
-    // Helper para la inicial
     var initial: String {
         return String(name.prefix(1))
     }
