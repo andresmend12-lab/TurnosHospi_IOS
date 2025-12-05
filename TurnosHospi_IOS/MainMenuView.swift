@@ -16,6 +16,7 @@ struct MainMenuView: View {
         var cal = Calendar(identifier: .gregorian)
         cal.firstWeekday = 2 // 2 = Lunes
         cal.locale = Locale(identifier: "es_ES")
+        cal.timeZone = TimeZone.current
         return cal
     }
     
@@ -31,20 +32,24 @@ struct MainMenuView: View {
         
         // 3. Buscamos coincidencia exacta
         if let myRecord = workers.first(where: { $0.name == targetName }) {
-            return mapStringToShiftType(myRecord.shiftName ?? "")
+            return mapStringToShiftType(myRecord.shiftName ?? "", role: myRecord.role)
         }
         return nil
     }
     
-    private func mapStringToShiftType(_ name: String) -> ShiftType? {
-        let lower = name.lowercased()
-        if lower.contains("media") {
-            if lower.contains("mañana") || lower.contains("dia") { return .mediaManana }
-            if lower.contains("tarde") { return .mediaTarde }
+    private func mapStringToShiftType(_ name: String, role: String) -> ShiftType? {
+        let lowerName = name.lowercased()
+        let isHalf = role.localizedCaseInsensitiveContains("media")
+        
+        if lowerName.contains("mañana") || lowerName.contains("dia") || lowerName.contains("día") {
+            return isHalf ? .mediaManana : .manana
         }
-        if lower.contains("mañana") || lower.contains("día") { return .manana }
-        if lower.contains("tarde") { return .tarde }
-        if lower.contains("noche") { return .noche }
+        if lowerName.contains("tarde") {
+            return isHalf ? .mediaTarde : .tarde
+        }
+        if lowerName.contains("noche") {
+            return .noche
+        }
         return nil
     }
     
@@ -98,17 +103,13 @@ struct MainMenuView: View {
             if let user = authManager.user, authManager.currentUserName.isEmpty {
                 authManager.fetchUserData(uid: user.uid)
             }
-            currentMonth = selectedDate
+            resetCurrentMonthToFirstDay(of: selectedDate)
             loadData()
         }
         .onChange(of: selectedDate) { newDate in
-            // Si cambia el mes (según nuestro calendario corregido), recargamos
+            // Si cambia el mes, recargamos
             if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
-                // Ajustamos currentMonth al día 1 del nuevo mes para evitar errores
-                let comps = calendar.dateComponents([.year, .month], from: newDate)
-                if let firstOfMonth = calendar.date(from: comps) {
-                    currentMonth = firstOfMonth
-                }
+                resetCurrentMonthToFirstDay(of: newDate)
                 loadData()
             }
             // Siempre cargamos detalles del día específico
@@ -117,6 +118,14 @@ struct MainMenuView: View {
             }
         }
         .onChange(of: authManager.userPlantId) { _ in loadData() }
+    }
+    
+    // Asegura que currentMonth siempre sea el día 1 para evitar errores de cálculo
+    func resetCurrentMonthToFirstDay(of date: Date) {
+        let components = calendar.dateComponents([.year, .month], from: date)
+        if let firstOfMonth = calendar.date(from: components) {
+            currentMonth = firstOfMonth
+        }
     }
     
     func loadData() {
@@ -197,9 +206,11 @@ struct MainMenuView: View {
                 columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7),
                 spacing: 8
             ) {
-                // Huecos iniciales (calculados con calendario español)
-                ForEach(0..<firstWeekdayOffset(for: currentMonth), id: \.self) { _ in
-                    Color.clear.frame(height: 36)
+                // --- CORRECCIÓN AQUÍ: IDs únicos para los huecos ---
+                ForEach(0..<firstWeekdayOffset(for: currentMonth), id: \.self) { index in
+                    Color.clear
+                        .frame(height: 36)
+                        .id("blank-\(index)") // ID único para evitar conflicto con los días
                 }
                 
                 // Días reales del mes
@@ -212,11 +223,11 @@ struct MainMenuView: View {
                         withAnimation { selectedDate = date }
                     } label: {
                         ZStack {
-                            // Fondo coloreado SI es mi turno (usando ThemeManager)
+                            // Fondo coloreado SI es mi turno
                             if let s = shift {
                                 themeManager.color(for: s).opacity(isSelected ? 0.9 : 0.7)
                             } else {
-                                // Día libre (usando ThemeManager)
+                                // Día libre
                                 themeManager.holidayColor.opacity(isSelected ? 0.6 : 0.2)
                             }
                             
@@ -296,10 +307,10 @@ struct MainMenuView: View {
                     
                     // Compañeros en el mismo turno
                     let targetName = plantManager.myPlantName ?? authManager.currentUserName
-                    let shiftString = shiftName(for: type)
+                    // Usamos nombre base (Mañana) para buscar compañeros
+                    let shiftBaseName = shiftName(for: type)
                     
-                    // Obtenemos los del turno y nos filtramos a nosotros mismos
-                    let coworkers = (plantManager.dailyAssignments[shiftString] ?? [])
+                    let coworkers = (plantManager.dailyAssignments[shiftBaseName] ?? [])
                         .filter { $0.name != targetName }
                     
                     if !coworkers.isEmpty {
@@ -340,7 +351,6 @@ struct MainMenuView: View {
                 .padding()
                 .background(Color.white.opacity(0.05))
                 .cornerRadius(15)
-                // Borde dinámico del tema
                 .overlay(
                     RoundedRectangle(cornerRadius: 15)
                         .stroke(themeManager.color(for: type).opacity(0.5), lineWidth: 1)
@@ -365,7 +375,7 @@ struct MainMenuView: View {
         }
     }
     
-    // MARK: - Helpers Corregidos
+    // MARK: - Helpers
     
     private func monthYearString(for date: Date) -> String {
         let formatter = DateFormatter()
@@ -375,9 +385,10 @@ struct MainMenuView: View {
     }
     
     private func firstWeekdayOffset(for monthDate: Date) -> Int {
-        guard let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: monthDate)) else { return 0 }
+        let components = calendar.dateComponents([.year, .month], from: monthDate)
+        guard let firstDay = calendar.date(from: components) else { return 0 }
         let weekday = calendar.component(.weekday, from: firstDay)
-        // Lunes(2)->0, Martes(3)->1 ... Domingo(1)->6
+        // Lunes=0 ... Domingo=6
         return (weekday + 5) % 7
     }
     
@@ -394,23 +405,17 @@ struct MainMenuView: View {
     
     private func changeMonth(by value: Int) {
         if let newDate = calendar.date(byAdding: .month, value: value, to: currentMonth) {
-            // Ajustar al día 1
-            let components = calendar.dateComponents([.year, .month], from: newDate)
-            if let firstOfMonth = calendar.date(from: components) {
-                currentMonth = firstOfMonth
-                loadData()
-            }
+            resetCurrentMonthToFirstDay(of: newDate)
+            loadData()
         }
     }
     
     private func shiftName(for type: ShiftType) -> String {
-        return type.rawValue
-    }
-    
-    private func loadDailyStaffIfPossible(for date: Date) {
-        let plantId = authManager.userPlantId
-        guard !plantId.isEmpty else { return }
-        plantManager.fetchDailyStaff(plantId: plantId, date: date)
+        switch type {
+        case .manana, .mediaManana: return "Mañana"
+        case .tarde, .mediaTarde: return "Tarde"
+        case .noche: return "Noche"
+        }
     }
     
     func getIconForShift(_ type: ShiftType) -> String {
