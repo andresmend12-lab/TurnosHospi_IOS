@@ -129,13 +129,13 @@ struct ImportShiftsView: View {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Instrucciones (Formato Matriz):")
                                 .font(.caption).bold().foregroundColor(.white)
-                            Text("1. La primera fila debe contener las fechas (AAAA-MM-DD) empezando en la columna 2.")
+                            Text("1. La primera fila contiene las fechas (AAAA-MM-DD) empezando en la columna 2.")
                                 .font(.caption).foregroundColor(.gray)
-                            Text("2. La primera columna debe contener los nombres del personal.")
+                            Text("2. La primera columna contiene los nombres del personal.")
                                 .font(.caption).foregroundColor(.gray)
-                            Text("3. Rellena las celdas con el nombre del turno (ej: Mañana, Tarde, Noche).")
+                            Text("3. Rellena las celdas con el turno (Mañana, Tarde, Noche, Libre).")
                                 .font(.caption).foregroundColor(.gray)
-                            Text("4. Deja la celda vacía si no hay turno asignado.")
+                            Text("4. Deja la celda vacía si no hay asignación.")
                                 .font(.caption).foregroundColor(.gray)
                         }
                         .padding()
@@ -179,35 +179,40 @@ struct ImportShiftsView: View {
         }
     }
     
-    // Generar plantilla estilo MATRIZ (Horizontal)
+    // Generar plantilla estilo MATRIZ (Horizontal) corregida
     func prepareTemplateDownload() {
-        // Generamos fechas para el mes actual como ejemplo
+        // Generamos fechas para el mes actual y el siguiente como ejemplo (similar a tu archivo subido)
         let calendar = Calendar.current
         let today = Date()
-        let range = calendar.range(of: .day, in: .month, for: today)!
-        let components = calendar.dateComponents([.year, .month], from: today)
-        let year = components.year!
-        let month = components.month!
         
-        var header = "," // Primera celda vacía (esquina superior izquierda)
+        // Cabecera: Celda A1 vacía + Fechas
+        var header = "," // Primera celda vacía
         
-        // Crear cabeceras de fecha
-        for day in range {
-            let dateStr = String(format: "%04d-%02d-%02d", year, month, day)
-            header += "\(dateStr),"
+        // Generar 60 días desde hoy (aprox 2 meses)
+        for i in 0..<60 {
+            if let date = calendar.date(byAdding: .day, value: i, to: today) {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                let dateStr = formatter.string(from: date)
+                header += "\(dateStr),"
+            }
         }
-        // Eliminar última coma
+        // Eliminar última coma y añadir salto de línea
         header = String(header.dropLast()) + "\n"
         
-        // Añadir filas de ejemplo con personal (si existe)
+        // Cuerpo: Lista de personal + Celdas vacías
         var body = ""
-        let staff = plantManager.currentPlant?.allStaffList.prefix(5) ?? []
+        let staffList = plantManager.currentPlant?.allStaffList ?? []
         
-        if staff.isEmpty {
-            body += "Nombre del Personal,Mañana,Tarde,Noche,,,,,"
+        if staffList.isEmpty {
+            // Ejemplo genérico si no hay personal cargado
+            body += "Nombre Apellido,Mañana,Tarde,Noche,,,,,"
         } else {
-            for person in staff {
-                body += "\(person.name),Mañana,Tarde,Noche,,,,,\n"
+            for person in staffList {
+                // Nombre en primera columna, luego comas para dejar huecos vacíos para rellenar
+                // Añadimos tantas comas como fechas generamos (60)
+                let emptyCells = String(repeating: ",", count: 60)
+                body += "\(person.name)\(emptyCells)\n"
             }
         }
         
@@ -235,7 +240,7 @@ struct ImportShiftsView: View {
         
         do {
             let content = try String(contentsOf: url, encoding: .utf8)
-            // Llamamos a la nueva función de importación matricial
+            // Llamamos a la función de importación matricial en PlantManager
             plantManager.processMatrixCSVImport(csvContent: content, plant: plant) { success, msg in
                 DispatchQueue.main.async {
                     isLoading = false

@@ -47,10 +47,6 @@ struct SideMenuView: View {
                         Button(action: { showCreatePlantSheet = true }) {
                             MenuOptionRow(icon: "plus.app.fill", text: "Crear nueva planta")
                         }
-                        // NUEVO BOTÓN IMPORTAR
-                        Button(action: { showImportShiftsSheet = true }) {
-                            MenuOptionRow(icon: "square.and.arrow.down", text: "Importar turnos")
-                        }
                     }
                     
                     Button(action: {
