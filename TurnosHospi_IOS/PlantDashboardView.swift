@@ -21,19 +21,17 @@ struct PlantDashboardView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     
-    // Managers
     @StateObject var shiftManager = ShiftManager()
     @StateObject var plantManager = PlantManager()
     
     @State private var isMenuOpen = false
     @State private var selectedOption: String = "Calendario"
     @State private var selectedDate = Date()
-    @State private var currentMonth = Date()
+    @State private var lastFetchedMonth = Date()
     
     // Estado de edición para supervisor (como en Android)
     @State private var supervisorAssignments: [String: ShiftAssignmentState] = [:]
     @State private var isLoadingSupervisorAssignments = false
-    @State private var isSupervisorAssignmentsLoaded = false
     @State private var isSavingSupervisorAssignments = false
     @State private var supervisorStatusMessage: String?
     
@@ -103,30 +101,11 @@ struct PlantDashboardView: View {
                                 ScrollView {
                                     VStack(spacing: 20) {
                                         
-                                        // CALENDARIO
-                                        CalendarWithShiftsView(
+                                        // CALENDARIO PROPIO DE LA PANTALLA
+                                        PlantDashboardCalendarView(
                                             selectedDate: $selectedDate,
-                                            shifts: shiftManager.userShifts,
                                             monthlyAssignments: plantManager.monthlyAssignments
                                         )
-                                        .onChange(of: selectedDate) { newDate in
-                                            let calendar = Calendar.current
-                                            
-                                            if !plantId.isEmpty {
-                                                plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
-                                            }
-                                            
-                                            if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
-                                                currentMonth = newDate
-                                                if !plantId.isEmpty {
-                                                    plantManager.fetchMonthlyAssignments(plantId: plantId, month: newDate)
-                                                }
-                                            }
-                                            
-                                            if authManager.userRole == "Supervisor" {
-                                                loadSupervisorAssignments()
-                                            }
-                                        }
                                         
                                         // CONTENIDO BAJO EL CALENDARIO
                                         if authManager.userRole == "Supervisor",
@@ -210,30 +189,43 @@ struct PlantDashboardView: View {
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
         .onAppear {
+            let plantId = authManager.userPlantId
             shiftManager.fetchUserShifts()
             
-            if !authManager.userPlantId.isEmpty {
-                let plantId = authManager.userPlantId
+            if !plantId.isEmpty {
                 plantManager.fetchCurrentPlant(plantId: plantId)
                 plantManager.fetchDailyStaff(plantId: plantId, date: selectedDate)
-                currentMonth = selectedDate
+                
+                lastFetchedMonth = selectedDate
                 plantManager.fetchMonthlyAssignments(plantId: plantId, month: selectedDate)
             }
             
             if authManager.userRole == "Supervisor" {
-                loadSupervisorAssignments()
+                loadSupervisorAssignments(for: selectedDate)
             }
         }
-        .onChange(of: selectedDate) { _ in
+        .onChange(of: selectedDate) { newDate in
+            let plantId = authManager.userPlantId
+            let calendar = Calendar.current
+            
+            if !plantId.isEmpty {
+                plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
+                
+                if !calendar.isDate(newDate, equalTo: lastFetchedMonth, toGranularity: .month) {
+                    lastFetchedMonth = newDate
+                    plantManager.fetchMonthlyAssignments(plantId: plantId, month: newDate)
+                }
+            }
+            
             if authManager.userRole == "Supervisor" {
-                loadSupervisorAssignments()
+                loadSupervisorAssignments(for: newDate)
             }
         }
     }
     
     // MARK: - Lógica Supervisor: carga / guardado (formato Android)
     
-    private func loadSupervisorAssignments() {
+    private func loadSupervisorAssignments(for date: Date) {
         guard authManager.userRole == "Supervisor",
               let plant = plantManager.currentPlant else {
             return
@@ -241,10 +233,9 @@ struct PlantDashboardView: View {
         
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        let dateKey = formatter.string(from: selectedDate)
+        let dateKey = formatter.string(from: date)
         
         isLoadingSupervisorAssignments = true
-        isSupervisorAssignmentsLoaded = false
         supervisorStatusMessage = nil
         
         let dbRef = Database.database().reference()
@@ -322,7 +313,6 @@ struct PlantDashboardView: View {
             DispatchQueue.main.async {
                 self.supervisorAssignments = result
                 self.isLoadingSupervisorAssignments = false
-                self.isSupervisorAssignmentsLoaded = true
             }
         }
     }
@@ -375,7 +365,6 @@ struct PlantDashboardView: View {
                     self.supervisorStatusMessage = "Error al guardar: \(error.localizedDescription)"
                 } else {
                     self.supervisorStatusMessage = "Cambios guardados"
-                    // Refrescar vistas de solo lectura / calendario
                     self.plantManager.fetchDailyStaff(plantId: plantId, date: self.selectedDate)
                     self.plantManager.fetchMonthlyAssignments(plantId: plantId, month: self.selectedDate)
                 }
@@ -429,145 +418,154 @@ extension SlotAssignment {
     }
 }
 
-// MARK: - CALENDARIO CON INDICADOR (SIN INICIALES)
+// MARK: - Calendario específico de PlantDashboard (sin iniciales, solo punto)
 
-/// Versión simplificada: muestra días del mes y un puntito si hay asignaciones en monthlyAssignments.
-/// ShiftType es genérico porque no usamos `shifts` aquí, solo lo recibimos para mantener la firma.
-struct CalendarWithShiftsView<ShiftType>: View {
+struct PlantDashboardCalendarView: View {
     @Binding var selectedDate: Date
-    let shifts: [ShiftType]
-    let monthlyAssignments: [Date: [PlantShiftWorker]]
+    var monthlyAssignments: [Date: [PlantShiftWorker]]
     
-    @State private var currentMonth: Date = Date()
+    private let days = ["L", "M", "X", "J", "V", "S", "D"]
     
-    private var calendar: Calendar { Calendar.current }
-    
-    private var monthInterval: DateInterval {
-        calendar.dateInterval(of: .month, for: currentMonth) ?? DateInterval()
+    // Días del mes de selectedDate
+    private var daysInMonth: [Int] {
+        let calendar = Calendar.current
+        guard let range = calendar.range(of: .day, in: .month, for: selectedDate) else { return [] }
+        return Array(range)
     }
     
-    private var daysInMonth: [Date] {
-        guard monthInterval.start <= monthInterval.end else { return [] }
-        var days: [Date] = []
-        var date = monthInterval.start
-        while date < monthInterval.end {
-            days.append(date)
-            date = calendar.date(byAdding: .day, value: 1, to: date) ?? date
-        }
-        return days
+    // Desplazamiento del primer día para empezar por lunes
+    private var firstWeekdayOfMonth: Int {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month], from: selectedDate)
+        guard let firstDay = calendar.date(from: components) else { return 0 }
+        let weekday = calendar.component(.weekday, from: firstDay)
+        // Ajuste para lunes (Dom=1 -> 6, Lun=2 -> 0)
+        return weekday == 1 ? 6 : weekday - 2
     }
-    
-    private var monthTitle: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "es_ES")
-        formatter.dateFormat = "LLLL yyyy"
-        return formatter.string(from: currentMonth).capitalized
-    }
-    
-    private let weekdaySymbols = ["L", "M", "X", "J", "V", "S", "D"]
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 15) {
+            // Cabecera mes
             HStack {
-                Button {
-                    if let newDate = calendar.date(byAdding: .month, value: -1, to: currentMonth) {
-                        currentMonth = newDate
-                    }
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .foregroundColor(.white)
-                }
-                
-                Spacer()
-                
-                Text(monthTitle)
+                Text(selectedDate.formatted(.dateTime.month(.wide).year()))
+                    .font(.title3.bold())
                     .foregroundColor(.white)
-                    .font(.headline)
-                
+                    .textCase(.uppercase)
                 Spacer()
-                
-                Button {
-                    if let newDate = calendar.date(byAdding: .month, value: 1, to: currentMonth) {
-                        currentMonth = newDate
+                HStack(spacing: 20) {
+                    Button(action: { changeMonth(by: -1) }) {
+                        Image(systemName: "chevron.left")
                     }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(.white)
+                    Button(action: { changeMonth(by: 1) }) {
+                        Image(systemName: "chevron.right")
+                    }
                 }
+                .foregroundColor(.blue)
             }
             .padding(.horizontal)
             
-            // Cabecera días de la semana
+            // Días semana
             HStack {
-                ForEach(weekdaySymbols, id: \.self) { symbol in
-                    Text(symbol)
-                        .font(.caption)
+                ForEach(days, id: \.self) { day in
+                    Text(day)
+                        .font(.caption.bold())
                         .foregroundColor(.gray)
                         .frame(maxWidth: .infinity)
                 }
             }
-            .padding(.horizontal, 4)
             
-            // Grid de días
-            let firstWeekday = calendar.component(.weekday, from: monthInterval.start) // 1 = Sunday
-            let leadingEmpty = (firstWeekday + 5) % 7 // ajustar para Lunes como primer día
-            
-            let totalSlots = leadingEmpty + daysInMonth.count
-            let rows = Int(ceil(Double(totalSlots) / 7.0))
-            
-            VStack(spacing: 6) {
-                ForEach(0..<rows, id: \.self) { row in
-                    HStack(spacing: 4) {
-                        ForEach(0..<7, id: \.self) { col in
-                            let index = row * 7 + col
-                            if index < leadingEmpty || index - leadingEmpty >= daysInMonth.count {
-                                // Celda vacía
-                                Spacer()
-                                    .frame(maxWidth: .infinity, minHeight: 40)
+            // Rejilla de días
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 15) {
+                
+                // Espacios vacíos iniciales
+                ForEach(0..<firstWeekdayOfMonth, id: \.self) { _ in
+                    Text("").frame(height: 40)
+                }
+                
+                // Días reales
+                ForEach(daysInMonth, id: \.self) { day in
+                    let date = getDate(for: day)
+                    let calendar = Calendar.current
+                    let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
+                    
+                    let startOfDay = calendar.startOfDay(for: date)
+                    let workers = monthlyAssignments[startOfDay] ?? []
+                    let hasAssignments = !workers.isEmpty
+                    
+                    Button {
+                        withAnimation {
+                            selectedDate = date
+                        }
+                    } label: {
+                        VStack(spacing: 4) {
+                            Text("\(day)")
+                                .foregroundColor(isSelected ? .black : .white)
+                                .font(.system(size: 14, weight: isSelected ? .bold : .regular))
+                                .frame(width: 30, height: 30)
+                                .background(isSelected ? Color.white : Color.clear)
+                                .clipShape(Circle())
+                            
+                            if hasAssignments {
+                                Circle()
+                                    .fill(Color.cyan)
+                                    .frame(width: 6, height: 6)
                             } else {
-                                let dayIndex = index - leadingEmpty
-                                let date = daysInMonth[dayIndex]
-                                let dayNumber = calendar.component(.day, from: date)
-                                let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
-                                let dayKey = calendar.startOfDay(for: date)
-                                let hasAssignments = (monthlyAssignments[dayKey]?.isEmpty == false)
-                                
-                                Button {
-                                    selectedDate = date
-                                } label: {
-                                    VStack(spacing: 4) {
-                                        Text("\(dayNumber)")
-                                            .foregroundColor(isSelected ? .black : .white)
-                                            .fontWeight(isSelected ? .bold : .regular)
-                                        
-                                        if hasAssignments {
-                                            Circle()
-                                                .fill(Color(red: 0.33, green: 0.8, blue: 0.95))
-                                                .frame(width: 6, height: 6)
-                                        }
-                                    }
-                                    .frame(maxWidth: .infinity, minHeight: 40)
-                                    .padding(4)
-                                    .background(
-                                        isSelected
-                                        ? Color.white
-                                        : Color.white.opacity(0.08)
-                                    )
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                }
-                                .buttonStyle(.plain)
+                                Spacer().frame(height: 6)
                             }
                         }
+                        .frame(height: 45)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white.opacity(0.05))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(isSelected ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 1)
+                        )
                     }
+                    .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 4)
+            
+            Divider()
+                .background(Color.white.opacity(0.2))
+                .padding(.vertical, 5)
+            
+            // Texto informativo del día
+            HStack {
+                Image(systemName: "calendar.badge.clock")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+                
+                Text(selectedDate.formatted(date: .long, time: .omitted))
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 5)
         }
-        .padding(.vertical, 8)
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(18)
-        .onAppear {
-            currentMonth = selectedDate
+        .padding()
+        .background(.ultraThinMaterial)
+        .cornerRadius(20)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        )
+        .padding(.horizontal)
+    }
+    
+    // MARK: - Helpers calendario
+    
+    private func getDate(for day: Int) -> Date {
+        var components = Calendar.current.dateComponents([.year, .month], from: selectedDate)
+        components.day = day
+        return Calendar.current.date(from: components) ?? Date()
+    }
+    
+    private func changeMonth(by value: Int) {
+        if let newDate = Calendar.current.date(byAdding: .month, value: value, to: selectedDate) {
+            selectedDate = newDate
         }
     }
 }
@@ -583,7 +581,6 @@ struct SupervisorAssignmentsSection: View {
     let statusMessage: String?
     let onSave: () -> Void
     
-    // Opciones de personal
     var nurseOptions: [String] {
         plant.allStaffList
             .filter { $0.role.lowercased().contains("enfermer") }
@@ -601,7 +598,6 @@ struct SupervisorAssignmentsSection: View {
             .sorted()
     }
     
-    // Orden de turnos visual
     var orderedShiftNames: [String] {
         let preferred = [
             "Mañana",
@@ -614,7 +610,7 @@ struct SupervisorAssignmentsSection: View {
             "Turno de Noche"
         ]
         
-        let existingKeys = Set(plant.shiftTimes?.keys ?? [String: [String: String]]().keys)
+        let existingKeys = Set(plant.shiftTimes?.keys ?? [:].keys)
         
         let orderedExisting = preferred.filter { existingKeys.contains($0) }
         let extra = existingKeys.subtracting(orderedExisting).sorted()
@@ -667,7 +663,6 @@ struct SupervisorAssignmentsSection: View {
                     .padding(.horizontal)
             }
             
-            // Botón Guardar
             Button(action: onSave) {
                 HStack {
                     if isSaving {
@@ -724,7 +719,7 @@ struct SupervisorShiftRow: View {
                     .font(.subheadline.bold())
                     .foregroundColor(.white.opacity(0.9))
                 
-                ForEach(state.nurseSlots.indices, id: \.self) { index in
+                for index in state.nurseSlots.indices {
                     SlotAssignmentEditorRow(
                         label: "Enfermero \(index + 1)",
                         slot: Binding(
@@ -745,7 +740,7 @@ struct SupervisorShiftRow: View {
                         .font(.subheadline.bold())
                         .foregroundColor(.white.opacity(0.9))
                     
-                    ForEach(state.auxSlots.indices, id: \.self) { index in
+                    for index in state.auxSlots.indices {
                         SlotAssignmentEditorRow(
                             label: "TCAE \(index + 1)",
                             slot: Binding(
@@ -940,7 +935,7 @@ struct DailyStaffContent: View {
                     plantManager.dailyAssignments.keys.sorted().filter { !turnosOrdenados.contains($0) },
                     id: \.self
                 ) { turno in
-                    if let workers = plantManager.dailyAssignments[turno] {
+                    if let workers = plantManager.dailyAssignments[turno], !workers.isEmpty {
                         DailyShiftSection(title: turno, workers: workers)
                     }
                 }
