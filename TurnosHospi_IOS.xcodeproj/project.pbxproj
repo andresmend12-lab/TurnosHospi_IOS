@@ -10,6 +10,7 @@
 		979C54FD2EE3077300F21427 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C54FC2EE3077300F21427 /* ThemeManager.swift */; };
 		979C54FF2EE3078D00F21427 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C54FE2EE3078D00F21427 /* SettingsView.swift */; };
 		979C55012EE320A000F21427 /* ImportShiftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C55002EE320A000F21427 /* ImportShiftsView.swift */; };
+		979C55032EE3306500F21427 /* StatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C55022EE3306500F21427 /* StatisticsView.swift */; };
 		97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */; };
 		97E962CA2EE18973006E7707 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C92EE18973006E7707 /* ContentView.swift */; };
 		97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97E962CB2EE18976006E7707 /* Assets.xcassets */; };
@@ -61,6 +62,7 @@
 		979C54FC2EE3077300F21427 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		979C54FE2EE3078D00F21427 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		979C55002EE320A000F21427 /* ImportShiftsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportShiftsView.swift; sourceTree = "<group>"; };
+		979C55022EE3306500F21427 /* StatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsView.swift; sourceTree = "<group>"; };
 		97E962C42EE18973006E7707 /* TurnosHospi_IOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TurnosHospi_IOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSApp.swift; sourceTree = "<group>"; };
 		97E962C92EE18973006E7707 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -167,6 +169,7 @@
 				97FB938C2EE20B7600F5490F /* ShiftManager.swift */,
 				97FB93882EE2049200F5490F /* Extensions.swift */,
 				97FB937C2EE1EF6A00F5490F /* SideMenuView.swift */,
+				979C55022EE3306500F21427 /* StatisticsView.swift */,
 				97FB937A2EE1E19700F5490F /* SignUpView.swift */,
 			);
 			path = TurnosHospi_IOS;
@@ -356,6 +359,7 @@
 				97FB938B2EE20B4F00F5490F /* Shift.swift in Sources */,
 				979C54FD2EE3077300F21427 /* ThemeManager.swift in Sources */,
 				97FB937B2EE1E19700F5490F /* SignUpView.swift in Sources */,
+				979C55032EE3306500F21427 /* StatisticsView.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
 				97FB937F2EE1F26100F5490F /* PlantModels.swift in Sources */,
 			);

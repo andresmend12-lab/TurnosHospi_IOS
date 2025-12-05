@@ -29,6 +29,7 @@ struct PlantDashboardView: View {
     @State private var selectedDate = Date()
     @State private var currentMonth = Date()
     @State private var showImportShiftsSheet = false // Estado para importar turnos
+    @State private var showStatisticsSheet = false
     
     // Estado de edición para supervisor
     @State private var supervisorAssignments: [String: ShiftAssignmentState] = [:]
@@ -221,6 +222,14 @@ struct PlantDashboardView: View {
         .navigationBarHidden(true)
         .sheet(isPresented: $showImportShiftsSheet) {
             ImportShiftsView()
+                .sheet(isPresented: $showStatisticsSheet) {
+                    if let plantId = authManager.userPlantId {
+                        StatisticsView(
+                            plantId: plantId,
+                            isSupervisor: authManager.userRole == "Supervisor"
+                        )
+                    }
+                }
         }
         .onAppear {
             if !authManager.userPlantId.isEmpty {
@@ -1004,29 +1013,21 @@ struct PlantMenuDrawer: View {
     @Binding var isMenuOpen: Bool
     @Binding var selectedOption: String
     var onLogout: () -> Void
-    var onImportShifts: (() -> Void)? = nil // Callback opcional para importar
-    
+    var onImportShifts: (() -> Void)? = nil
+    var onOpenStatistics: (() -> Void)? = nil // Callback para estadísticas
+
     let menuBackground = Color(red: 26/255, green: 26/255, blue: 46/255)
-    
+
     var body: some View {
         ZStack {
             menuBackground.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 20) {
+                // Header del menú lateral
                 HStack(spacing: 15) {
                     Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
+                        .fill(LinearGradient(colors: [.blue, .purple], startPoint: .top, endPoint: .bottom))
                         .frame(width: 50, height: 50)
-                        .overlay(
-                            Text(String(authManager.currentUserName.prefix(1)))
-                                .bold()
-                                .foregroundColor(.white)
-                        )
+                        .overlay(Text(String(authManager.currentUserName.prefix(1))).bold().foregroundColor(.white))
                     VStack(alignment: .leading) {
                         Text(authManager.currentUserName)
                             .font(.headline)
@@ -1038,58 +1039,34 @@ struct PlantMenuDrawer: View {
                 }
                 .padding(.top, 60)
                 .padding(.bottom, 20)
-                
+
                 ScrollView {
                     VStack(alignment: .leading, spacing: 5) {
-                        PlantMenuRow(
-                            title: "Calendario",
-                            icon: "calendar",
-                            selected: $selectedOption
-                        ) { close() }
-                        
-                        Divider()
-                            .background(Color.white.opacity(0.2))
-                            .padding(.vertical, 5)
-                        
+                        // Opción Calendario (siempre visible)
+                        PlantMenuRow(title: "Calendario", icon: "calendar", selected: $selectedOption) { close() }
+                        Divider().background(Color.white.opacity(0.2)).padding(.vertical, 5)
+
                         if authManager.userRole == "Supervisor" {
+                            // --- MENÚ SUPERVISOR ---
                             Group {
                                 Text("ADMINISTRACIÓN")
                                     .font(.caption2)
                                     .bold()
                                     .foregroundColor(.gray)
                                     .padding(.leading, 10)
+
+                                PlantMenuRow(title: "Lista de personal", icon: "person.3.fill", selected: $selectedOption) { close() }
+                                PlantMenuRow(title: "Configuración de la planta", icon: "gearshape.2.fill", selected: $selectedOption) { close() }
                                 
-                                PlantMenuRow(
-                                    title: "Lista de personal",
-                                    icon: "person.3.fill",
-                                    selected: $selectedOption
-                                ) { close() }
-                                
-                                PlantMenuRow(
-                                    title: "Configuración de la planta",
-                                    icon: "gearshape.2.fill",
-                                    selected: $selectedOption
-                                ) { close() }
-                                
-                                // Botón Importar con callback
-                                Button(action: {
-                                    close()
-                                    onImportShifts?()
-                                }) {
+                                // Botón Importar Turnos
+                                Button(action: { close(); onImportShifts?() }) {
                                     PlantMenuRowContent(title: "Importar turnos", icon: "square.and.arrow.down", isSelected: false)
-                                }
-                                .buttonStyle(.plain)
-                                
-                                PlantMenuRow(
-                                    title: "Gestión de cambios",
-                                    icon: "arrow.triangle.2.circlepath",
-                                    selected: $selectedOption
-                                ) { close() }
+                                }.buttonStyle(.plain)
+
+                                PlantMenuRow(title: "Gestión de cambios", icon: "arrow.triangle.2.circlepath", selected: $selectedOption) { close() }
                             }
                             
-                            Divider()
-                                .background(Color.white.opacity(0.2))
-                                .padding(.vertical, 5)
+                            Divider().background(Color.white.opacity(0.2)).padding(.vertical, 5)
                             
                             Group {
                                 Text("PERSONAL")
@@ -1098,59 +1075,40 @@ struct PlantMenuDrawer: View {
                                     .foregroundColor(.gray)
                                     .padding(.leading, 10)
                                 
-                                PlantMenuRow(
-                                    title: "Estadísticas",
-                                    icon: "chart.bar.xaxis",
-                                    selected: $selectedOption
-                                ) { close() }
+                                // Botón Estadísticas (Supervisor)
+                                Button(action: { close(); onOpenStatistics?() }) {
+                                    PlantMenuRowContent(title: "Estadísticas", icon: "chart.bar.xaxis", isSelected: false)
+                                }.buttonStyle(.plain)
                             }
+
                         } else {
+                            // --- MENÚ PERSONAL REGULAR ---
                             Text("PERSONAL")
                                 .font(.caption2)
                                 .bold()
                                 .foregroundColor(.gray)
                                 .padding(.leading, 10)
+
+                            PlantMenuRow(title: "Días de vacaciones", icon: "sun.max.fill", selected: $selectedOption) { close() }
+                            PlantMenuRow(title: "Chat de grupo", icon: "bubble.left.and.bubble.right.fill", selected: $selectedOption) { close() }
+                            PlantMenuRow(title: "Cambio de turnos", icon: "arrow.triangle.2.circlepath", selected: $selectedOption) { close() }
+                            PlantMenuRow(title: "Bolsa de Turnos", icon: "briefcase.fill", selected: $selectedOption) { close() }
                             
-                            PlantMenuRow(
-                                title: "Días de vacaciones",
-                                icon: "sun.max.fill",
-                                selected: $selectedOption
-                            ) { close() }
-                            
-                            PlantMenuRow(
-                                title: "Chat de grupo",
-                                icon: "bubble.left.and.bubble.right.fill",
-                                selected: $selectedOption
-                            ) { close() }
-                            
-                            PlantMenuRow(
-                                title: "Cambio de turnos",
-                                icon: "arrow.triangle.2.circlepath",
-                                selected: $selectedOption
-                            ) { close() }
-                            
-                            PlantMenuRow(
-                                title: "Bolsa de Turnos",
-                                icon: "briefcase.fill",
-                                selected: $selectedOption
-                            ) { close() }
-                            
-                            PlantMenuRow(
-                                title: "Estadísticas",
-                                icon: "chart.bar.xaxis",
-                                selected: $selectedOption
-                            ) { close() }
+                            // Botón Estadísticas (Personal)
+                            Button(action: { close(); onOpenStatistics?() }) {
+                                PlantMenuRowContent(title: "Estadísticas", icon: "chart.bar.xaxis", isSelected: false)
+                            }.buttonStyle(.plain)
                         }
                     }
                 }
                 
                 Spacer()
                 
+                // Botón Cerrar Sesión / Volver
                 Button(action: onLogout) {
                     HStack {
                         Image(systemName: "arrow.left.circle.fill")
-                        Text("Volver al menú principal")
-                            .bold()
+                        Text("Volver al menú principal").bold()
                     }
                     .foregroundColor(.red.opacity(0.9))
                     .padding()
