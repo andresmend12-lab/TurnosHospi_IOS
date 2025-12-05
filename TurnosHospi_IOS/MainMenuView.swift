@@ -11,6 +11,24 @@ struct MainMenuView: View {
     
     private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]
     
+    // Diccionario: inicioDelDía -> turnos de ese día
+    private var userShiftsByDay: [Date: [Shift]] {
+        let cal = Calendar.current
+        var dict: [Date: [Shift]] = [:]
+        for shift in shiftManager.userShifts {
+            let dayKey = cal.startOfDay(for: shift.date)
+            dict[dayKey, default: []].append(shift)
+        }
+        return dict
+    }
+    
+    // Turno principal del usuario para el día seleccionado
+    private var selectedDayShift: Shift? {
+        let cal = Calendar.current
+        let dayKey = cal.startOfDay(for: selectedDate)
+        return userShiftsByDay[dayKey]?.first
+    }
+    
     // MARK: - Body
     
     var body: some View {
@@ -72,11 +90,9 @@ struct MainMenuView: View {
             loadDailyStaffIfPossible(for: selectedDate)
         }
         .onChange(of: selectedDate) { newDate in
-            // Cada vez que cambias de día, recargamos con la planta actual
             loadDailyStaffIfPossible(for: newDate)
         }
         .onChange(of: authManager.userPlantId) { _ in
-            // Si se actualiza la planta del usuario, recargamos
             loadDailyStaffIfPossible(for: selectedDate)
         }
     }
@@ -161,8 +177,11 @@ struct MainMenuView: View {
                 // Días reales del mes
                 ForEach(daysInMonth(for: currentMonth), id: \.self) { day in
                     let date = dateFor(day: day, monthBase: currentMonth)
-                    let isSelected = Calendar.current.isDate(date, inSameDayAs: selectedDate)
-                    let shiftForDay = userShift(on: date)
+                    let cal = Calendar.current
+                    let dayKey = cal.startOfDay(for: date)
+                    let shiftsThatDay = userShiftsByDay[dayKey] ?? []
+                    let shiftForDay = shiftsThatDay.first
+                    let isSelected = cal.isDate(date, inSameDayAs: selectedDate)
                     
                     Button {
                         withAnimation {
@@ -233,9 +252,7 @@ struct MainMenuView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal)
             
-            let shiftForDay = userShift(on: selectedDate)
-            
-            if let shift = shiftForDay {
+            if let shift = selectedDayShift {
                 // Tarjeta con nuestro turno
                 VStack(spacing: 12) {
                     HStack {
@@ -368,12 +385,6 @@ struct MainMenuView: View {
     
     // MARK: - Helpers turnos
     
-    private func userShift(on date: Date) -> Shift? {
-        shiftManager.userShifts.first { shift in
-            Calendar.current.isDate(shift.date, inSameDayAs: date)
-        }
-    }
-    
     private func shiftName(for type: ShiftType) -> String {
         switch type {
         case .manana:      return "Mañana"
@@ -390,7 +401,6 @@ struct MainMenuView: View {
         plantManager.fetchDailyStaff(plantId: plantId, date: date)
     }
     
-    // Ya la tenías
     func getIconForShift(_ type: ShiftType) -> String {
         switch type {
         case .manana, .mediaManana: return "sun.max.fill"
