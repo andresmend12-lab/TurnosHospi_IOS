@@ -2,8 +2,8 @@ import SwiftUI
 
 struct MainMenuView: View {
     @EnvironmentObject var authManager: AuthManager
-    @EnvironmentObject var themeManager: ThemeManager
-    @StateObject var plantManager = PlantManager()
+    @EnvironmentObject var themeManager: ThemeManager // Inyectado para los colores
+    @StateObject var plantManager = PlantManager() // Inyectado para datos de planta
     
     @State private var showMenu = false
     @State private var selectedDate = Date()
@@ -11,7 +11,7 @@ struct MainMenuView: View {
     
     private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]
     
-    // --- CALENDARIO ROBUSTO (Forzado a Gregoriano / Español) ---
+    // --- CALENDARIO GREGORIANO (ESPAÑOL - LUNES) ---
     private var calendar: Calendar {
         var cal = Calendar(identifier: .gregorian)
         cal.firstWeekday = 2 // 2 = Lunes
@@ -19,15 +19,17 @@ struct MainMenuView: View {
         return cal
     }
     
-    // MARK: - LÓGICA DE FILTRADO
+    // MARK: - Lógica de Filtrado de Turnos
     private func getMyShiftFor(date: Date) -> ShiftType? {
-        // Usamos nuestro calendario configurado
         let startOfDay = calendar.startOfDay(for: date)
         
+        // 1. Obtenemos asignaciones globales del día
         guard let workers = plantManager.monthlyAssignments[startOfDay] else { return nil }
         
+        // 2. Buscamos mi nombre real en la planta (o el del perfil si no se ha cargado)
         let targetName = plantManager.myPlantName ?? authManager.currentUserName
         
+        // 3. Buscamos coincidencia exacta
         if let myRecord = workers.first(where: { $0.name == targetName }) {
             return mapStringToShiftType(myRecord.shiftName ?? "")
         }
@@ -56,10 +58,18 @@ struct MainMenuView: View {
                     Color.deepSpace.ignoresSafeArea()
                     
                     VStack(spacing: 20) {
+                        
+                        // HEADER
                         headerView
+                        
+                        // CONTENIDO
                         ScrollView {
                             VStack(spacing: 20) {
+                                
+                                // CALENDARIO PROPIO
                                 calendarCard
+                                
+                                // INFO DEL DÍA
                                 dayInfoSection
                             }
                             .padding(.bottom, 100)
@@ -71,7 +81,9 @@ struct MainMenuView: View {
                 .scaleEffect(showMenu ? 0.85 : 1)
                 .shadow(color: .black.opacity(0.5), radius: showMenu ? 20 : 0, x: -10, y: 0)
                 .disabled(showMenu)
-                .onTapGesture { if showMenu { withAnimation { showMenu = false } } }
+                .onTapGesture {
+                    if showMenu { withAnimation { showMenu = false } }
+                }
                 
                 if showMenu {
                     SideMenuView(isShowing: $showMenu)
@@ -90,10 +102,16 @@ struct MainMenuView: View {
             loadData()
         }
         .onChange(of: selectedDate) { newDate in
+            // Si cambia el mes (según nuestro calendario corregido), recargamos
             if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
-                currentMonth = newDate
+                // Ajustamos currentMonth al día 1 del nuevo mes para evitar errores
+                let comps = calendar.dateComponents([.year, .month], from: newDate)
+                if let firstOfMonth = calendar.date(from: comps) {
+                    currentMonth = firstOfMonth
+                }
                 loadData()
             }
+            // Siempre cargamos detalles del día específico
             if !authManager.userPlantId.isEmpty {
                 plantManager.fetchDailyStaff(plantId: authManager.userPlantId, date: newDate)
             }
@@ -104,6 +122,7 @@ struct MainMenuView: View {
     func loadData() {
         let pid = authManager.userPlantId
         guard !pid.isEmpty else { return }
+        
         plantManager.fetchCurrentPlant(plantId: pid)
         plantManager.fetchMonthlyAssignments(plantId: pid, month: currentMonth)
         plantManager.fetchDailyStaff(plantId: pid, date: selectedDate)
@@ -112,73 +131,131 @@ struct MainMenuView: View {
     // MARK: - Header
     private var headerView: some View {
         HStack {
-            Button(action: { withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { showMenu.toggle() } }) {
+            Button(action: {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    showMenu.toggle()
+                }
+            }) {
                 Image(systemName: "line.3.horizontal")
-                    .font(.title).foregroundColor(.white)
-                    .padding(10).background(Color.white.opacity(0.1)).clipShape(Circle())
+                    .font(.title)
+                    .foregroundColor(.white)
+                    .padding(10)
+                    .background(Color.white.opacity(0.1))
+                    .clipShape(Circle())
             }
+            
             Spacer()
+            
             VStack(alignment: .trailing) {
-                Text("Bienvenido").font(.caption).foregroundColor(.white.opacity(0.6))
-                Text(authManager.currentUserName).font(.headline).bold().foregroundColor(.white)
+                Text("Bienvenido")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.6))
+                Text(authManager.currentUserName.isEmpty ? "Usuario" : authManager.currentUserName)
+                    .font(.headline)
+                    .bold()
+                    .foregroundColor(.white)
             }
         }
-        .padding(.horizontal).padding(.top, 50)
+        .padding(.horizontal)
+        .padding(.top, 50)
     }
     
     // MARK: - Calendar Card
     private var calendarCard: some View {
         VStack(spacing: 15) {
+            // Cabecera mes
             HStack {
                 Text(monthYearString(for: currentMonth))
-                    .font(.title3.bold()).foregroundColor(.white).textCase(.uppercase)
+                    .font(.title3.bold())
+                    .foregroundColor(.white)
+                    .textCase(.uppercase)
                 Spacer()
                 HStack(spacing: 20) {
-                    Button(action: { changeMonth(by: -1) }) { Image(systemName: "chevron.left") }
-                    Button(action: { changeMonth(by: 1) }) { Image(systemName: "chevron.right") }
-                }.foregroundColor(.blue)
-            }.padding(.horizontal)
+                    Button(action: { changeMonth(by: -1) }) {
+                        Image(systemName: "chevron.left")
+                    }
+                    Button(action: { changeMonth(by: 1) }) {
+                        Image(systemName: "chevron.right")
+                    }
+                }
+                .foregroundColor(.blue)
+            }
+            .padding(.horizontal)
             
+            // Nombres días semana
             HStack {
                 ForEach(weekDays, id: \.self) { day in
-                    Text(day).font(.caption.bold()).foregroundColor(.gray).frame(maxWidth: .infinity)
+                    Text(day)
+                        .font(.caption.bold())
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity)
                 }
             }
             
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8) {
-                // Huecos iniciales
-                ForEach(0..<firstWeekdayOffset(for: currentMonth), id: \.self) { _ in Color.clear.frame(height: 36) }
+            // Rejilla de días
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7),
+                spacing: 8
+            ) {
+                // Huecos iniciales (calculados con calendario español)
+                ForEach(0..<firstWeekdayOffset(for: currentMonth), id: \.self) { _ in
+                    Color.clear.frame(height: 36)
+                }
                 
-                // Días reales
+                // Días reales del mes
                 ForEach(daysInMonth(for: currentMonth), id: \.self) { day in
                     let date = dateFor(day: day, monthBase: currentMonth)
                     let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
                     let shift = getMyShiftFor(date: date)
                     
-                    Button { withAnimation { selectedDate = date } } label: {
+                    Button {
+                        withAnimation { selectedDate = date }
+                    } label: {
                         ZStack {
+                            // Fondo coloreado SI es mi turno (usando ThemeManager)
                             if let s = shift {
                                 themeManager.color(for: s).opacity(isSelected ? 0.9 : 0.7)
                             } else {
+                                // Día libre (usando ThemeManager)
                                 themeManager.holidayColor.opacity(isSelected ? 0.6 : 0.2)
                             }
-                            Text("\(day)").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                            
+                            Text("\(day)")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
                         }
-                        .frame(height: 36).cornerRadius(10)
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(isSelected ? .white : .clear, lineWidth: 2))
-                    }.buttonStyle(.plain)
+                        .frame(height: 36)
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(isSelected ? Color.white : Color.clear, lineWidth: 2)
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
-            }.padding(.horizontal, 4)
+            }
+            .padding(.horizontal, 4)
             
             Divider().background(Color.white.opacity(0.2)).padding(.vertical, 5)
             
+            // Texto informativo del día
             HStack {
-                Image(systemName: "calendar.badge.clock").foregroundColor(.blue).font(.title3)
-                Text(selectedDate.formatted(date: .long, time: .omitted)).font(.headline).foregroundColor(.white)
+                Image(systemName: "calendar.badge.clock")
+                    .foregroundColor(.blue)
+                    .font(.title3)
+                
+                Text(selectedDate.formatted(date: .long, time: .omitted))
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
                 Spacer()
-            }.padding(.horizontal).padding(.bottom, 5)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 5)
         }
-        .padding().background(.ultraThinMaterial).cornerRadius(20)
+        .padding()
+        .background(.ultraThinMaterial)
+        .cornerRadius(20)
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.1), lineWidth: 1))
         .padding(.horizontal)
     }
@@ -186,89 +263,138 @@ struct MainMenuView: View {
     // MARK: - Day Info Section
     private var dayInfoSection: some View {
         VStack(alignment: .leading, spacing: 15) {
-            Text("Agenda del día").font(.title3).bold().foregroundColor(.white).padding(.horizontal)
+            Text("Agenda del día")
+                .font(.title3)
+                .bold()
+                .foregroundColor(.white)
+                .padding(.horizontal)
             
             if let type = getMyShiftFor(date: selectedDate) {
+                // Tarjeta con nuestro turno
                 VStack(spacing: 12) {
                     HStack {
-                        Rectangle().fill(themeManager.color(for: type)).frame(width: 5).cornerRadius(2)
+                        // Color dinámico del tema
+                        Rectangle()
+                            .fill(themeManager.color(for: type))
+                            .frame(width: 5)
+                            .cornerRadius(2)
+                        
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(type.rawValue).font(.headline).foregroundColor(.white)
-                            Text("Tu turno asignado").font(.subheadline).foregroundColor(.gray)
+                            Text(type.rawValue)
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text("Tu turno asignado")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
                         }
                         Spacer()
-                        Image(systemName: getIconForShift(type)).foregroundColor(.white.opacity(0.7)).font(.title2)
+                        
+                        Image(systemName: getIconForShift(type))
+                            .foregroundColor(.white.opacity(0.7))
+                            .font(.title2)
                     }
                     
+                    // Compañeros en el mismo turno
                     let targetName = plantManager.myPlantName ?? authManager.currentUserName
                     let shiftString = shiftName(for: type)
+                    
+                    // Obtenemos los del turno y nos filtramos a nosotros mismos
                     let coworkers = (plantManager.dailyAssignments[shiftString] ?? [])
                         .filter { $0.name != targetName }
                     
                     if !coworkers.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Compañeros en tu turno").font(.subheadline.bold()).foregroundColor(.white)
+                            Text("Compañeros en tu turno")
+                                .font(.subheadline.bold())
+                                .foregroundColor(.white)
+                            
                             ForEach(coworkers) { worker in
                                 HStack(spacing: 12) {
-                                    Circle().fill(Color.white.opacity(0.15)).frame(width: 32, height: 32)
-                                        .overlay(Text(String(worker.name.prefix(1))).foregroundColor(.white).bold())
+                                    Circle()
+                                        .fill(Color.white.opacity(0.15))
+                                        .frame(width: 32, height: 32)
+                                        .overlay(
+                                            Text(String(worker.name.prefix(1)))
+                                                .foregroundColor(.white)
+                                                .bold()
+                                        )
+                                    
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(worker.name).foregroundColor(.white).font(.subheadline)
-                                        Text(worker.role).foregroundColor(.gray).font(.caption)
+                                        Text(worker.name)
+                                            .foregroundColor(.white)
+                                            .font(.subheadline)
+                                        Text(worker.role)
+                                            .foregroundColor(.gray)
+                                            .font(.caption)
                                     }
                                     Spacer()
                                 }
                             }
                         }
                     } else {
-                        Text("No hay más compañeros registrados en este turno.").font(.caption).foregroundColor(.gray)
+                        Text("No hay más compañeros registrados en este turno.")
+                            .font(.caption)
+                            .foregroundColor(.gray)
                     }
                 }
-                .padding().background(Color.white.opacity(0.05)).cornerRadius(15)
-                .overlay(RoundedRectangle(cornerRadius: 15).stroke(themeManager.color(for: type).opacity(0.5), lineWidth: 1))
+                .padding()
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(15)
+                // Borde dinámico del tema
+                .overlay(
+                    RoundedRectangle(cornerRadius: 15)
+                        .stroke(themeManager.color(for: type).opacity(0.5), lineWidth: 1)
+                )
                 .padding(.horizontal)
+                
             } else {
+                // Si no tengo turno hoy
                 HStack {
                     Spacer()
                     VStack(spacing: 10) {
-                        Image(systemName: "calendar.badge.exclamationmark").font(.largeTitle).foregroundColor(.gray.opacity(0.5))
-                        Text("No tienes turnos para este día").foregroundColor(.gray)
+                        Image(systemName: "calendar.badge.exclamationmark")
+                            .font(.largeTitle)
+                            .foregroundColor(.gray.opacity(0.5))
+                        Text("No tienes turnos para este día")
+                            .foregroundColor(.gray)
                     }
                     Spacer()
-                }.padding(.vertical, 30)
+                }
+                .padding(.vertical, 30)
             }
         }
     }
     
     // MARK: - Helpers Corregidos
+    
     private func monthYearString(for date: Date) -> String {
-        let f = DateFormatter(); f.locale = Locale(identifier: "es_ES"); f.dateFormat = "LLLL yyyy"
-        return f.string(from: date)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "es_ES")
+        formatter.dateFormat = "LLLL yyyy"
+        return formatter.string(from: date)
     }
     
-    // Cálculo de offset corregido para Lunes=0, Domingo=6 independientemente de la región del móvil
     private func firstWeekdayOffset(for monthDate: Date) -> Int {
-        guard let firstDayOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: monthDate)) else { return 0 }
-        
-        let weekday = calendar.component(.weekday, from: firstDayOfMonth)
-        // weekday: 1=Domingo ... 7=Sábado en calendario Gregoriano estándar
-        // Queremos: Lunes(2)->0, Martes(3)->1, ..., Domingo(1)->6
+        guard let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: monthDate)) else { return 0 }
+        let weekday = calendar.component(.weekday, from: firstDay)
+        // Lunes(2)->0, Martes(3)->1 ... Domingo(1)->6
         return (weekday + 5) % 7
     }
     
     private func daysInMonth(for monthDate: Date) -> [Int] {
-        guard let r = calendar.range(of: .day, in: .month, for: monthDate) else { return [] }
-        return Array(r)
+        guard let range = calendar.range(of: .day, in: .month, for: monthDate) else { return [] }
+        return Array(range)
     }
     
     private func dateFor(day: Int, monthBase: Date) -> Date {
-        var comp = calendar.dateComponents([.year, .month], from: monthBase); comp.day = day
+        var comp = calendar.dateComponents([.year, .month], from: monthBase)
+        comp.day = day
         return calendar.date(from: comp) ?? monthBase
     }
     
     private func changeMonth(by value: Int) {
         if let newDate = calendar.date(byAdding: .month, value: value, to: currentMonth) {
-            // Aseguramos que currentMonth sea el día 1 para evitar errores en meses de diferente duración
+            // Ajustar al día 1
             let components = calendar.dateComponents([.year, .month], from: newDate)
             if let firstOfMonth = calendar.date(from: components) {
                 currentMonth = firstOfMonth
@@ -277,7 +403,15 @@ struct MainMenuView: View {
         }
     }
     
-    private func shiftName(for type: ShiftType) -> String { return type.rawValue }
+    private func shiftName(for type: ShiftType) -> String {
+        return type.rawValue
+    }
+    
+    private func loadDailyStaffIfPossible(for date: Date) {
+        let plantId = authManager.userPlantId
+        guard !plantId.isEmpty else { return }
+        plantManager.fetchDailyStaff(plantId: plantId, date: date)
+    }
     
     func getIconForShift(_ type: ShiftType) -> String {
         switch type {
@@ -285,11 +419,5 @@ struct MainMenuView: View {
         case .tarde, .mediaTarde:   return "sunset.fill"
         case .noche:                return "moon.stars.fill"
         }
-    }
-    
-    private func loadDailyStaffIfPossible(for date: Date) {
-        let plantId = authManager.userPlantId
-        guard !plantId.isEmpty else { return }
-        plantManager.fetchDailyStaff(plantId: plantId, date: date)
     }
 }
