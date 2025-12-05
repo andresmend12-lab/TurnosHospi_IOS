@@ -12,10 +12,10 @@ class PlantManager: ObservableObject {
     
     @Published var currentPlant: HospitalPlant?
     
-    // Almacena los trabajadores del día seleccionado (para visualización y edición)
+    /// Clave: nombre de turno ("Mañana", "Tarde", "Noche"...)
     @Published var dailyAssignments: [String: [PlantShiftWorker]] = [:]
     
-    // NUEVO: Almacena los trabajadores del mes (para la vista de calendario)
+    /// Clave: fecha (startOfDay). Valor: todos los trabajadores que tienen algún turno ese día
     @Published var monthlyAssignments: [Date: [PlantShiftWorker]] = [:]
     
     // MARK: - Buscar Planta
@@ -24,7 +24,6 @@ class PlantManager: ObservableObject {
         self.errorMessage = nil
         self.foundPlant = nil
         
-        // Cambio del closure para evitar el error de argumentos no utilizados
         ref.child("plants").child(plantId).observeSingleEvent(of: .value) { snapshot in
             self.isLoading = false
             
@@ -33,7 +32,8 @@ class PlantManager: ObservableObject {
                 return
             }
             
-            guard let realPassword = value["accessPassword"] as? String, realPassword == password else {
+            guard let realPassword = value["accessPassword"] as? String,
+                  realPassword == password else {
                 self.errorMessage = "La contraseña es incorrecta."
                 return
             }
@@ -52,7 +52,6 @@ class PlantManager: ObservableObject {
                 }
             }
             
-            // CORRECCIÓN LINEA 121 (Aprox.): Usar el inicializador simplificado
             let plant = HospitalPlant(
                 id: plantId,
                 name: value["name"] as? String ?? "Planta",
@@ -79,28 +78,38 @@ class PlantManager: ObservableObject {
             "staffRole": selectedStaff.role
         ]
         
-        ref.child("plants").child(plant.id).child("userPlants").child(user.uid).setValue(userPlantData) { error, _ in
-            if let error = error {
-                self.isLoading = false
-                self.errorMessage = "Error al unirse: \(error.localizedDescription)"
-            } else {
-                let userUpdates: [String: Any] = ["role": selectedStaff.role, "plantId": plant.id]
-                self.ref.child("users").child(user.uid).updateChildValues(userUpdates) { err, _ in
+        ref.child("plants")
+            .child(plant.id)
+            .child("userPlants")
+            .child(user.uid)
+            .setValue(userPlantData) { error, _ in
+                if let error = error {
                     self.isLoading = false
-                    if err == nil { self.joinSuccess = true }
+                    self.errorMessage = "Error al unirse: \(error.localizedDescription)"
+                } else {
+                    let userUpdates: [String: Any] = [
+                        "role": selectedStaff.role,
+                        "plantId": plant.id
+                    ]
+                    self.ref.child("users")
+                        .child(user.uid)
+                        .updateChildValues(userUpdates) { err, _ in
+                            self.isLoading = false
+                            if err == nil {
+                                self.joinSuccess = true
+                            }
+                        }
                 }
             }
-        }
     }
     
     // MARK: - Obtener Planta Actual
     func fetchCurrentPlant(plantId: String) {
-        // CORRECCIÓN LINEA 97 (Aprox.): Usar el parámetro 'with' explícitamente para evitar ambigüedades
         ref.child("plants").child(plantId).observe(.value, with: { snapshot in
             guard let value = snapshot.value as? [String: Any] else { return }
             
             var staffMembers: [PlantStaff] = []
-            // MODIFICADO: Cargar desde "personal_de_planta"
+            // Cargar desde "personal_de_planta"
             if let personalDict = value["personal_de_planta"] as? [String: [String: Any]] {
                 for (_, data) in personalDict {
                     let staff = PlantStaff(
@@ -120,7 +129,6 @@ class PlantManager: ObservableObject {
                 let staffRequirements = value["staffRequirements"] as? [String: Int]
                 let shiftTimes = value["shiftTimes"] as? [String: [String: String]]
                 
-                // Usar el inicializador completo
                 let plant = HospitalPlant(
                     id: plantId,
                     name: value["name"] as? String ?? "Planta",
@@ -138,98 +146,184 @@ class PlantManager: ObservableObject {
     }
     
     // MARK: - Obtener personal del día (assignments)
+    //
+    // Estructura real en Firebase (igual que Android):
+    //
+    // plants / {plantId} / turnos / turnos-YYYY-MM-DD /
+    //    Mañana /
+    //       nurses:      [ { halfDay, primary, secondary, primaryLabel, secondaryLabel }, ... ]
+    //       auxiliaries: [ { ... }, ... ]
+    //
+    // Esto se traduce a:
+    //  dailyAssignments["Mañana"] = [PlantShiftWorker(...), ...]
+    //
     func fetchDailyStaff(plantId: String, date: Date) {
-        // 1. Formatear la fecha a "YYYY-MM-DD"
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateString = formatter.string(from: date)
         let nodeName = "turnos-\(dateString)"
         
-        // 2. Ruta: plants -> [ID] -> turnos -> turnos-2025-11-28
-        ref.child("plants").child(plantId).child("turnos").child(nodeName).observe(.value, with: { snapshot in
-            
-            var newDailyAssignments: [String: [PlantShiftWorker]] = [:]
-            
-            if let shiftsDict = snapshot.value as? [String: [String: [String: Any]]] {
+        ref.child("plants")
+            .child(plantId)
+            .child("turnos")
+            .child(nodeName)
+            .observeSingleEvent(of: .value, with: { snapshot in
                 
-                for (shiftName, workersDict) in shiftsDict {
-                    var workers: [PlantShiftWorker] = []
+                var newDailyAssignments: [String: [PlantShiftWorker]] = [:]
+                
+                // snapshot.children = nodos de turno: "Mañana", "Tarde", "Noche", "Vacaciones", etc.
+                for child in snapshot.children {
+                    guard let shiftSnap = child as? DataSnapshot else { continue }
+                    let shiftName = shiftSnap.key
                     
-                    for (workerId, workerData) in workersDict {
-                        let name = workerData["name"] as? String ?? "Usuario"
-                        let role = workerData["role"] as? String ?? "Personal" // <-- CORRECCIÓN: Usar "role"
+                    var workersForShift: [PlantShiftWorker] = []
+                    
+                    // Dentro de cada turno: "nurses", "auxiliaries", etc.
+                    for groupChild in shiftSnap.children {
+                        guard let groupSnap = groupChild as? DataSnapshot else { continue }
+                        let groupKey = groupSnap.key   // "nurses" o "auxiliaries"
                         
-                        let worker = PlantShiftWorker(id: workerId, name: name, role: role)
-                        workers.append(worker)
-                    }
-                    
-                    newDailyAssignments[shiftName] = workers
-                }
-            }
-            
-            DispatchQueue.main.async {
-                self.dailyAssignments = newDailyAssignments
-            }
-        })
-    }
-    
-    // NUEVO: Obtener asignaciones del mes (para el calendario)
-    func fetchMonthlyAssignments(plantId: String, month: Date) {
-        
-        // La obtención de datos para todo el mes se hace observando el nodo "turnos" completo,
-        // y filtrando las fechas localmente.
-        
-        let calendar = Calendar.current
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        
-        // Observamos el nodo padre "turnos" que contiene todos los "turnos-yyyy-MM-dd"
-        ref.child("plants").child(plantId).child("turnos").observe(.value, with: { snapshot in
-            
-            var newMonthlyAssignments: [Date: [PlantShiftWorker]] = [:]
-            
-            // El snapshot contiene todos los nodos "turnos-yyyy-MM-dd"
-            if let allMonthsData = snapshot.value as? [String: [String: [String: [String: Any]]]] {
-                
-                // Iterar sobre todos los nodos de turno (turnos-yyyy-MM-dd)
-                for (dateNode, shiftsDict) in allMonthsData {
-                    
-                    // Extraer la fecha del nombre del nodo (turnos-yyyy-MM-dd)
-                    guard dateNode.hasPrefix("turnos-") else { continue }
-                    let dateString = String(dateNode.dropFirst(7))
-                    
-                    guard let date = dateFormatter.date(from: dateString) else { continue }
-                    
-                    // Filtrar solo las fechas que caen en el mes actual que estamos viendo
-                    if !calendar.isDate(date, equalTo: month, toGranularity: .month) && !calendar.isDate(date, equalTo: month, toGranularity: .year) {
-                        continue
-                    }
-                    
-                    var totalWorkersForDay: [PlantShiftWorker] = []
-                    
-                    // Sumar todos los trabajadores de CADA turno para ese día
-                    for (_, workersDict) in shiftsDict {
-                        for (workerId, workerData) in workersDict {
-                            let name = workerData["name"] as? String ?? "Usuario"
-                            let role = workerData["role"] as? String ?? "Personal"
+                        let role: String
+                        switch groupKey {
+                        case "nurses":
+                            role = "Enfermero"
+                        case "auxiliaries":
+                            role = "TCAE"
+                        default:
+                            role = "Personal"
+                        }
+                        
+                        // Slots: "0", "1", "2", ...
+                        for slotChild in groupSnap.children {
+                            guard let slotSnap = slotChild as? DataSnapshot,
+                                  let slotDict = slotSnap.value as? [String: Any] else { continue }
                             
-                            // Usamos un Set temporal para evitar contar un mismo trabajador dos veces en turnos diferentes
-                            let worker = PlantShiftWorker(id: workerId, name: name, role: role)
-                            totalWorkersForDay.append(worker)
+                            let primary = slotDict["primary"] as? String ?? ""
+                            let secondary = slotDict["secondary"] as? String ?? ""
+                            
+                            // En Android, el unassignedLabel viene de stringResource(R.string.staff_unassigned_option)
+                            // En tu BD, por lo que has mostrado, el valor es "Sin asignar".
+                            let unassigned = "Sin asignar"
+                            
+                            if !primary.isEmpty && primary != unassigned {
+                                let workerId = "\(groupKey)_\(slotSnap.key ?? "0")_primary"
+                                workersForShift.append(
+                                    PlantShiftWorker(id: workerId, name: primary, role: role)
+                                )
+                            }
+                            
+                            if !secondary.isEmpty && secondary != unassigned {
+                                let workerId = "\(groupKey)_\(slotSnap.key ?? "0")_secondary"
+                                workersForShift.append(
+                                    PlantShiftWorker(id: workerId, name: secondary, role: role)
+                                )
+                            }
                         }
                     }
                     
-                    if !totalWorkersForDay.isEmpty {
-                        // Usamos la fecha limpia (sin hora) como clave para el diccionario
-                        let startOfDay = calendar.startOfDay(for: date)
-                        newMonthlyAssignments[startOfDay] = Array(Set(totalWorkersForDay)) // Aseguramos no duplicados
+                    if !workersForShift.isEmpty {
+                        newDailyAssignments[shiftName] = workersForShift
                     }
                 }
-            }
-            
-            DispatchQueue.main.async {
-                self.monthlyAssignments = newMonthlyAssignments
-            }
-        })
+                
+                DispatchQueue.main.async {
+                    self.dailyAssignments = newDailyAssignments
+                }
+            })
+    }
+    
+    // MARK: - Obtener asignaciones del mes (para el calendario)
+    //
+    // Recorremos todos los "turnos-YYYY-MM-DD" bajo plants/{plantId}/turnos,
+    // filtramos las fechas que caen en el mes solicitado
+    // y agregamos todos los trabajadores de todos los turnos de ese día.
+    //
+    func fetchMonthlyAssignments(plantId: String, month: Date) {
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        
+        ref.child("plants")
+            .child(plantId)
+            .child("turnos")
+            .observeSingleEvent(of: .value, with: { snapshot in
+                
+                var newMonthlyAssignments: [Date: [PlantShiftWorker]] = [:]
+                
+                // snapshot.children = nodos "turnos-YYYY-MM-DD"
+                for child in snapshot.children {
+                    guard let daySnap = child as? DataSnapshot else { continue }
+                    let nodeKey = daySnap.key  // "turnos-2025-11-30"
+                    
+                    guard nodeKey.hasPrefix("turnos-") else { continue }
+                    let dateString = String(nodeKey.dropFirst("turnos-".count))
+                    guard let date = formatter.date(from: dateString) else { continue }
+                    
+                    // Solo fechas del mes solicitado
+                    if !calendar.isDate(date, equalTo: month, toGranularity: .month) {
+                        continue
+                    }
+                    
+                    var workersForDay: [PlantShiftWorker] = []
+                    
+                    // daySnap.children = turnos ("Mañana", "Tarde", "Noche", "Vacaciones"...)
+                    for shiftChild in daySnap.children {
+                        guard let shiftSnap = shiftChild as? DataSnapshot else { continue }
+                        
+                        for groupChild in shiftSnap.children {
+                            guard let groupSnap = groupChild as? DataSnapshot else { continue }
+                            let groupKey = groupSnap.key
+                            
+                            let role: String
+                            switch groupKey {
+                            case "nurses":
+                                role = "Enfermero"
+                            case "auxiliaries":
+                                role = "TCAE"
+                            default:
+                                role = "Personal"
+                            }
+                            
+                            for slotChild in groupSnap.children {
+                                guard let slotSnap = slotChild as? DataSnapshot,
+                                      let slotDict = slotSnap.value as? [String: Any] else { continue }
+                                
+                                let primary = slotDict["primary"] as? String ?? ""
+                                let secondary = slotDict["secondary"] as? String ?? ""
+                                let unassigned = "Sin asignar"
+                                
+                                if !primary.isEmpty && primary != unassigned {
+                                    let workerId = "\(groupKey)_\(slotSnap.key ?? "0")_primary"
+                                    workersForDay.append(
+                                        PlantShiftWorker(id: workerId, name: primary, role: role)
+                                    )
+                                }
+                                
+                                if !secondary.isEmpty && secondary != unassigned {
+                                    let workerId = "\(groupKey)_\(slotSnap.key ?? "0")_secondary"
+                                    workersForDay.append(
+                                        PlantShiftWorker(id: workerId, name: secondary, role: role)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    
+                    if !workersForDay.isEmpty {
+                        // Evitar duplicados por id (por si acaso)
+                        var uniqueById: [String: PlantShiftWorker] = [:]
+                        for worker in workersForDay {
+                            uniqueById[worker.id] = worker
+                        }
+                        
+                        let startOfDay = calendar.startOfDay(for: date)
+                        newMonthlyAssignments[startOfDay] = Array(uniqueById.values)
+                    }
+                }
+                
+                DispatchQueue.main.async {
+                    self.monthlyAssignments = newMonthlyAssignments
+                }
+            })
     }
 }
