@@ -8,7 +8,8 @@ struct SideMenuView: View {
     @State private var showJoinPlantSheet = false
     @State private var showPlantDashboard = false
     @State private var showEditProfileSheet = false
-    @State private var showCreatePlantSheet = false // <-- NUEVO: Estado para abrir CreatePlantView
+    @State private var showCreatePlantSheet = false
+    @State private var showSettingsSheet = false // <--- NUEVO: Estado para configuración
     
     var body: some View {
         ZStack {
@@ -40,11 +41,10 @@ struct SideMenuView: View {
                 
                 Divider().background(Color.white.opacity(0.3))
                 
-                // Opciones
+                // Opciones del Menú
                 VStack(alignment: .leading, spacing: 25) {
                     
                     if authManager.userRole == "Supervisor" {
-                        // <-- MODIFICACIÓN: Botón funcional para crear planta
                         Button(action: {
                             showCreatePlantSheet = true
                         }) {
@@ -52,12 +52,11 @@ struct SideMenuView: View {
                         }
                     }
                     
-                    // --- BOTÓN INTELIGENTE "MI PLANTA" ---
                     Button(action: {
                         if !authManager.userPlantId.isEmpty {
-                            showPlantDashboard = true // Ir al Dashboard
+                            showPlantDashboard = true
                         } else {
-                            showJoinPlantSheet = true // Ir a Unirse
+                            showJoinPlantSheet = true
                         }
                     }) {
                         MenuOptionRow(icon: "bed.double.fill", text: "Mi planta")
@@ -67,7 +66,13 @@ struct SideMenuView: View {
                         MenuOptionRow(icon: "person.text.rectangle.fill", text: "Editar perfil")
                     }
                     
-                    MenuOptionRow(icon: "gearshape.fill", text: "Configuración")
+                    // --- AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
+                    // Antes era solo texto, ahora es un botón funcional
+                    Button(action: {
+                        showSettingsSheet = true
+                    }) {
+                        MenuOptionRow(icon: "gearshape.fill", text: "Configuración")
+                    }
                 }
                 .padding(.leading, 10)
                 
@@ -91,7 +96,7 @@ struct SideMenuView: View {
             .padding(.horizontal)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        // Modales
+        // --- Modales ---
         .sheet(isPresented: $showJoinPlantSheet) {
             JoinPlantView()
         }
@@ -101,14 +106,17 @@ struct SideMenuView: View {
         .sheet(isPresented: $showEditProfileSheet) {
             EditProfileView()
         }
-        // <-- NUEVO: Presentar la vista de creación de planta
         .sheet(isPresented: $showCreatePlantSheet) {
             CreatePlantView()
+        }
+        // Modal de Configuración
+        .sheet(isPresented: $showSettingsSheet) {
+            SettingsView()
         }
     }
 }
 
-// Subvista fila de menú
+// Subvista fila de menú (igual que antes)
 struct MenuOptionRow: View {
     var icon: String
     var text: String

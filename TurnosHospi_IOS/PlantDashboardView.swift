@@ -440,7 +440,7 @@ extension SlotAssignment {
     }
 }
 
-// MARK: - Calendario específico para PlantDashboard
+// MARK: - Calendario específico para PlantDashboard (sin iniciales)
 
 struct PlantDashboardCalendarView: View {
     @Binding var selectedDate: Date
@@ -467,8 +467,9 @@ struct PlantDashboardCalendarView: View {
     private var firstWeekdayOffset: Int {
         let components = calendar.dateComponents([.year, .month], from: currentMonth)
         guard let firstDay = calendar.date(from: components) else { return 0 }
-        let weekday = calendar.component(.weekday, from: firstDay) // 1=Domingo, 2=Lunes...
-        return (weekday + 5) % 7 // Lunes=0
+        let weekday = calendar.component(.weekday, from: firstDay)
+        // Domingo=1 -> 6, Lunes=2 -> 0...
+        return (weekday + 5) % 7
     }
     
     var body: some View {
@@ -509,7 +510,7 @@ struct PlantDashboardCalendarView: View {
                 columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7),
                 spacing: 8
             ) {
-                // Huecos iniciales - ID ÚNICO
+                // Huecos iniciales - CORRECCIÓN DE IDs ÚNICOS
                 ForEach(0..<firstWeekdayOffset, id: \.self) { index in
                     Color.clear
                         .frame(height: 40)
@@ -519,8 +520,8 @@ struct PlantDashboardCalendarView: View {
                 // Días reales
                 ForEach(daysInMonth, id: \.self) { day in
                     let date = dateFor(day: day)
-                    let isSelected = Calendar.current.isDate(date, inSameDayAs: selectedDate)
-                    let startOfDay = Calendar.current.startOfDay(for: date)
+                    let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
+                    let startOfDay = calendar.startOfDay(for: date)
                     let hasAssignments = (monthlyAssignments[startOfDay]?.isEmpty == false)
                     
                     Button {
@@ -1210,4 +1211,3 @@ struct PlantPlaceholderView: View {
         .frame(height: 300)
     }
 }
-// FIN DEL ARCHIVO

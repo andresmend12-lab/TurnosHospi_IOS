@@ -11,12 +11,12 @@ class PlantManager: ObservableObject {
     @Published var joinSuccess: Bool = false
     
     @Published var currentPlant: HospitalPlant?
-    
-    // Nombre exacto del usuario en ESTA planta (ej: "Andrés Mendoza")
     @Published var myPlantName: String? = nil
     
     // Datos para la vista
     @Published var dailyAssignments: [String: [PlantShiftWorker]] = [:]
+    
+    // Diccionario con TODOS los turnos cargados (Fecha -> Trabajadores)
     @Published var monthlyAssignments: [Date: [PlantShiftWorker]] = [:]
     
     // MARK: - Buscar Planta
@@ -74,7 +74,7 @@ class PlantManager: ObservableObject {
         
         let userPlantData: [String: Any] = [
             "plantId": plant.id,
-            "staffId": selectedStaff.id, // Guardamos el ID del personal
+            "staffId": selectedStaff.id,
             "staffName": selectedStaff.name,
             "staffRole": selectedStaff.role
         ]
@@ -102,12 +102,11 @@ class PlantManager: ObservableObject {
             }
     }
     
-    // MARK: - Obtener Planta Actual e Identidad
+    // MARK: - Obtener Planta Actual
     func fetchCurrentPlant(plantId: String) {
         ref.child("plants").child(plantId).observe(.value, with: { snapshot in
             guard let value = snapshot.value as? [String: Any] else { return }
             
-            // 1. Parsear personal
             var staffMembers: [PlantStaff] = []
             if let personalDict = value["personal_de_planta"] as? [String: [String: Any]] {
                 for (_, data) in personalDict {
@@ -122,7 +121,7 @@ class PlantManager: ObservableObject {
                 }
             }
             
-            // 2. Parsear configuración planta
+            // Configuración
             let staffScope = value["staffScope"] as? String ?? "nurses_only"
             let shiftDuration = value["shiftDuration"] as? String
             let staffRequirements = value["staffRequirements"] as? [String: Int]
@@ -140,37 +139,35 @@ class PlantManager: ObservableObject {
                 shiftTimes: shiftTimes
             )
             
-            // 3. IDENTIFICAR USUARIO ACTUAL
-            // Buscamos en userPlants -> mi UID -> obtenemos staffId -> buscamos nombre en staffMembers
+            // Identificar al usuario actual en la planta
             var identifiedName: String? = nil
             if let userPlants = value["userPlants"] as? [String: [String: Any]],
                let uid = Auth.auth().currentUser?.uid,
                let myData = userPlants[uid] {
                 
-                // Intento 1: Buscar por staffId (lo más seguro)
                 if let myStaffId = myData["staffId"] as? String,
                    let me = staffMembers.first(where: { $0.id == myStaffId }) {
                     identifiedName = me.name
-                }
-                // Intento 2: Si no hay staffId, usar el nombre guardado (fallback)
-                else if let savedName = myData["staffName"] as? String {
+                } else if let savedName = myData["staffName"] as? String {
                     identifiedName = savedName
                 }
             }
             
             DispatchQueue.main.async {
                 self.currentPlant = plant
-                self.myPlantName = identifiedName // <--- Aquí guardamos el nombre real
+                self.myPlantName = identifiedName
             }
         })
     }
     
-    // MARK: - Parsers
-    private func parseWorkersForShift(shiftName: String, shiftData: [String: Any]) -> [PlantShiftWorker] {
+    // MARK: - Parser Helper
+    private func parseWorkersForShift(
+        shiftName: String,
+        shiftData: [String: Any]
+    ) -> [PlantShiftWorker] {
         var workers: [PlantShiftWorker] = []
         let unassigned = "Sin asignar"
         
-        // Función auxiliar interna para procesar arrays (nurses/auxiliaries)
         func processArray(_ list: [[String: Any]], roleName: String) {
             for (index, slot) in list.enumerated() {
                 let halfDay = slot["halfDay"] as? Bool ?? false
@@ -211,71 +208,96 @@ class PlantManager: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let dateString = formatter.string(from: date)
+        let nodeName = "turnos-\(dateString)"
         
-        ref.child("plants").child(plantId).child("turnos").child("turnos-\(dateString)")
+        ref.child("plants").child(plantId).child("turnos").child(nodeName)
             .observe(.value) { snapshot in
-                var result: [String: [PlantShiftWorker]] = [:]
+                var newDailyAssignments: [String: [PlantShiftWorker]] = [:]
                 
                 if let shiftsDict = snapshot.value as? [String: Any] {
-                    for (shiftName, val) in shiftsDict {
-                        if let data = val as? [String: Any] {
-                            let workers = self.parseWorkersForShift(shiftName: shiftName, shiftData: data)
-                            if !workers.isEmpty { result[shiftName] = workers }
+                    for (shiftName, value) in shiftsDict {
+                        if let shiftData = value as? [String: Any] {
+                            let workers = self.parseWorkersForShift(shiftName: shiftName, shiftData: shiftData)
+                            if !workers.isEmpty {
+                                newDailyAssignments[shiftName] = workers
+                            }
                         }
                     }
                 }
                 
                 DispatchQueue.main.async {
-                    self.dailyAssignments = result
+                    self.dailyAssignments = newDailyAssignments
                 }
             }
     }
     
-    // MARK: - Fetch Mensual
+    // MARK: - Fetch GLOBAL (Carga todos los turnos de la historia)
+    // Nota: Mantenemos el parámetro 'month' por compatibilidad con las llamadas existentes,
+    // pero lo ignoramos para cargar todo el calendario de golpe.
     func fetchMonthlyAssignments(plantId: String, month: Date) {
         let calendar = Calendar.current
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         
+        // Descargamos todo el nodo 'turnos'
         ref.child("plants").child(plantId).child("turnos")
             .observeSingleEvent(of: .value) { snapshot in
-                var result: [Date: [PlantShiftWorker]] = [:]
                 
-                guard let allDates = snapshot.value as? [String: Any] else {
+                var allAssignments: [Date: [PlantShiftWorker]] = [:]
+                
+                guard let allDatesDict = snapshot.value as? [String: Any] else {
                     DispatchQueue.main.async { self.monthlyAssignments = [:] }
                     return
                 }
                 
-                for (key, val) in allDates {
-                    guard key.hasPrefix("turnos-") else { continue }
-                    let dateStr = String(key.dropFirst(7)) // Quitar "turnos-"
-                    guard let date = formatter.date(from: dateStr) else { continue }
+                for (nodeName, value) in allDatesDict {
+                    // Procesamos cada fecha encontrada en la base de datos
+                    guard nodeName.hasPrefix("turnos-") else { continue }
+                    let dateString = String(nodeName.dropFirst("turnos-".count))
                     
-                    // Filtrar por mes
-                    if !calendar.isDate(date, equalTo: month, toGranularity: .month) { continue }
+                    guard let date = formatter.date(from: dateString) else { continue }
                     
-                    guard let shiftsDict = val as? [String: Any] else { continue }
-                    var dayWorkers: [PlantShiftWorker] = []
+                    // --- CORRECCIÓN: ELIMINADO EL FILTRO DE MES ---
+                    // Antes había un guard aquí que filtraba por 'month'. Lo hemos quitado.
                     
-                    for (shiftName, sVal) in shiftsDict {
-                        if let sData = sVal as? [String: Any] {
-                            dayWorkers.append(contentsOf: self.parseWorkersForShift(shiftName: shiftName, shiftData: sData))
+                    guard let shiftsDict = value as? [String: Any] else { continue }
+                    
+                    var workersForDay: [PlantShiftWorker] = []
+                    
+                    for (shiftName, shiftValue) in shiftsDict {
+                        if let shiftData = shiftValue as? [String: Any] {
+                            workersForDay.append(contentsOf: self.parseWorkersForShift(
+                                shiftName: shiftName,
+                                shiftData: shiftData
+                            ))
                         }
                     }
                     
-                    if !dayWorkers.isEmpty {
+                    if !workersForDay.isEmpty {
                         // Eliminar duplicados (misma persona en mismo turno)
                         var unique: [String: PlantShiftWorker] = [:]
-                        for w in dayWorkers {
-                            unique["\(w.name)_\(w.shiftName ?? "")"] = w
+                        for w in workersForDay {
+                            let key = "\(w.name)_\(w.shiftName ?? "")"
+                            unique[key] = w
                         }
-                        result[calendar.startOfDay(for: date)] = Array(unique.values)
+                        
+                        // Usamos startOfDay para que coincida con la clave del calendario
+                        let startOfDay = calendar.startOfDay(for: date)
+                        allAssignments[startOfDay] = Array(unique.values)
                     }
                 }
                 
                 DispatchQueue.main.async {
-                    self.monthlyAssignments = result
+                    self.monthlyAssignments = allAssignments
                 }
             }
+    }
+}
+
+// MARK: - Extensions
+extension DateFormatter {
+    func dateString(from date: Date) -> String {
+        self.dateFormat = "yyyy-MM-dd"
+        return self.string(from: date)
     }
 }
