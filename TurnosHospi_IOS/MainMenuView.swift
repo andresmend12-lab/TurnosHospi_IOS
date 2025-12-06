@@ -60,7 +60,7 @@ struct MainMenuView: View {
                 Color.black.ignoresSafeArea()
                 
                 ZStack {
-                    // Usamos un color de fondo por defecto
+                    // Usamos Color(hex:) asumiendo que la extensión está en ThemeManager.swift
                     Color(hex: "0F172A").ignoresSafeArea()
                     
                     VStack(spacing: 20) {
@@ -68,19 +68,20 @@ struct MainMenuView: View {
                         // HEADER
                         headerView
                         
-                        // --- CONTENIDO PRINCIPAL (CAMBIO AQUÍ) ---
-                        // Comprobamos si el usuario tiene una planta asignada
+                        // --- CONTENIDO PRINCIPAL ---
+                        // AQUÍ ESTÁ EL CAMBIO: Comprobamos si hay planta
                         if authManager.userPlantId.isEmpty {
-                            // CASO 1: NO TIENE PLANTA -> MODO OFFLINE (Tu Planilla)
-                            // Llamamos a la vista OfflineCalendarView que creamos en el otro archivo
+                            
+                            // CASO 1: MODO OFFLINE (Tu Planilla)
                             OfflineCalendarView()
                                 .transition(.opacity)
-                                // Ajustes visuales para que parezca una tarjeta integrada
+                                // Ajuste visual para que parezca una tarjeta
                                 .clipShape(RoundedRectangle(cornerRadius: 30))
                                 .padding(.bottom, 20)
                             
                         } else {
-                            // CASO 2: TIENE PLANTA -> TU LÓGICA ORIGINAL (ONLINE)
+                            
+                            // CASO 2: MODO ONLINE (Tu lógica original)
                             ScrollView {
                                 VStack(spacing: 20) {
                                     
@@ -104,7 +105,6 @@ struct MainMenuView: View {
                     if showMenu { withAnimation { showMenu = false } }
                 }
                 
-                // Menú Lateral
                 if showMenu {
                     SideMenuView(isShowing: $showMenu)
                         .frame(width: 260)
@@ -184,7 +184,7 @@ struct MainMenuView: View {
         .padding(.top, 50)
     }
     
-    // MARK: - Calendar Card (Lógica Original Online)
+    // MARK: - Calendar Card
     private var calendarCard: some View {
         VStack(spacing: 15) {
             // Cabecera mes
@@ -221,14 +221,14 @@ struct MainMenuView: View {
                 columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7),
                 spacing: 8
             ) {
-                // Huecos
+                // Huecos para alinear el día 1
                 ForEach(0..<firstWeekdayOffset(for: currentMonth), id: \.self) { index in
                     Color.clear
                         .frame(height: 36)
                         .id("blank-\(index)")
                 }
                 
-                // Días reales
+                // Días reales del mes
                 ForEach(daysInMonth(for: currentMonth), id: \.self) { day in
                     let date = dateFor(day: day, monthBase: currentMonth)
                     let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
@@ -286,7 +286,7 @@ struct MainMenuView: View {
         .padding(.horizontal)
     }
     
-    // MARK: - Day Info Section (Lógica Original Online)
+    // MARK: - Day Info Section
     private var dayInfoSection: some View {
         VStack(alignment: .leading, spacing: 15) {
             Text("Agenda del día")
@@ -314,14 +314,15 @@ struct MainMenuView: View {
                                 .foregroundColor(.gray)
                         }
                         Spacer()
+                        
+                        // Icono (opcional)
+                        // Image(systemName: "sun.max.fill") ...
                     }
                     
                     // Compañeros en el mismo turno
                     let targetName = plantManager.myPlantName ?? authManager.currentUserName
                     
-                    // Nota: Aquí se asume que ShiftType tiene un rawValue que coincide con la BD
-                    // o que tienes un helper `shiftName(for:)` disponible.
-                    // Si no, necesitarás añadir esa función helper aquí también.
+                    // Nota: Asegúrate de que ShiftType.rawValue coincida con lo que viene de DB
                     let shiftBaseName = type.rawValue
                     
                     let coworkers = (plantManager.dailyAssignments[shiftBaseName] ?? [])
@@ -388,7 +389,7 @@ struct MainMenuView: View {
         }
     }
     
-    // MARK: - Helpers (Originales)
+    // MARK: - Helpers
     
     private func monthYearString(for date: Date) -> String {
         let formatter = DateFormatter()
@@ -422,3 +423,4 @@ struct MainMenuView: View {
         }
     }
 }
+// FIN DEL ARCHIVO - SIN EXTENSIONES DEBAJO
