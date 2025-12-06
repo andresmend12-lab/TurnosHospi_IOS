@@ -171,7 +171,7 @@ struct MainMenuView: View {
             
             VStack(alignment: .trailing) {
                 // Texto dinámico según si es offline u online
-                Text(authManager.userPlantId.isEmpty ? "Modo Offline" : "Bienvenido")
+                Text(authManager.userPlantId.isEmpty ? "Bienvenido" : "Bienvenido")
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.6))
                 Text(authManager.currentUserName.isEmpty ? "Usuario" : authManager.currentUserName)

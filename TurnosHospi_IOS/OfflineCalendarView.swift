@@ -7,29 +7,6 @@ struct UserShift: Codable, Equatable {
     let isHalfDay: Bool
 }
 
-struct ShiftColors {
-    static let morning = Color.blue.opacity(0.7)
-    static let afternoon = Color.orange.opacity(0.7)
-    static let night = Color.purple.opacity(0.7)
-    static let saliente = Color.green.opacity(0.7)
-    static let holiday = Color.red.opacity(0.7)
-    static let free = Color.clear
-    static let morningHalf = Color.blue.opacity(0.4)
-    static let afternoonHalf = Color.orange.opacity(0.4)
-    
-    static func color(for shiftName: String) -> Color {
-        let name = shiftName.lowercased()
-        if name.contains("vacaciones") { return holiday }
-        if name.contains("noche") { return night }
-        if name.contains("media") && (name.contains("mañana") || name.contains("día")) { return morningHalf }
-        if name.contains("mañana") || name.contains("día") { return morning }
-        if name.contains("media") && name.contains("tarde") { return afternoonHalf }
-        if name.contains("tarde") { return afternoon }
-        if name.contains("saliente") { return saliente }
-        return morning
-    }
-}
-
 // MARK: - ViewModel
 
 class OfflineCalendarViewModel: ObservableObject {
@@ -98,7 +75,6 @@ class OfflineCalendarViewModel: ObservableObject {
             saveData()
         } else {
             selectedDate = date
-            // Resetear estados de notas al cambiar de día
             isAddingNote = false
             editingNoteIndex = nil
         }
@@ -137,7 +113,6 @@ class OfflineCalendarViewModel: ObservableObject {
         }
     }
     
-    // Helpers para calendario
     func changeMonth(by value: Int) {
         if let newDate = Calendar.current.date(byAdding: .month, value: value, to: currentMonth) {
             currentMonth = newDate
@@ -148,18 +123,25 @@ class OfflineCalendarViewModel: ObservableObject {
 // MARK: - Vista Principal
 
 struct OfflineCalendarView: View {
+    @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var viewModel = OfflineCalendarViewModel()
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
         NavigationView {
             ZStack {
-                Color(hex: "0F172A").edgesIgnoringSafeArea(.all) // Fondo oscuro
+                Color(hex: "0F172A").edgesIgnoringSafeArea(.all)
                 
                 VStack(spacing: 0) {
                     // --- CALENDARIO ---
                     CalendarGridView(viewModel: viewModel)
-                        .padding()
+                        .padding(.top)
+                        .padding(.horizontal)
+                    
+                    // --- NUEVA LEYENDA ---
+                    // Se inserta aquí, entre el calendario y el panel inferior
+                    LegendView()
+                        .padding(.vertical, 10)
                     
                     // --- PANEL INFERIOR ---
                     VStack {
@@ -175,7 +157,7 @@ struct OfflineCalendarView: View {
                     .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: -4)
                 }
                 
-                // Botón Flotante (FAB) para entrar en modo edición
+                // Botón Flotante (FAB)
                 if !viewModel.isAssignmentMode {
                     VStack {
                         Spacer()
@@ -192,21 +174,59 @@ struct OfflineCalendarView: View {
                                     .clipShape(Circle())
                                     .shadow(radius: 4)
                             }
-                            .padding(.trailing, 24)
-                            .padding(.bottom, 220) // Ajustar según altura del panel inferior
+                            .padding(.trailing, 10)
+                            .padding(.bottom, 140)
                         }
                     }
                 }
             }
             .navigationBarTitle("Mi Planilla", displayMode: .inline)
-            // CAMBIO: Se ha eliminado el botón de atrás manual y se oculta el por defecto
             .navigationBarBackButtonHidden(true)
+            .onAppear {
+                viewModel.loadData()
+            }
         }
         .preferredColorScheme(.dark)
     }
 }
 
-// MARK: - Subvistas
+// MARK: - LEYENDA ACTUALIZADA (2 LÍNEAS)
+
+struct LegendView: View {
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    let items = [
+        "Mañana", "M. Mañana", "Tarde", "M. Tarde",
+        "Noche", "Saliente", "Libre", "Vacaciones"
+    ]
+    
+    // Definimos 4 columnas flexibles. Al haber 8 items, se crearán 2 filas automáticamente.
+    let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 4)
+    
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 10) {
+            ForEach(items, id: \.self) { item in
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(themeManager.color(forShiftName: item))
+                        .frame(width: 8, height: 8)
+                        .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                    
+                    Text(item)
+                        .font(.system(size: 10, weight: .medium)) // Fuente ajustada para que quepan 4
+                        .foregroundColor(.gray)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8) // Se reduce un poco si el nombre es muy largo
+                }
+                .frame(maxWidth: .infinity, alignment: .leading) // Alineación limpia
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Subvistas Calendario
 
 struct CalendarGridView: View {
     @ObservedObject var viewModel: OfflineCalendarViewModel
@@ -250,7 +270,7 @@ struct CalendarGridView: View {
                     if let date = date {
                         DayCell(date: date, viewModel: viewModel)
                     } else {
-                        Text("").frame(height: 40) // Espaciador
+                        Text("").frame(height: 40)
                     }
                 }
             }
@@ -272,7 +292,6 @@ struct CalendarGridView: View {
         }
         
         let firstWeekday = calendar.component(.weekday, from: firstDayOfMonth)
-        // Ajustar para que Lunes sea 0 (domingo es 1 en Calendar)
         let offset = (firstWeekday + 5) % 7
         
         var days: [Date?] = Array(repeating: nil, count: offset)
@@ -282,7 +301,6 @@ struct CalendarGridView: View {
                 days.append(date)
             }
         }
-        
         return days
     }
 }
@@ -290,6 +308,7 @@ struct CalendarGridView: View {
 struct DayCell: View {
     let date: Date
     @ObservedObject var viewModel: OfflineCalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         let dateKey = viewModel.dateKey(for: date)
@@ -297,16 +316,24 @@ struct DayCell: View {
         let isSelected = Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate)
         let hasNotes = !(viewModel.localNotes[dateKey]?.isEmpty ?? true)
         
-        // Calcular color del turno o Saliente automático
         var bgColor: Color = .clear
+        
         if let shift = shift {
-            bgColor = ShiftColors.color(for: shift.shiftName)
+            if let type = mapToShiftType(shift.shiftName) {
+                bgColor = themeManager.color(for: type)
+            } else if shift.shiftName.lowercased().contains("saliente") {
+                bgColor = Color.green.opacity(0.5)
+            } else if shift.shiftName.lowercased().contains("vacaciones") {
+                bgColor = Color.red.opacity(0.5)
+            } else {
+                bgColor = Color.gray.opacity(0.3)
+            }
         } else {
-            // Lógica Saliente automático (día después de noche)
+            // Lógica Saliente automático
             if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: date),
                let prevShift = viewModel.localShifts[viewModel.dateKey(for: yesterday)],
                prevShift.shiftName.lowercased().contains("noche") {
-                bgColor = ShiftColors.saliente
+                bgColor = Color.green.opacity(0.5)
             }
         }
         
@@ -323,7 +350,7 @@ struct DayCell: View {
             
             if hasNotes {
                 Circle()
-                    .fill(Color(hex: "E91E63")) // Punto rojo
+                    .fill(Color(hex: "E91E63"))
                     .frame(width: 8, height: 8)
                     .offset(y: 2)
             }
@@ -332,12 +359,23 @@ struct DayCell: View {
             viewModel.handleDayClick(date: date)
         }
     }
+    
+    private func mapToShiftType(_ name: String) -> ShiftType? {
+        let lower = name.lowercased()
+        if lower.contains("media") && (lower.contains("mañana") || lower.contains("día")) { return .mediaManana }
+        if lower.contains("media") && lower.contains("tarde") { return .mediaTarde }
+        if lower.contains("mañana") || lower.contains("día") { return .manana }
+        if lower.contains("tarde") { return .tarde }
+        if lower.contains("noche") { return .noche }
+        return nil
+    }
 }
 
 // MARK: - Paneles de Control
 
 struct AssignmentControlPanel: View {
     @ObservedObject var viewModel: OfflineCalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -347,14 +385,15 @@ struct AssignmentControlPanel: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(viewModel.shiftTypes, id: \.self) { type in
-                        let isSelected = viewModel.selectedShiftToApply == type
-                        Button(action: { viewModel.selectedShiftToApply = type }) {
-                            Text(type)
+                    ForEach(viewModel.shiftTypes, id: \.self) { typeName in
+                        let isSelected = viewModel.selectedShiftToApply == typeName
+                        
+                        Button(action: { viewModel.selectedShiftToApply = typeName }) {
+                            Text(typeName)
                                 .font(.system(size: 14, weight: .medium))
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
-                                .background(isSelected ? Color(hex: "54C7EC") : Color(hex: "334155"))
+                                .background(isSelected ? Color(hex: "54C7EC") : getButtonColor(for: typeName).opacity(0.6))
                                 .foregroundColor(isSelected ? .black : .white)
                                 .cornerRadius(20)
                                 .overlay(
@@ -380,6 +419,32 @@ struct AssignmentControlPanel: View {
             }
         }
         .padding(16)
+    }
+    
+    private func getButtonColor(for typeName: String) -> Color {
+        if typeName == "Libre" {
+            return Color(hex: "334155")
+        }
+        
+        if let type = mapToShiftType(typeName) {
+            return themeManager.color(for: type)
+        } else if typeName.lowercased().contains("saliente") {
+            return Color.green.opacity(0.5)
+        } else if typeName.lowercased().contains("vacaciones") {
+            return Color.red.opacity(0.5)
+        }
+        
+        return Color(hex: "334155")
+    }
+    
+    private func mapToShiftType(_ name: String) -> ShiftType? {
+        let lower = name.lowercased()
+        if lower.contains("m.") && lower.contains("mañana") { return .mediaManana }
+        if lower.contains("m.") && lower.contains("tarde") { return .mediaTarde }
+        if lower == "mañana" { return .manana }
+        if lower == "tarde" { return .tarde }
+        if lower == "noche" { return .noche }
+        return nil
     }
 }
 
@@ -423,7 +488,6 @@ struct NotesControlPanel: View {
                 }
             }
             
-            // CAMBIO: ScrollView para la lista de notas
             ScrollView {
                 VStack(spacing: 8) {
                     let key = viewModel.dateKey(for: viewModel.selectedDate)
@@ -476,7 +540,7 @@ struct NotesControlPanel: View {
                     }
                 }
             }
-            .frame(maxHeight: 250) // Altura máxima para que no crezca infinitamente, permitiendo el scroll
+            .frame(maxHeight: 250)
             
             // Añadir Nueva Nota
             if viewModel.isAddingNote {
@@ -496,7 +560,6 @@ struct NotesControlPanel: View {
             }
         }
         .padding(16)
-        // Altura mínima para mantener consistencia
         .frame(minHeight: 200, alignment: .top)
     }
     
@@ -525,3 +588,4 @@ struct RoundedCorner: Shape {
         return Path(path.cgPath)
     }
 }
+

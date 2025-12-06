@@ -1,33 +1,47 @@
 import SwiftUI
 
+// NOTA: Se ha eliminado 'enum ShiftType' de aquí porque ya existe en tu proyecto.
+
 class ThemeManager: ObservableObject {
-    // Claves para guardar en UserDefaults
+    static let shared = ThemeManager() // Singleton
+
+    // --- Claves para UserDefaults ---
     private let kMorning = "color_morning"
     private let kMorningHalf = "color_morning_half"
     private let kAfternoon = "color_afternoon"
     private let kAfternoonHalf = "color_afternoon_half"
     private let kNight = "color_night"
+    private let kSaliente = "color_saliente"
+    private let kFreeDay = "color_free"
     private let kHoliday = "color_holiday"
     
-    // Colores publicados (la vista se actualizará al cambiarlos)
+    // --- Colores Publicados ---
     @Published var morningColor: Color
     @Published var morningHalfColor: Color
     @Published var afternoonColor: Color
     @Published var afternoonHalfColor: Color
     @Published var nightColor: Color
+    @Published var salienteColor: Color
+    @Published var freeDayColor: Color
     @Published var holidayColor: Color
     
     init() {
-        // Cargar colores guardados o usar los por defecto
-        self.morningColor = ThemeManager.loadColor(key: kMorning) ?? .yellow
-        self.morningHalfColor = ThemeManager.loadColor(key: kMorningHalf) ?? Color(red: 1.0, green: 0.9, blue: 0.6)
-        self.afternoonColor = ThemeManager.loadColor(key: kAfternoon) ?? .orange
-        self.afternoonHalfColor = ThemeManager.loadColor(key: kAfternoonHalf) ?? Color(red: 1.0, green: 0.6, blue: 0.4)
-        self.nightColor = ThemeManager.loadColor(key: kNight) ?? Color(red: 0.3, green: 0.3, blue: 1.0)
-        self.holidayColor = ThemeManager.loadColor(key: kHoliday) ?? .green
+        // Cargar colores guardados o usar los por defecto definidos
+        self.morningColor = ThemeManager.loadColor(key: kMorning) ?? Color(hex: "D97706")       // Mañana: Amarillo Oscuro
+        self.morningHalfColor = ThemeManager.loadColor(key: kMorningHalf) ?? Color(hex: "FDE047") // M. Mañana: Amarillo Claro
+        self.afternoonColor = ThemeManager.loadColor(key: kAfternoon) ?? Color(hex: "60A5FA")   // Tarde: Azul Claro
+        self.afternoonHalfColor = ThemeManager.loadColor(key: kAfternoonHalf) ?? Color(hex: "2DD4BF") // M. Tarde: Turquesa
+        self.nightColor = ThemeManager.loadColor(key: kNight) ?? Color(hex: "A855F7")           // Noche: Violeta
+        
+        // --- COLORES ACTUALIZADOS ---
+        self.salienteColor = ThemeManager.loadColor(key: kSaliente) ?? Color(hex: "00008B")     // Saliente: Azul Oscuro
+        self.freeDayColor = ThemeManager.loadColor(key: kFreeDay) ?? Color(hex: "22C55E")       // Libre: Verde
+        self.holidayColor = ThemeManager.loadColor(key: kHoliday) ?? .red                       // Vacaciones: Rojo
     }
     
-    // Función para obtener color según el tipo de turno
+    // --- Lógica de Selección de Color ---
+    
+    // 1. Obtener color por Enum (Tipos básicos existentes en tu otro archivo)
     func color(for type: ShiftType) -> Color {
         switch type {
         case .manana: return morningColor
@@ -38,27 +52,54 @@ class ThemeManager: ObservableObject {
         }
     }
     
-    // Guardar colores
+    // 2. Obtener color por Nombre (String) - Para manejar Saliente, Libre, Vacaciones y legacy
+    func color(forShiftName name: String) -> Color {
+        let lower = name.lowercased()
+        
+        // Prioridad a estados especiales
+        if lower.contains("saliente") { return salienteColor }
+        if lower == "libre" { return freeDayColor }
+        if lower.contains("vacaciones") { return holidayColor }
+        
+        // Chequeo de turnos estándar
+        if lower.contains("media") && (lower.contains("mañana") || lower.contains("m.")) { return morningHalfColor }
+        if lower.contains("media") && (lower.contains("tarde") || lower.contains("m.")) { return afternoonHalfColor }
+        if lower.contains("mañana") { return morningColor }
+        if lower.contains("tarde") { return afternoonColor }
+        if lower.contains("noche") { return nightColor }
+        
+        return .gray // Color por defecto si no coincide
+    }
+    
+    // --- Persistencia ---
+    
     func saveColors() {
         ThemeManager.saveColor(color: morningColor, key: kMorning)
         ThemeManager.saveColor(color: morningHalfColor, key: kMorningHalf)
         ThemeManager.saveColor(color: afternoonColor, key: kAfternoon)
         ThemeManager.saveColor(color: afternoonHalfColor, key: kAfternoonHalf)
         ThemeManager.saveColor(color: nightColor, key: kNight)
+        ThemeManager.saveColor(color: salienteColor, key: kSaliente)
+        ThemeManager.saveColor(color: freeDayColor, key: kFreeDay)
         ThemeManager.saveColor(color: holidayColor, key: kHoliday)
     }
     
     func resetDefaults() {
-        morningColor = .yellow
-        morningHalfColor = Color(red: 1.0, green: 0.9, blue: 0.6)
-        afternoonColor = .orange
-        afternoonHalfColor = Color(red: 1.0, green: 0.6, blue: 0.4)
-        nightColor = Color(red: 0.3, green: 0.3, blue: 1.0)
-        holidayColor = .green
+        morningColor = Color(hex: "D97706")
+        morningHalfColor = Color(hex: "FDE047")
+        afternoonColor = Color(hex: "60A5FA")
+        afternoonHalfColor = Color(hex: "2DD4BF")
+        nightColor = Color(hex: "A855F7")
+        
+        // Actualizamos los defaults también
+        salienteColor = Color(hex: "00008B")
+        freeDayColor = Color(hex: "22C55E")
+        holidayColor = .red
+        
         saveColors()
     }
     
-    // --- Helpers de persistencia (Color -> String Hex) ---
+    // --- Helpers Privados ---
     private static func loadColor(key: String) -> Color? {
         guard let hex = UserDefaults.standard.string(forKey: key) else { return nil }
         return Color(hex: hex)
@@ -71,7 +112,8 @@ class ThemeManager: ObservableObject {
     }
 }
 
-// Extensiones para convertir Color <-> Hex String
+// MARK: - Extensiones Color
+
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
