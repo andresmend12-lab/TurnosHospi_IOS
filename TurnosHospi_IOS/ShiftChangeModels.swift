@@ -1,6 +1,8 @@
 import Foundation
+import SwiftUI
 
 // --- ENUMS ---
+
 enum RequestType: String, Codable {
     case coverage = "COVERAGE"
     case swap = "SWAP"
@@ -50,8 +52,23 @@ struct ShiftChangeRequest: Identifiable, Codable {
     var targetShiftName: String?
     var timestamp: TimeInterval = Date().timeIntervalSince1970
     
-    // Inicializador por defecto
-    init(id: String = UUID().uuidString, type: RequestType = .swap, status: RequestStatus = .searching, mode: RequestMode = .flexible, hardnessLevel: ShiftHardness = .normal, requesterId: String, requesterName: String, requesterRole: String, requesterShiftDate: String, requesterShiftName: String, offeredDates: [String] = []) {
+    // Inicializador por defecto para facilitar la creación
+    init(id: String = UUID().uuidString,
+         type: RequestType = .swap,
+         status: RequestStatus = .searching,
+         mode: RequestMode = .flexible,
+         hardnessLevel: ShiftHardness = .normal,
+         requesterId: String = "",
+         requesterName: String = "",
+         requesterRole: String = "",
+         requesterShiftDate: String = "",
+         requesterShiftName: String = "",
+         offeredDates: [String] = [],
+         targetUserId: String? = nil,
+         targetUserName: String? = nil,
+         targetShiftDate: String? = nil,
+         targetShiftName: String? = nil) {
+        
         self.id = id
         self.type = type
         self.status = status
@@ -63,6 +80,10 @@ struct ShiftChangeRequest: Identifiable, Codable {
         self.requesterShiftDate = requesterShiftDate
         self.requesterShiftName = requesterShiftName
         self.offeredDates = offeredDates
+        self.targetUserId = targetUserId
+        self.targetUserName = targetUserName
+        self.targetShiftDate = targetShiftDate
+        self.targetShiftName = targetShiftName
     }
 }
 
@@ -78,13 +99,13 @@ struct FavorTransaction: Identifiable, Codable {
     var timestamp: TimeInterval
 }
 
-// Visualización auxiliar
+// Visualización auxiliar para calendarios
 struct MyShiftDisplay: Identifiable {
     var id: String { fullDateString }
     let dateString: String
     let shiftName: String
     let fullDate: Date
-    let fullDateString: String // yyyy-MM-dd para key
+    let fullDateString: String // yyyy-MM-dd
 }
 
 // Turno genérico de planta
