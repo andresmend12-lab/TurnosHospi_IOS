@@ -8,11 +8,10 @@ struct UserShift: Codable, Equatable {
 }
 
 struct ShiftColors {
-    // Puedes ajustar estos colores a los de tu Assets.xcassets
     static let morning = Color.blue.opacity(0.7)
     static let afternoon = Color.orange.opacity(0.7)
     static let night = Color.purple.opacity(0.7)
-    static let saliente = Color.green.opacity(0.7) // Color específico para Saliente
+    static let saliente = Color.green.opacity(0.7)
     static let holiday = Color.red.opacity(0.7)
     static let free = Color.clear
     static let morningHalf = Color.blue.opacity(0.4)
@@ -200,12 +199,8 @@ struct OfflineCalendarView: View {
                 }
             }
             .navigationBarTitle("Mi Planilla", displayMode: .inline)
-            .navigationBarItems(leading: Button(action: {
-                presentationMode.wrappedValue.dismiss()
-            }) {
-                Image(systemName: "arrow.left")
-                    .foregroundColor(.white)
-            })
+            // CAMBIO: Se ha eliminado el botón de atrás manual y se oculta el por defecto
+            .navigationBarBackButtonHidden(true)
         }
         .preferredColorScheme(.dark)
     }
@@ -428,54 +423,60 @@ struct NotesControlPanel: View {
                 }
             }
             
-            // Lista de Notas
-            let key = viewModel.dateKey(for: viewModel.selectedDate)
-            let notes = viewModel.localNotes[key] ?? []
-            
-            if notes.isEmpty && !viewModel.isAddingNote {
-                Text("No hay notas. Pulsa + para crear una.")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .padding(.top, 4)
-            }
-            
-            ForEach(Array(notes.enumerated()), id: \.offset) { index, note in
-                if viewModel.editingNoteIndex == index {
-                    // Edición
-                    HStack {
-                        TextField("", text: $viewModel.editingNoteText)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .colorScheme(.light)
-                        
-                        Button(action: { viewModel.updateNote(at: index) }) {
-                            Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
-                        }
-                        Button(action: { viewModel.editingNoteIndex = nil }) {
-                            Image(systemName: "xmark.circle.fill").foregroundColor(.red)
-                        }
+            // CAMBIO: ScrollView para la lista de notas
+            ScrollView {
+                VStack(spacing: 8) {
+                    let key = viewModel.dateKey(for: viewModel.selectedDate)
+                    let notes = viewModel.localNotes[key] ?? []
+                    
+                    if notes.isEmpty && !viewModel.isAddingNote {
+                        Text("No hay notas. Pulsa + para crear una.")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .padding(.top, 4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                } else {
-                    // Visualización
-                    HStack {
-                        Text(note)
-                            .foregroundColor(.white)
-                            .padding(8)
-                            .background(Color(hex: "334155"))
-                            .cornerRadius(8)
-                        Spacer()
-                        Button(action: {
-                            viewModel.editingNoteIndex = index
-                            viewModel.editingNoteText = note
-                            viewModel.isAddingNote = false
-                        }) {
-                            Image(systemName: "pencil").foregroundColor(Color(hex: "54C7EC"))
-                        }
-                        Button(action: { viewModel.deleteNote(at: index) }) {
-                            Image(systemName: "trash").foregroundColor(.red)
+                    
+                    ForEach(Array(notes.enumerated()), id: \.offset) { index, note in
+                        if viewModel.editingNoteIndex == index {
+                            // Edición
+                            HStack {
+                                TextField("", text: $viewModel.editingNoteText)
+                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    .colorScheme(.light)
+                                
+                                Button(action: { viewModel.updateNote(at: index) }) {
+                                    Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                                }
+                                Button(action: { viewModel.editingNoteIndex = nil }) {
+                                    Image(systemName: "xmark.circle.fill").foregroundColor(.red)
+                                }
+                            }
+                        } else {
+                            // Visualización
+                            HStack {
+                                Text(note)
+                                    .foregroundColor(.white)
+                                    .padding(8)
+                                    .background(Color(hex: "334155"))
+                                    .cornerRadius(8)
+                                Spacer()
+                                Button(action: {
+                                    viewModel.editingNoteIndex = index
+                                    viewModel.editingNoteText = note
+                                    viewModel.isAddingNote = false
+                                }) {
+                                    Image(systemName: "pencil").foregroundColor(Color(hex: "54C7EC"))
+                                }
+                                Button(action: { viewModel.deleteNote(at: index) }) {
+                                    Image(systemName: "trash").foregroundColor(.red)
+                                }
+                            }
                         }
                     }
                 }
             }
+            .frame(maxHeight: 250) // Altura máxima para que no crezca infinitamente, permitiendo el scroll
             
             // Añadir Nueva Nota
             if viewModel.isAddingNote {
@@ -495,7 +496,7 @@ struct NotesControlPanel: View {
             }
         }
         .padding(16)
-        // Altura mínima para que no salte mucho al añadir cosas
+        // Altura mínima para mantener consistencia
         .frame(minHeight: 200, alignment: .top)
     }
     
