@@ -1,32 +1,99 @@
 import Foundation
 
-enum ChangeStatus: String, Codable {
-    case pending = "Pendiente"
-    case accepted = "Aceptado"
-    case rejected = "Rechazado"
+// --- ENUMS ---
+enum RequestType: String, Codable {
+    case coverage = "COVERAGE"
+    case swap = "SWAP"
 }
 
+enum RequestMode: String, Codable {
+    case strict = "STRICT"
+    case flexible = "FLEXIBLE"
+}
+
+enum RequestStatus: String, Codable {
+    case draft = "DRAFT"
+    case searching = "SEARCHING"
+    case pendingPartner = "PENDING_PARTNER"
+    case awaitingSupervisor = "AWAITING_SUPERVISOR"
+    case approved = "APPROVED"
+    case rejected = "REJECTED"
+}
+
+enum ShiftHardness: String, Codable {
+    case night = "NIGHT"
+    case weekend = "WEEKEND"
+    case holiday = "HOLIDAY"
+    case normal = "NORMAL"
+}
+
+// --- DATA STRUCTS ---
+
+// Solicitud de cambio/cobertura
 struct ShiftChangeRequest: Identifiable, Codable {
-    let id: String
-    let requesterId: String
-    let requesterName: String
-    let originalShiftDate: String // formato yyyy-MM-dd
-    let originalShiftType: String // "Mañana", "Tarde", etc.
-    let targetDate: String?       // Opcional: Si busca un día específico a cambio
-    let targetShiftType: String?
-    let status: ChangeStatus
-    let timestamp: TimeInterval
+    var id: String
+    var type: RequestType
+    var status: RequestStatus
+    var mode: RequestMode
+    var hardnessLevel: ShiftHardness
+    var requesterId: String
+    var requesterName: String
+    var requesterRole: String
+    var requesterShiftDate: String // Formato yyyy-MM-dd
+    var requesterShiftName: String
+    var offeredDates: [String] = []
     
-    // Inicializador para crear una nueva solicitud
-    init(id: String = UUID().uuidString, requesterId: String, requesterName: String, originalShiftDate: String, originalShiftType: String, targetDate: String? = nil, targetShiftType: String? = nil) {
+    // Campos para intercambio (Swap)
+    var targetUserId: String?
+    var targetUserName: String?
+    var targetShiftDate: String?
+    var targetShiftName: String?
+    var timestamp: TimeInterval = Date().timeIntervalSince1970
+    
+    // Inicializador por defecto
+    init(id: String = UUID().uuidString, type: RequestType = .swap, status: RequestStatus = .searching, mode: RequestMode = .flexible, hardnessLevel: ShiftHardness = .normal, requesterId: String, requesterName: String, requesterRole: String, requesterShiftDate: String, requesterShiftName: String, offeredDates: [String] = []) {
         self.id = id
+        self.type = type
+        self.status = status
+        self.mode = mode
+        self.hardnessLevel = hardnessLevel
         self.requesterId = requesterId
         self.requesterName = requesterName
-        self.originalShiftDate = originalShiftDate
-        self.originalShiftType = originalShiftType
-        self.targetDate = targetDate
-        self.targetShiftType = targetShiftType
-        self.status = .pending
-        self.timestamp = Date().timeIntervalSince1970
+        self.requesterRole = requesterRole
+        self.requesterShiftDate = requesterShiftDate
+        self.requesterShiftName = requesterShiftName
+        self.offeredDates = offeredDates
     }
+}
+
+// Historial de favores (Marketplace)
+struct FavorTransaction: Identifiable, Codable {
+    var id: String
+    var covererId: String
+    var covererName: String
+    var requesterId: String
+    var requesterName: String
+    var date: String
+    var shiftName: String
+    var timestamp: TimeInterval
+}
+
+// Visualización auxiliar
+struct MyShiftDisplay: Identifiable {
+    var id: String { fullDateString }
+    let dateString: String
+    let shiftName: String
+    let fullDate: Date
+    let fullDateString: String // yyyy-MM-dd para key
+}
+
+// Turno genérico de planta
+struct PlantShift: Identifiable {
+    var id: String { "\(userId)_\(dateString)" }
+    let userId: String
+    let userName: String
+    let userRole: String
+    let date: Date
+    let dateString: String
+    let shiftName: String
 }
