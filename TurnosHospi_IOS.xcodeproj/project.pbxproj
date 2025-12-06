@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		976F1F3F2EE46A0C0036A9E0 /* OfflineCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976F1F3E2EE46A0C0036A9E0 /* OfflineCalendarView.swift */; };
 		979C54FD2EE3077300F21427 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C54FC2EE3077300F21427 /* ThemeManager.swift */; };
 		979C54FF2EE3078D00F21427 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C54FE2EE3078D00F21427 /* SettingsView.swift */; };
 		979C55012EE320A000F21427 /* ImportShiftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C55002EE320A000F21427 /* ImportShiftsView.swift */; };
@@ -59,6 +60,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		976F1F3E2EE46A0C0036A9E0 /* OfflineCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendarView.swift; sourceTree = "<group>"; };
 		979C54FC2EE3077300F21427 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		979C54FE2EE3078D00F21427 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		979C55002EE320A000F21427 /* ImportShiftsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportShiftsView.swift; sourceTree = "<group>"; };
@@ -153,6 +155,7 @@
 				97E962CE2EE18976006E7707 /* Preview Content */,
 				97FB93692EE1D55700F5490F /* LoginView.swift */,
 				97FB936D2EE1DAF300F5490F /* MainMenuView.swift */,
+				976F1F3E2EE46A0C0036A9E0 /* OfflineCalendarView.swift */,
 				979C54FC2EE3077300F21427 /* ThemeManager.swift */,
 				979C54FE2EE3078D00F21427 /* SettingsView.swift */,
 				97FB937E2EE1F26100F5490F /* PlantModels.swift */,
@@ -362,6 +365,7 @@
 				979C55032EE3306500F21427 /* StatisticsView.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
 				97FB937F2EE1F26100F5490F /* PlantModels.swift in Sources */,
+				976F1F3F2EE46A0C0036A9E0 /* OfflineCalendarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

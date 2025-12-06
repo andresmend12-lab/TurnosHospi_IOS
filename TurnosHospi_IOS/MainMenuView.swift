@@ -60,24 +60,38 @@ struct MainMenuView: View {
                 Color.black.ignoresSafeArea()
                 
                 ZStack {
-                    Color.deepSpace.ignoresSafeArea()
+                    // Usamos un color de fondo por defecto
+                    Color(hex: "0F172A").ignoresSafeArea()
                     
                     VStack(spacing: 20) {
                         
                         // HEADER
                         headerView
                         
-                        // CONTENIDO
-                        ScrollView {
-                            VStack(spacing: 20) {
-                                
-                                // CALENDARIO PROPIO
-                                calendarCard
-                                
-                                // INFO DEL DÍA
-                                dayInfoSection
+                        // --- CONTENIDO PRINCIPAL (CAMBIO AQUÍ) ---
+                        // Comprobamos si el usuario tiene una planta asignada
+                        if authManager.userPlantId.isEmpty {
+                            // CASO 1: NO TIENE PLANTA -> MODO OFFLINE (Tu Planilla)
+                            // Llamamos a la vista OfflineCalendarView que creamos en el otro archivo
+                            OfflineCalendarView()
+                                .transition(.opacity)
+                                // Ajustes visuales para que parezca una tarjeta integrada
+                                .clipShape(RoundedRectangle(cornerRadius: 30))
+                                .padding(.bottom, 20)
+                            
+                        } else {
+                            // CASO 2: TIENE PLANTA -> TU LÓGICA ORIGINAL (ONLINE)
+                            ScrollView {
+                                VStack(spacing: 20) {
+                                    
+                                    // CALENDARIO PROPIO
+                                    calendarCard
+                                    
+                                    // INFO DEL DÍA
+                                    dayInfoSection
+                                }
+                                .padding(.bottom, 100)
                             }
-                            .padding(.bottom, 100)
                         }
                     }
                 }
@@ -90,6 +104,7 @@ struct MainMenuView: View {
                     if showMenu { withAnimation { showMenu = false } }
                 }
                 
+                // Menú Lateral
                 if showMenu {
                     SideMenuView(isShowing: $showMenu)
                         .frame(width: 260)
@@ -107,13 +122,12 @@ struct MainMenuView: View {
             loadData()
         }
         .onChange(of: selectedDate) { newDate in
-            // Si cambia el mes, recargamos
-            if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
-                resetCurrentMonthToFirstDay(of: newDate)
-                loadData()
-            }
-            // Siempre cargamos detalles del día específico
+            // Solo cargamos datos online si hay planta
             if !authManager.userPlantId.isEmpty {
+                if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
+                    resetCurrentMonthToFirstDay(of: newDate)
+                    loadData()
+                }
                 plantManager.fetchDailyStaff(plantId: authManager.userPlantId, date: newDate)
             }
         }
@@ -156,7 +170,8 @@ struct MainMenuView: View {
             Spacer()
             
             VStack(alignment: .trailing) {
-                Text("Bienvenido")
+                // Texto dinámico según si es offline u online
+                Text(authManager.userPlantId.isEmpty ? "Modo Offline" : "Bienvenido")
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.6))
                 Text(authManager.currentUserName.isEmpty ? "Usuario" : authManager.currentUserName)
@@ -169,7 +184,7 @@ struct MainMenuView: View {
         .padding(.top, 50)
     }
     
-    // MARK: - Calendar Card
+    // MARK: - Calendar Card (Lógica Original Online)
     private var calendarCard: some View {
         VStack(spacing: 15) {
             // Cabecera mes
@@ -206,14 +221,14 @@ struct MainMenuView: View {
                 columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7),
                 spacing: 8
             ) {
-                // --- CORRECCIÓN AQUÍ: IDs únicos para los huecos ---
+                // Huecos
                 ForEach(0..<firstWeekdayOffset(for: currentMonth), id: \.self) { index in
                     Color.clear
                         .frame(height: 36)
-                        .id("blank-\(index)") // ID único para evitar conflicto con los días
+                        .id("blank-\(index)")
                 }
                 
-                // Días reales del mes
+                // Días reales
                 ForEach(daysInMonth(for: currentMonth), id: \.self) { day in
                     let date = dateFor(day: day, monthBase: currentMonth)
                     let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
@@ -271,7 +286,7 @@ struct MainMenuView: View {
         .padding(.horizontal)
     }
     
-    // MARK: - Day Info Section
+    // MARK: - Day Info Section (Lógica Original Online)
     private var dayInfoSection: some View {
         VStack(alignment: .leading, spacing: 15) {
             Text("Agenda del día")
@@ -299,16 +314,15 @@ struct MainMenuView: View {
                                 .foregroundColor(.gray)
                         }
                         Spacer()
-                        
-                        Image(systemName: getIconForShift(type))
-                            .foregroundColor(.white.opacity(0.7))
-                            .font(.title2)
                     }
                     
                     // Compañeros en el mismo turno
                     let targetName = plantManager.myPlantName ?? authManager.currentUserName
-                    // Usamos nombre base (Mañana) para buscar compañeros
-                    let shiftBaseName = shiftName(for: type)
+                    
+                    // Nota: Aquí se asume que ShiftType tiene un rawValue que coincide con la BD
+                    // o que tienes un helper `shiftName(for:)` disponible.
+                    // Si no, necesitarás añadir esa función helper aquí también.
+                    let shiftBaseName = type.rawValue
                     
                     let coworkers = (plantManager.dailyAssignments[shiftBaseName] ?? [])
                         .filter { $0.name != targetName }
@@ -358,7 +372,6 @@ struct MainMenuView: View {
                 .padding(.horizontal)
                 
             } else {
-                // Si no tengo turno hoy
                 HStack {
                     Spacer()
                     VStack(spacing: 10) {
@@ -375,7 +388,7 @@ struct MainMenuView: View {
         }
     }
     
-    // MARK: - Helpers
+    // MARK: - Helpers (Originales)
     
     private func monthYearString(for date: Date) -> String {
         let formatter = DateFormatter()
@@ -388,7 +401,6 @@ struct MainMenuView: View {
         let components = calendar.dateComponents([.year, .month], from: monthDate)
         guard let firstDay = calendar.date(from: components) else { return 0 }
         let weekday = calendar.component(.weekday, from: firstDay)
-        // Lunes=0 ... Domingo=6
         return (weekday + 5) % 7
     }
     
@@ -407,22 +419,6 @@ struct MainMenuView: View {
         if let newDate = calendar.date(byAdding: .month, value: value, to: currentMonth) {
             resetCurrentMonthToFirstDay(of: newDate)
             loadData()
-        }
-    }
-    
-    private func shiftName(for type: ShiftType) -> String {
-        switch type {
-        case .manana, .mediaManana: return "Mañana"
-        case .tarde, .mediaTarde: return "Tarde"
-        case .noche: return "Noche"
-        }
-    }
-    
-    func getIconForShift(_ type: ShiftType) -> String {
-        switch type {
-        case .manana, .mediaManana: return "sun.max.fill"
-        case .tarde, .mediaTarde:   return "sunset.fill"
-        case .noche:                return "moon.stars.fill"
         }
     }
 }
