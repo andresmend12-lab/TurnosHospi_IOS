@@ -28,7 +28,7 @@ struct PlantDashboardView: View {
     @State private var selectedOption: String = "Calendario"
     @State private var selectedDate = Date()
     @State private var currentMonth = Date()
-    @State private var showImportShiftsSheet = false // Estado para importar turnos
+    @State private var showImportShiftsSheet = false
     @State private var showStatisticsSheet = false
     
     // Estado de edición para supervisor
@@ -95,15 +95,17 @@ struct PlantDashboardView: View {
                     // CONTENIDO
                     VStack(spacing: 20) {
                         
-                        // Título de la sección
-                        HStack {
-                            Text(selectedOption)
-                                .font(.largeTitle.bold())
-                                .foregroundColor(.white)
-                            Spacer()
+                        // Título de la sección (Ocultar para vistas que tienen su propio header)
+                        if !["Cambio de turnos", "Gestión de cambios", "Bolsa de Turnos"].contains(selectedOption) {
+                            HStack {
+                                Text(selectedOption)
+                                    .font(.largeTitle.bold())
+                                    .foregroundColor(.white)
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 20)
                         }
-                        .padding(.horizontal)
-                        .padding(.top, 20)
                         
                         Group {
                             let plantId = authManager.userPlantId
@@ -177,6 +179,13 @@ struct PlantDashboardView: View {
                                     Spacer()
                                 }
                                 
+                            // --- NUEVOS CASOS AÑADIDOS ---
+                            case "Cambio de turnos", "Gestión de cambios":
+                                ShiftChangeView(plantId: plantId)
+                                
+                            case "Bolsa de Turnos":
+                                ShiftMarketplaceView(plantId: plantId)
+                                
                             default:
                                 ScrollView {
                                     PlantPlaceholderView(
@@ -224,10 +233,6 @@ struct PlantDashboardView: View {
         .sheet(isPresented: $showImportShiftsSheet) {
             ImportShiftsView()
         }
-        .sheet(isPresented: $showImportShiftsSheet) {
-            ImportShiftsView()
-        }
-        // El sheet de estadísticas debe ir SEPARADO, encadenado al anterior o a la vista principal
         .sheet(isPresented: $showStatisticsSheet) {
             if !authManager.userPlantId.isEmpty {
                 StatisticsView(
