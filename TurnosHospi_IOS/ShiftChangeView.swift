@@ -2,6 +2,8 @@ import SwiftUI
 import FirebaseDatabase
 import FirebaseAuth
 
+// MARK: - VISTA PRINCIPAL
+
 struct ShiftChangeView: View {
     // Parámetros recibidos
     var plantId: String
@@ -21,11 +23,11 @@ struct ShiftChangeView: View {
     
     // Búsqueda de candidatos
     @State private var allPlantShifts: [PlantShift] = []
-    @State private var userSchedules: [String: [String: String]] = [:]
+    @State private var userSchedules: [String: [String: String]] = [:] // IDUsuario -> [Fecha: Turno]
     @State private var selectedRequestForSuggestions: ShiftChangeRequest?
+    @State private var isLoadingCandidates = false
     
     // UI Dialogs
-    @State private var showCreateDialog = false
     @State private var selectedShiftForRequest: MyShiftDisplay?
     
     // Firebase References
@@ -56,31 +58,41 @@ struct ShiftChangeView: View {
                     .padding()
                     
                     if selectedRequestForSuggestions == nil {
-                        // Selector de Pestañas
+                        // Selector de Pestañas (Estilo claro sobre fondo oscuro)
                         Picker("", selection: $selectedTab) {
                             Text("Mis Turnos").tag(0)
                             Text("Gestión").tag(1)
                             Text("Sugerencias").tag(2)
                         }
                         .pickerStyle(SegmentedPickerStyle())
+                        .colorScheme(.dark)
                         .padding(.horizontal)
                         .padding(.bottom)
                     }
                     
                     // Contenido
-                    if selectedRequestForSuggestions != nil {
+                    if let req = selectedRequestForSuggestions {
                         // VISTA BUSCADOR DE CANDIDATOS
-                        FullPlantShiftsList(
-                            request: selectedRequestForSuggestions!,
-                            allShifts: allPlantShifts,
-                            currentUserId: currentUserId,
-                            userSchedules: userSchedules,
-                            currentUserSchedule: [:], // Simplificado
-                            onPropose: { candidate in
-                                performProposal(myReq: selectedRequestForSuggestions!, target: candidate)
-                                selectedRequestForSuggestions = nil
+                        if isLoadingCandidates {
+                            VStack {
+                                Spacer()
+                                ProgressView("Analizando compatibilidad con reglas...")
+                                    .tint(.white)
+                                    .foregroundColor(.white)
+                                Spacer()
                             }
-                        )
+                        } else {
+                            FullPlantShiftsList(
+                                request: req,
+                                allShifts: allPlantShifts, // Lista ya filtrada por ShiftRulesEngine
+                                currentUserId: currentUserId,
+                                userSchedules: userSchedules, // Para la simulación visual
+                                onPropose: { candidate in
+                                    performProposal(myReq: req, target: candidate)
+                                    selectedRequestForSuggestions = nil
+                                }
+                            )
+                        }
                     } else {
                         switch selectedTab {
                         case 0:
@@ -90,22 +102,25 @@ struct ShiftChangeView: View {
                                 selectedDate: $selectedDate,
                                 plantManager: plantManager,
                                 onSelect: { shift in
-                                    // Esta clausura se ejecuta SOLO al pulsar el botón "Solicitar Cambio"
                                     selectedShiftForRequest = shift
-                                    showCreateDialog = true
                                 }
                             )
                         case 1:
+                            // GESTIÓN (Con historial y estados)
                             ManagementTab(
                                 currentUserId: currentUserId,
                                 requests: allRequests
                             )
                         case 2:
+                            // SUGERENCIAS (TARJETAS MEJORADAS)
                             SuggestionsTab(
                                 myRequests: allRequests.filter {
                                     $0.requesterId == currentUserId && $0.status == .searching
                                 },
-                                onSeeCandidates: { req in selectedRequestForSuggestions = req }
+                                onSeeCandidates: { req in
+                                    selectedRequestForSuggestions = req
+                                    loadCandidates() // Descarga masiva y filtrado
+                                }
                             )
                         default: EmptyView()
                         }
@@ -114,7 +129,6 @@ struct ShiftChangeView: View {
             }
         }
         .onAppear {
-            // Inicializar mes actual al día 1
             let components = Calendar.current.dateComponents([.year, .month], from: Date())
             if let first = Calendar.current.date(from: components) {
                 currentMonth = first
@@ -126,14 +140,16 @@ struct ShiftChangeView: View {
                 plantManager.fetchMonthlyAssignments(plantId: plantId, month: newDate)
             }
         }
-        .sheet(isPresented: $showCreateDialog) {
-            if let shift = selectedShiftForRequest {
-                CreateRequestView(shift: shift, plantId: plantId, onDismiss: { showCreateDialog = false })
-                    .presentationDetents([.medium, .large])
-                    // CORRECCIÓN FONDO BLANCO: Forzamos fondo oscuro y esquema oscuro en la hoja
-                    .presentationBackground(Color(red: 0.05, green: 0.05, blue: 0.1))
-                    .preferredColorScheme(.dark)
-            }
+        // MODAL PARA CREAR SOLICITUD
+        .sheet(item: $selectedShiftForRequest) { shift in
+            CreateRequestView(
+                shift: shift,
+                plantId: plantId,
+                onDismiss: { selectedShiftForRequest = nil }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationBackground(Color(red: 0.05, green: 0.05, blue: 0.1))
+            .preferredColorScheme(.dark)
         }
     }
     
@@ -142,6 +158,136 @@ struct ShiftChangeView: View {
             plantManager.fetchCurrentPlant(plantId: plantId)
             plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
             loadRequests()
+        }
+    }
+    
+    // MARK: - LÓGICA DE CARGA Y FILTRADO (CON SHIFT RULES ENGINE)
+    
+    func loadCandidates() {
+        guard let myRequest = selectedRequestForSuggestions else { return }
+        
+        self.allPlantShifts = []
+        self.userSchedules = [:]
+        self.isLoadingCandidates = true
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        
+        // Cargar contexto histórico (7 días atrás) para reglas de racha/saliente
+        guard let historyStart = Calendar.current.date(byAdding: .day, value: -7, to: Date()) else { return }
+        let startKey = "turnos-\(formatter.string(from: historyStart))"
+        
+        ref.child("plants/\(plantId)/turnos")
+            .queryOrderedByKey()
+            .queryStarting(atValue: startKey)
+            .observeSingleEvent(of: .value) { snapshot in
+                
+                var tempSchedules: [String: [String: String]] = [:]
+                var potentialCandidates: [PlantShift] = []
+                
+                let staffList = plantManager.currentPlant?.allStaffList ?? []
+                
+                for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                    let key = child.key
+                    guard key.hasPrefix("turnos-") else { continue }
+                    
+                    let dateStr = String(key.dropFirst(7))
+                    guard let date = formatter.date(from: dateStr) else { continue }
+                    
+                    if let shiftsMap = child.value as? [String: Any] {
+                        for (shiftName, shiftData) in shiftsMap {
+                            guard let data = shiftData as? [String: Any] else { continue }
+                            
+                            // Procesador de listas (Enfermeros/Auxiliares)
+                            func process(list: [[String: Any]], defaultRole: String) {
+                                for slot in list {
+                                    // Recuperar datos del slot
+                                    let primaryName = slot["primary"] as? String ?? ""
+                                    let halfDay = slot["halfDay"] as? Bool ?? false
+                                    let secondaryName = slot["secondary"] as? String ?? ""
+                                    
+                                    // -- Turno Principal --
+                                    if !primaryName.isEmpty && primaryName != "Sin asignar" {
+                                        addShift(name: primaryName, defaultRole: defaultRole, date: date, dateStr: dateStr, shiftName: shiftName, tempSchedules: &tempSchedules, potentialCandidates: &potentialCandidates, staffList: staffList)
+                                    }
+                                    
+                                    // -- Turno Secundario (Media jornada) --
+                                    if halfDay && !secondaryName.isEmpty && secondaryName != "Sin asignar" {
+                                        addShift(name: secondaryName, defaultRole: defaultRole, date: date, dateStr: dateStr, shiftName: shiftName, tempSchedules: &tempSchedules, potentialCandidates: &potentialCandidates, staffList: staffList)
+                                    }
+                                }
+                            }
+                            
+                            if let nurses = data["nurses"] as? [[String: Any]] { process(list: nurses, defaultRole: "Enfermero") }
+                            if let auxs = data["auxiliaries"] as? [[String: Any]] { process(list: auxs, defaultRole: "Auxiliar") }
+                        }
+                    }
+                }
+                
+                // Preparar validación con ShiftRulesEngine
+                let myReqDate = formatter.date(from: myRequest.requesterShiftDate) ?? Date()
+                let myReqShift = myRequest.requesterShiftName
+                let mySchedule = tempSchedules[self.currentUserId] ?? [:]
+                
+                // Filtrar candidatos
+                let filteredShifts = potentialCandidates.filter { candidate in
+                    // 1. No soy yo
+                    if candidate.userId == self.currentUserId { return false }
+                    
+                    // 2. Roles Compatibles (definido en ShiftRulesEngine)
+                    if !ShiftRulesEngine.areRolesCompatible(roleA: myRequest.requesterRole, roleB: candidate.userRole) {
+                        return false
+                    }
+                    
+                    let candidateSchedule = tempSchedules[candidate.userId] ?? [:]
+                    
+                    // 3. Validación Cruzada (Swap)
+                    
+                    // A. ¿Puede el Candidato hacer MI turno?
+                    if ShiftRulesEngine.checkMatch(
+                        requesterRequest: myRequest,
+                        candidateRequest: ShiftChangeRequest(
+                            type: .swap, status: .searching, mode: .flexible, hardnessLevel: .normal,
+                            requesterId: candidate.userId, requesterName: candidate.userName, requesterRole: candidate.userRole,
+                            requesterShiftDate: candidate.dateString, requesterShiftName: candidate.shiftName
+                        ), // Simulamos request del candidato
+                        requesterSchedule: mySchedule,
+                        candidateSchedule: candidateSchedule
+                    ) == false {
+                        return false
+                    }
+                    
+                    return true
+                }
+                
+                DispatchQueue.main.async {
+                    self.userSchedules = tempSchedules
+                    self.allPlantShifts = filteredShifts
+                    self.isLoadingCandidates = false
+                }
+            }
+    }
+    
+    // Helper para añadir turnos a las estructuras temporales
+    func addShift(name: String, defaultRole: String, date: Date, dateStr: String, shiftName: String, tempSchedules: inout [String: [String: String]], potentialCandidates: inout [PlantShift], staffList: [PlantStaff]) {
+        let staff = staffList.first(where: { $0.name == name })
+        let uid = staff?.id ?? name // Mejor ID, fallback a nombre
+        let role = staff?.role ?? defaultRole
+        
+        // Guardar en horario global
+        if tempSchedules[uid] == nil { tempSchedules[uid] = [:] }
+        tempSchedules[uid]?[dateStr] = shiftName
+        
+        // Añadir a candidatos si es fecha futura o hoy
+        if date >= Calendar.current.startOfDay(for: Date()) {
+            potentialCandidates.append(PlantShift(
+                userId: uid,
+                userName: name,
+                userRole: role,
+                date: date,
+                dateString: dateStr,
+                shiftName: shiftName
+            ))
         }
     }
     
@@ -166,6 +312,8 @@ struct ShiftChangeView: View {
               let rShift = dict["requesterShiftName"] as? String else { return nil }
         
         let statusStr = dict["status"] as? String ?? "SEARCHING"
+        let tId = dict["targetUserId"] as? String
+        let tName = dict["targetUserName"] as? String
         
         return ShiftChangeRequest(
             id: id,
@@ -175,7 +323,9 @@ struct ShiftChangeView: View {
             requesterName: rName,
             requesterRole: rRole,
             requesterShiftDate: rDate,
-            requesterShiftName: rShift
+            requesterShiftName: rShift,
+            targetUserId: tId,
+            targetUserName: tName
         )
     }
     
@@ -191,365 +341,129 @@ struct ShiftChangeView: View {
     }
 }
 
-// MARK: - CALENDARIO
-
-struct MyShiftsCalendarTab: View {
-    @Binding var currentMonth: Date
-    @Binding var selectedDate: Date
-    @ObservedObject var plantManager: PlantManager
-    let onSelect: (MyShiftDisplay) -> Void
-    
-    @EnvironmentObject var themeManager: ThemeManager
-    @EnvironmentObject var authManager: AuthManager
-    
-    private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]
-    
-    private var calendar: Calendar {
-        var cal = Calendar(identifier: .gregorian)
-        cal.firstWeekday = 2 // Lunes
-        cal.locale = Locale(identifier: "es_ES")
-        return cal
-    }
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 15) {
-                
-                // --- Cabecera de Mes ---
-                HStack {
-                    Text(monthYearString(for: currentMonth).capitalized)
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 20) {
-                        Button(action: { changeMonth(by: -1) }) { Image(systemName: "chevron.left") }
-                        Button(action: { changeMonth(by: 1) }) { Image(systemName: "chevron.right") }
-                    }
-                    .foregroundColor(.blue)
-                }
-                .padding(.horizontal)
-                
-                // --- Cabecera Días Semana ---
-                HStack {
-                    ForEach(weekDays, id: \.self) { day in
-                        Text(day)
-                            .font(.caption.bold())
-                            .foregroundColor(.gray)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                
-                // --- Rejilla Días ---
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8) {
-                    
-                    ForEach(0..<firstWeekdayOffset, id: \.self) { _ in
-                        Color.clear.frame(height: 36)
-                    }
-                    
-                    ForEach(daysInMonth, id: \.self) { day in
-                        let date = dateFor(day: day)
-                        let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
-                        
-                        let myShiftWorker = getMyShiftWorker(for: date)
-                        let shiftType = myShiftWorker != nil ? mapStringToShiftType(myShiftWorker?.shiftName ?? "", role: myShiftWorker?.role ?? "") : nil
-                        
-                        Button {
-                            // SOLO selecciona fecha, NO abre ventana
-                            withAnimation {
-                                selectedDate = date
-                            }
-                        } label: {
-                            ZStack {
-                                if let type = shiftType {
-                                    themeManager.color(for: type)
-                                        .opacity(isSelected ? 1.0 : 0.8)
-                                } else {
-                                    Color.white.opacity(0.05)
-                                }
-                                
-                                Text("\(day)")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.white)
-                            }
-                            .frame(height: 36)
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isSelected ? Color.white : Color.clear, lineWidth: 2)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 4)
-                
-                // --- Detalle Inferior ---
-                if let worker = getMyShiftWorker(for: selectedDate), let sName = worker.shiftName {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Turno seleccionado:")
-                                .font(.caption).foregroundColor(.gray)
-                            Text(sName)
-                                .font(.headline).foregroundColor(.white)
-                        }
-                        Spacer()
-                        
-                        // ESTE BOTÓN ABRE LA VENTANA
-                        Button("Solicitar Cambio") {
-                            let formatter = DateFormatter()
-                            formatter.dateFormat = "yyyy-MM-dd"
-                            let display = MyShiftDisplay(
-                                dateString: formatter.string(from: selectedDate),
-                                shiftName: sName,
-                                fullDate: selectedDate,
-                                fullDateString: formatter.string(from: selectedDate)
-                            )
-                            onSelect(display)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color(red: 0.2, green: 0.4, blue: 1.0)) // Electric Blue
-                    }
-                    .padding()
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(12)
-                    .padding(.top, 10)
-                } else {
-                    Text("Selecciona un día con turno para gestionar cambios.")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                        .padding(.top, 20)
-                }
-            }
-            .padding()
-        }
-    }
-    
-    private func getMyShiftWorker(for date: Date) -> PlantShiftWorker? {
-        let startOfDay = calendar.startOfDay(for: date)
-        guard let workers = plantManager.monthlyAssignments[startOfDay] else { return nil }
-        let targetName = plantManager.myPlantName ?? authManager.currentUserName
-        return workers.first(where: { $0.name == targetName })
-    }
-    
-    private func mapStringToShiftType(_ name: String, role: String) -> ShiftType? {
-        let lowerName = name.lowercased()
-        let isHalf = role.localizedCaseInsensitiveContains("media")
-        
-        if lowerName.contains("mañana") || lowerName.contains("dia") || lowerName.contains("día") { return isHalf ? .mediaManana : .manana }
-        if lowerName.contains("tarde") { return isHalf ? .mediaTarde : .tarde }
-        if lowerName.contains("noche") { return .noche }
-        return nil
-    }
-    
-    private var daysInMonth: [Int] {
-        guard let range = calendar.range(of: .day, in: .month, for: currentMonth) else { return [] }
-        return Array(range)
-    }
-    
-    private var firstWeekdayOffset: Int {
-        let components = calendar.dateComponents([.year, .month], from: currentMonth)
-        guard let firstDay = calendar.date(from: components) else { return 0 }
-        let weekday = calendar.component(.weekday, from: firstDay)
-        return (weekday + 5) % 7
-    }
-    
-    private func dateFor(day: Int) -> Date {
-        var components = calendar.dateComponents([.year, .month], from: currentMonth)
-        components.day = day
-        return calendar.date(from: components) ?? Date()
-    }
-    
-    private func changeMonth(by value: Int) {
-        if let newDate = calendar.date(byAdding: .month, value: value, to: currentMonth) {
-            let components = calendar.dateComponents([.year, .month], from: newDate)
-            if let first = calendar.date(from: components) {
-                currentMonth = first
-            }
-        }
-    }
-    
-    private func monthYearString(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "es_ES")
-        formatter.dateFormat = "LLLL yyyy"
-        return formatter.string(from: date)
-    }
-}
-
-// MARK: - VENTANA DE CREACIÓN (GLASS DARK CORREGIDA)
-
-struct CreateRequestView: View {
-    let shift: MyShiftDisplay
-    let plantId: String
-    let onDismiss: () -> Void
-    @State private var mode: RequestMode = .flexible
-    
-    private let ref = Database.database().reference()
-    @EnvironmentObject var authManager: AuthManager
-    
-    var body: some View {
-        ZStack {
-            // Fondo oscuro base (aunque presentationBackground ayuda, esto asegura el tono)
-            Color.black.opacity(0.8).ignoresSafeArea()
-            
-            // Decoración
-            VStack {
-                Circle().fill(Color(red: 0.2, green: 0.4, blue: 1.0)).frame(width: 200).blur(radius: 80).offset(x: -100, y: -150).opacity(0.3)
-                Spacer()
-                Circle().fill(Color(red: 0.6, green: 0.2, blue: 0.9)).frame(width: 200).blur(radius: 80).offset(x: 100, y: 150).opacity(0.3)
-            }
-            .ignoresSafeArea()
-            
-            // Contenido Principal
-            VStack(spacing: 25) {
-                
-                // Título
-                VStack(spacing: 5) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 40))
-                        .foregroundStyle(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    
-                    Text("Ofrecer Turno")
-                        .font(.title2.bold())
-                        .foregroundColor(.white)
-                }
-                .padding(.top, 10)
-                
-                Divider().background(Color.white.opacity(0.3))
-                
-                // Información del Turno
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Estás ofreciendo:")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    
-                    HStack {
-                        Image(systemName: "calendar")
-                            .foregroundColor(.blue)
-                        Text(shift.dateString)
-                            .bold()
-                            .foregroundColor(.white)
-                        Spacer()
-                        Image(systemName: "clock")
-                            .foregroundColor(.purple)
-                        Text(shift.shiftName)
-                            .bold()
-                            .foregroundColor(.white)
-                    }
-                    .padding()
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.2), lineWidth: 1))
-                }
-                
-                // Configuración
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Modo de cambio")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    
-                    Picker("Modo", selection: $mode) {
-                        Text("Flexible (Cualquier cambio)").tag(RequestMode.flexible)
-                        Text("Estricto (Mismo rol/horario)").tag(RequestMode.strict)
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .colorScheme(.dark) // Forza controles oscuros
-                }
-                
-                Spacer()
-                
-                // Botones de Acción
-                HStack(spacing: 15) {
-                    Button(action: onDismiss) {
-                        Text("Cancelar")
-                            .foregroundColor(.white.opacity(0.7))
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                    }
-                    
-                    Button(action: createRequest) {
-                        Text("Publicar Oferta")
-                            .bold()
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing))
-                            .cornerRadius(15)
-                    }
-                }
-            }
-            .padding(25)
-        }
-    }
-    
-    func createRequest() {
-        guard let user = authManager.user else { return }
-        
-        let newReq = ShiftChangeRequest(
-            type: .swap,
-            status: .searching,
-            mode: mode,
-            hardnessLevel: .normal,
-            requesterId: user.uid,
-            requesterName: authManager.currentUserName,
-            requesterRole: authManager.userRole,
-            requesterShiftDate: shift.dateString,
-            requesterShiftName: shift.shiftName
-        )
-        
-        let reqData: [String: Any] = [
-            "type": newReq.type.rawValue,
-            "status": newReq.status.rawValue,
-            "mode": newReq.mode.rawValue,
-            "hardnessLevel": newReq.hardnessLevel.rawValue,
-            "requesterId": newReq.requesterId,
-            "requesterName": newReq.requesterName,
-            "requesterRole": newReq.requesterRole,
-            "requesterShiftDate": newReq.requesterShiftDate,
-            "requesterShiftName": newReq.requesterShiftName,
-            "timestamp": ServerValue.timestamp()
-        ]
-        
-        ref.child("plants/\(plantId)/shift_requests").childByAutoId().setValue(reqData) { error, _ in
-            if error == nil {
-                onDismiss()
-            }
-        }
-    }
-}
-
-// MARK: - TABS SECUNDARIAS
+// MARK: - 1. PESTAÑA GESTIÓN (ACTUALIZADA)
 
 struct ManagementTab: View {
     let currentUserId: String
     let requests: [ShiftChangeRequest]
     
+    private let dateFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f
+    }()
+    
+    private let monthFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMMM yyyy"; f.locale = Locale(identifier: "es_ES"); return f
+    }()
+    
     var body: some View {
         List {
-            ForEach(requests) { req in
-                VStack(alignment: .leading) {
-                    Text(req.requesterShiftName).font(.headline).foregroundColor(.white)
-                    Text("Estado: \(req.status.rawValue)")
-                        .foregroundColor(statusColor(req.status))
+            // SECCIÓN ACTIVOS
+            if !activeRequests.isEmpty {
+                Section(header: Text("En curso / Próximos").foregroundColor(.white)) {
+                    ForEach(activeRequests) { req in RequestRow(req: req, isHistory: false) }
                 }
-                .listRowBackground(Color.white.opacity(0.05))
+            } else if activeRequests.isEmpty && historyRequests.isEmpty {
+                Text("No hay solicitudes activas").foregroundColor(.gray).listRowBackground(Color.clear)
+            }
+            
+            // SECCIÓN HISTORIAL
+            if !historyRequests.isEmpty {
+                ForEach(groupedHistory.keys.sorted(by: >), id: \.self) { monthKey in
+                    Section(header: Text(monthKey).foregroundColor(.gray)) {
+                        ForEach(groupedHistory[monthKey]!) { req in RequestRow(req: req, isHistory: true) }
+                    }
+                }
             }
         }
-        .listStyle(.plain)
+        .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .background(Color(red: 0.05, green: 0.05, blue: 0.1))
+    }
+    
+    var activeRequests: [ShiftChangeRequest] {
+        let todayStr = dateFormatter.string(from: Date())
+        return requests.filter { req in
+            return req.requesterShiftDate >= todayStr && req.status != .approved && req.status != .rejected
+        }
+    }
+    
+    var historyRequests: [ShiftChangeRequest] {
+        let todayStr = dateFormatter.string(from: Date())
+        return requests.filter { req in
+            return req.requesterShiftDate < todayStr || req.status == .approved || req.status == .rejected
+        }
+    }
+    
+    var groupedHistory: [String: [ShiftChangeRequest]] {
+        Dictionary(grouping: historyRequests) { req in
+            if let date = dateFormatter.date(from: req.requesterShiftDate) {
+                return monthFormatter.string(from: date).capitalized
+            }
+            return "Desconocido"
+        }
+    }
+}
+
+struct RequestRow: View {
+    let req: ShiftChangeRequest
+    let isHistory: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(req.requesterShiftDate)
+                    .font(.caption).bold().foregroundColor(.white)
+                    .padding(4).background(Color.blue.opacity(0.3)).cornerRadius(4)
+                Text(req.requesterShiftName).font(.headline).foregroundColor(.white)
+                Spacer()
+            }
+            HStack {
+                Image(systemName: statusIcon(req.status)).foregroundColor(statusColor(req.status))
+                Text(statusText(req.status)).font(.subheadline).foregroundColor(statusColor(req.status)).bold()
+            }
+            if !isHistory, let targetName = req.targetUserName {
+                Text("Con: \(targetName)").font(.caption).foregroundColor(.gray)
+            }
+        }
+        .padding(.vertical, 4)
+        .listRowBackground(Color.white.opacity(0.05))
+    }
+    
+    func statusText(_ status: RequestStatus) -> String {
+        switch status {
+        case .draft: return "Borrador"
+        case .searching: return "Buscando cambio"
+        case .pendingPartner: return "Esperando confirmación del compañero"
+        case .awaitingSupervisor: return "Esperando confirmación de supervisor"
+        case .approved: return "Aceptado"
+        case .rejected: return "Rechazado"
+        }
     }
     
     func statusColor(_ status: RequestStatus) -> Color {
         switch status {
-        case .approved: return .green
         case .searching: return .blue
         case .pendingPartner: return .orange
+        case .awaitingSupervisor: return .purple
+        case .approved: return .green
+        case .rejected: return .red
         default: return .gray
         }
     }
+    
+    func statusIcon(_ status: RequestStatus) -> String {
+        switch status {
+        case .searching: return "magnifyingglass"
+        case .pendingPartner: return "person.2.wave.2"
+        case .awaitingSupervisor: return "hourglass"
+        case .approved: return "checkmark.circle.fill"
+        case .rejected: return "xmark.circle.fill"
+        default: return "circle"
+        }
+    }
 }
+
+// MARK: - 2. SUGERENCIAS (TAB 2) (MEJORADA)
 
 struct SuggestionsTab: View {
     let myRequests: [ShiftChangeRequest]
@@ -557,63 +471,220 @@ struct SuggestionsTab: View {
     
     var body: some View {
         ScrollView {
-            ForEach(myRequests) { req in
-                VStack(alignment: .leading) {
-                    Text("Ofreces: \(req.requesterShiftDate)").bold().foregroundColor(.white)
-                    Button("Ver Candidatos") { onSeeCandidates(req) }
-                        .padding(.top, 4)
+            LazyVStack(spacing: 15) {
+                ForEach(myRequests) { req in
+                    SuggestionCard(req: req, onAction: { onSeeCandidates(req) })
                 }
-                .padding()
-                .background(Color.blue.opacity(0.2))
-                .cornerRadius(10)
-                .padding(.horizontal)
             }
+            .padding()
         }
     }
 }
+
+// NUEVO: Tarjeta de Sugerencia mejorada
+struct SuggestionCard: View {
+    let req: ShiftChangeRequest
+    let onAction: () -> Void
+    
+    private var formattedDate: String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        guard let date = f.date(from: req.requesterShiftDate) else { return req.requesterShiftDate }
+        f.dateFormat = "EEE, d MMM"
+        f.locale = Locale(identifier: "es_ES")
+        return f.string(from: date).capitalized
+    }
+    
+    private var shiftIcon: String {
+        let name = req.requesterShiftName.lowercased()
+        if name.contains("mañana") || name.contains("día") { return "sun.max.fill" }
+        if name.contains("tarde") { return "sunset.fill" }
+        if name.contains("noche") { return "moon.stars.fill" }
+        return "clock.fill"
+    }
+    
+    private var shiftColor: Color {
+        let name = req.requesterShiftName.lowercased()
+        if name.contains("mañana") || name.contains("día") { return .yellow }
+        if name.contains("tarde") { return .orange }
+        if name.contains("noche") { return .indigo }
+        return .gray
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Tu Oferta")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white.opacity(0.6))
+                    .textCase(.uppercase)
+                Spacer()
+                // Badge de Modo
+                Text(req.mode == .flexible ? "Flexible" : "Estricto")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(req.mode == .flexible ? Color.green.opacity(0.2) : Color.orange.opacity(0.2))
+                    .foregroundColor(req.mode == .flexible ? .green : .orange)
+                    .cornerRadius(8)
+            }
+            .padding([.horizontal, .top], 12)
+            
+            // Content
+            HStack(alignment: .center, spacing: 15) {
+                // Icono grande
+                ZStack {
+                    Circle()
+                        .fill(shiftColor.opacity(0.2))
+                        .frame(width: 50, height: 50)
+                    Image(systemName: shiftIcon)
+                        .font(.title2)
+                        .foregroundColor(shiftColor)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(formattedDate)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    Text(req.requesterShiftName)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                
+                Spacer()
+            }
+            .padding(12)
+            
+            Divider().background(Color.white.opacity(0.1))
+            
+            // Action
+            Button(action: onAction) {
+                HStack {
+                    Text("Ver Candidatos")
+                        .fontWeight(.semibold)
+                    Image(systemName: "arrow.right")
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .foregroundColor(.blue)
+            }
+        }
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - 3. LISTA DE CANDIDATOS (CON FILTROS Y PREVIEW)
 
 struct FullPlantShiftsList: View {
     let request: ShiftChangeRequest
     let allShifts: [PlantShift]
     let currentUserId: String
     let userSchedules: [String: [String: String]]
-    let currentUserSchedule: [String: String]
     let onPropose: (PlantShift) -> Void
     
+    // Filtros UI
+    @State private var filterName: String = ""
+    @State private var filterShift: String = ""
+    @State private var filterDate: Date = Date()
+    @State private var useDateFilter: Bool = false
+    
+    // Estado para abrir Preview
+    @State private var selectedCandidateForPreview: PlantShift?
+    
     var filteredShifts: [PlantShift] {
-        // En un entorno real, aquí se aplica ShiftRulesEngine
-        return allShifts.filter { $0.userId != currentUserId }
+        return allShifts.filter { shift in
+            if shift.userId == currentUserId { return false }
+            if !filterName.isEmpty {
+                if !shift.userName.localizedCaseInsensitiveContains(filterName) { return false }
+            }
+            if !filterShift.isEmpty {
+                if !shift.shiftName.localizedCaseInsensitiveContains(filterShift) { return false }
+            }
+            if useDateFilter {
+                let calendar = Calendar.current
+                if !calendar.isDate(shift.date, inSameDayAs: filterDate) { return false }
+            }
+            return true
+        }
     }
     
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
+            // Panel de Filtros
+            VStack(spacing: 12) {
+                HStack {
+                    Text("Filtrar candidatos").font(.caption).foregroundColor(.gray).textCase(.uppercase)
+                    Spacer()
+                    if !filterName.isEmpty || !filterShift.isEmpty || useDateFilter {
+                        Button("Limpiar") {
+                            withAnimation { filterName = ""; filterShift = ""; useDateFilter = false; filterDate = Date() }
+                        }.font(.caption).foregroundColor(.blue)
+                    }
+                }
+                HStack(spacing: 10) {
+                    HStack {
+                        Image(systemName: "person.magnifyingglass").foregroundColor(.gray)
+                        TextField("Persona...", text: $filterName).foregroundColor(.white).submitLabel(.done)
+                    }.padding(8).background(Color.white.opacity(0.1)).cornerRadius(8)
+                    
+                    HStack {
+                        Image(systemName: "clock").foregroundColor(.gray)
+                        TextField("Turno...", text: $filterShift).foregroundColor(.white).submitLabel(.done)
+                    }.padding(8).background(Color.white.opacity(0.1)).cornerRadius(8)
+                }
+                
+                HStack {
+                    Toggle(isOn: $useDateFilter) {
+                        HStack {
+                            Image(systemName: "calendar").foregroundColor(useDateFilter ? .white : .gray)
+                            Text("Fecha específica").font(.subheadline).foregroundColor(useDateFilter ? .white : .gray)
+                        }
+                    }.tint(.blue).fixedSize()
+                    Spacer()
+                    if useDateFilter {
+                        DatePicker("", selection: $filterDate, displayedComponents: .date)
+                            .labelsHidden().colorScheme(.dark)
+                    }
+                }
+            }
+            .padding().background(Color.black.opacity(0.2))
+            
+            Divider().background(Color.white.opacity(0.1))
+            
+            // Lista
             if filteredShifts.isEmpty {
                 Spacer()
-                Text("No se encontraron candidatos compatibles.")
-                    .foregroundColor(.gray)
-                    .padding()
+                VStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass").font(.largeTitle).foregroundColor(.gray.opacity(0.5))
+                    Text("No se encontraron candidatos").foregroundColor(.gray)
+                    Text("Prueba a ajustar los filtros.").font(.caption).foregroundColor(.gray.opacity(0.7))
+                }.padding()
                 Spacer()
             } else {
                 List(filteredShifts) { shift in
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(shift.userName)
-                                .font(.headline)
-                                .foregroundColor(.white)
-                            
+                            Text(shift.userName).font(.headline).foregroundColor(.white)
                             HStack {
-                                Image(systemName: "calendar")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
+                                Image(systemName: "calendar").font(.caption).foregroundColor(.gray)
                                 Text("\(shift.dateString) • \(shift.shiftName)")
                                     .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(useDateFilter ? .green : .gray)
                             }
                         }
-                        
                         Spacer()
-                        
-                        Button(action: { onPropose(shift) }) {
+                        // Botón abre Preview
+                        Button(action: { selectedCandidateForPreview = shift }) {
                             Text("Elegir")
                                 .bold()
                                 .font(.subheadline)
@@ -632,5 +703,237 @@ struct FullPlantShiftsList: View {
                 .scrollContentBackground(.hidden)
             }
         }
+        .background(Color(red: 0.05, green: 0.05, blue: 0.1))
+        // SHEET PREVIEW
+        .sheet(item: $selectedCandidateForPreview) { candidate in
+            ShiftSwapPreviewView(
+                request: request,
+                candidate: candidate,
+                userSchedules: userSchedules,
+                currentUserId: currentUserId,
+                onConfirm: {
+                    onPropose(candidate)
+                    selectedCandidateForPreview = nil
+                }
+            )
+            .presentationDetents([.fraction(0.8), .large])
+            .presentationBackground(Color(red: 0.05, green: 0.05, blue: 0.1))
+            .preferredColorScheme(.dark)
+        }
+    }
+}
+
+// MARK: - 4. VISTA DE PREVISUALIZACIÓN DE CAMBIO
+
+struct ShiftSwapPreviewView: View {
+    let request: ShiftChangeRequest // Mi oferta
+    let candidate: PlantShift       // Su turno
+    let userSchedules: [String: [String: String]]
+    let currentUserId: String
+    let onConfirm: () -> Void
+    
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var themeManager: ThemeManager
+    
+    private var dateA: Date {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
+        return f.date(from: request.requesterShiftDate) ?? Date()
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Simulación del Cambio").font(.title2.bold()).foregroundColor(.white)
+                Spacer()
+                Button { dismiss() } label: { Image(systemName: "xmark.circle.fill").font(.title2).foregroundColor(.gray) }
+            }.padding()
+            
+            ScrollView {
+                VStack(spacing: 30) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("📅 Tu fecha: \(request.requesterShiftDate)").font(.headline).foregroundColor(.blue).padding(.horizontal)
+                        
+                        SimulatedScheduleRow(
+                            title: "Tú (Resultado)", centerDate: dateA, originalSchedule: userSchedules[currentUserId] ?? [:],
+                            removeDateStr: request.requesterShiftDate, addDateStr: nil, addShiftName: nil
+                        )
+                        SimulatedScheduleRow(
+                            title: "\(candidate.userName) (Resultado)", centerDate: dateA, originalSchedule: userSchedules[candidate.userId] ?? [:],
+                            removeDateStr: nil, addDateStr: request.requesterShiftDate, addShiftName: request.requesterShiftName
+                        )
+                    }
+                    .padding(.vertical).background(Color.white.opacity(0.03)).cornerRadius(12)
+                    
+                    if request.requesterShiftDate != candidate.dateString {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("📅 Su fecha: \(candidate.dateString)").font(.headline).foregroundColor(.purple).padding(.horizontal)
+                            
+                            SimulatedScheduleRow(
+                                title: "Tú (Resultado)", centerDate: candidate.date, originalSchedule: userSchedules[currentUserId] ?? [:],
+                                removeDateStr: nil, addDateStr: candidate.dateString, addShiftName: candidate.shiftName
+                            )
+                            SimulatedScheduleRow(
+                                title: "\(candidate.userName) (Resultado)", centerDate: candidate.date, originalSchedule: userSchedules[candidate.userId] ?? [:],
+                                removeDateStr: candidate.dateString, addDateStr: nil, addShiftName: nil
+                            )
+                        }
+                        .padding(.vertical).background(Color.white.opacity(0.03)).cornerRadius(12)
+                    }
+                    HStack(spacing: 10) {
+                        Image(systemName: "info.circle.fill").foregroundColor(.gray)
+                        Text("Se muestran 5 días antes y después para verificar descansos.").font(.caption).foregroundColor(.gray)
+                    }.padding(.horizontal)
+                }.padding()
+            }
+            Button(action: onConfirm) {
+                Text("Confirmar Propuesta").bold().frame(maxWidth: .infinity).padding().background(Color.green).foregroundColor(.white).cornerRadius(12)
+            }.padding()
+        }
+    }
+}
+
+// MARK: - 5. ROW SIMULACIÓN (CORREGIDA)
+
+struct SimulatedScheduleRow: View {
+    let title: String
+    let centerDate: Date
+    let originalSchedule: [String: String]
+    let removeDateStr: String?
+    let addDateStr: String?
+    let addShiftName: String?
+    
+    @EnvironmentObject var themeManager: ThemeManager
+    private let calendar = Calendar.current
+    private let dateFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f
+    }()
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title).font(.caption.bold()).foregroundColor(.white.opacity(0.8)).padding(.horizontal)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(-5...5, id: \.self) { offset in
+                        // Calculamos fecha y estado fuera del ViewBuilder
+                        let date = calendar.date(byAdding: .day, value: offset, to: centerDate) ?? centerDate
+                        let dateStr = dateFormatter.string(from: date)
+                        let isCenter = (offset == 0)
+                        
+                        // Determinamos el turno final usando closure
+                        let shiftName: String = {
+                            if dateStr == removeDateStr { return "Libre" }
+                            if dateStr == addDateStr { return addShiftName ?? "Libre" }
+                            return originalSchedule[dateStr] ?? "Libre"
+                        }()
+                        
+                        // Renderizamos la celda
+                        DayCell(
+                            dayNum: calendar.component(.day, from: date),
+                            shiftName: shiftName,
+                            isCenter: isCenter,
+                            color: themeManager.color(forShiftName: shiftName)
+                        )
+                    }
+                }.padding(.horizontal)
+            }
+        }
+    }
+    
+    struct DayCell: View {
+        let dayNum: Int
+        let shiftName: String
+        let isCenter: Bool
+        let color: Color
+        
+        var body: some View {
+            VStack(spacing: 2) {
+                Text("\(dayNum)")
+                    .font(.caption2)
+                    .foregroundColor(isCenter ? .white : .gray)
+                    .fontWeight(isCenter ? .bold : .regular)
+                
+                Circle()
+                    .fill(color)
+                    .frame(width: 24, height: 24)
+                    .overlay(
+                        Text(String(shiftName.prefix(1)))
+                            .font(.caption2.bold())
+                            .foregroundColor(.white)
+                    )
+                    .overlay(
+                        Circle().stroke(Color.white, lineWidth: isCenter ? 2 : 0)
+                    )
+            }
+            .frame(width: 30)
+        }
+    }
+}
+
+// MARK: - 6. CALENDARIO (Visual) - Mantenido
+struct MyShiftsCalendarTab: View {
+    @Binding var currentMonth: Date; @Binding var selectedDate: Date; @ObservedObject var plantManager: PlantManager; let onSelect: (MyShiftDisplay) -> Void; @EnvironmentObject var themeManager: ThemeManager; @EnvironmentObject var authManager: AuthManager
+    private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]
+    private var calendar: Calendar { var c = Calendar(identifier: .gregorian); c.firstWeekday = 2; c.locale = Locale(identifier: "es_ES"); return c }
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 15) {
+                HStack {
+                    Text(monthYearString(for: currentMonth).capitalized).font(.title3.bold()).foregroundColor(.white); Spacer(); HStack(spacing: 20) { Button(action: { changeMonth(by: -1) }) { Image(systemName: "chevron.left") }; Button(action: { changeMonth(by: 1) }) { Image(systemName: "chevron.right") } }.foregroundColor(.blue)
+                }.padding(.horizontal)
+                HStack { ForEach(weekDays, id: \.self) { day in Text(day).font(.caption.bold()).foregroundColor(.gray).frame(maxWidth: .infinity) } }
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8) {
+                    ForEach(0..<firstWeekdayOffset, id: \.self) { _ in Color.clear.frame(height: 36) }
+                    ForEach(daysInMonth, id: \.self) { day in
+                        let date = dateFor(day: day); let isSelected = calendar.isDate(date, inSameDayAs: selectedDate); let worker = getMyShiftWorker(for: date); let type = worker != nil ? mapStringToShiftType(worker!.shiftName ?? "", role: worker!.role) : nil
+                        Button { withAnimation { selectedDate = date } } label: {
+                            ZStack { if let t = type { themeManager.color(for: t).opacity(isSelected ? 1.0 : 0.8) } else { Color.white.opacity(0.05) }; Text("\(day)").font(.system(size: 14, weight: .bold)).foregroundColor(.white) }
+                            .frame(height: 36).cornerRadius(8).overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? Color.white : Color.clear, lineWidth: 2))
+                        }.buttonStyle(.plain)
+                    }
+                }.padding(.horizontal, 4)
+                if let worker = getMyShiftWorker(for: selectedDate), let sName = worker.shiftName {
+                    HStack {
+                        VStack(alignment: .leading) { Text("Turno seleccionado:").font(.caption).foregroundColor(.gray); Text(sName).font(.headline).foregroundColor(.white) }; Spacer(); Button("Solicitar Cambio") {
+                            let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
+                            onSelect(MyShiftDisplay(dateString: f.string(from: selectedDate), shiftName: sName, fullDate: selectedDate, fullDateString: f.string(from: selectedDate)))
+                        }.buttonStyle(.borderedProminent).tint(Color(red: 0.2, green: 0.4, blue: 1.0))
+                    }.padding().background(Color.white.opacity(0.1)).cornerRadius(12).padding(.top, 10)
+                } else { Text("Selecciona un día con turno para gestionar cambios.").font(.caption).foregroundColor(.gray).padding(.top, 20) }
+            }.padding()
+        }
+    }
+    private func getMyShiftWorker(for date: Date) -> PlantShiftWorker? { let start = calendar.startOfDay(for: date); return plantManager.monthlyAssignments[start]?.first(where: { $0.name == (plantManager.myPlantName ?? authManager.currentUserName) }) }
+    private func mapStringToShiftType(_ name: String, role: String) -> ShiftType? { let l = name.lowercased(); let h = role.localizedCaseInsensitiveContains("media"); if l.contains("mañana") || l.contains("dia") || l.contains("día") { return h ? .mediaManana : .manana }; if l.contains("tarde") { return h ? .mediaTarde : .tarde }; if l.contains("noche") { return .noche }; return nil }
+    private var daysInMonth: [Int] { return Array(calendar.range(of: .day, in: .month, for: currentMonth)!) }
+    private var firstWeekdayOffset: Int { let c = calendar.dateComponents([.year, .month], from: currentMonth); let d = calendar.date(from: c)!; return (calendar.component(.weekday, from: d) + 5) % 7 }
+    private func dateFor(day: Int) -> Date { var c = calendar.dateComponents([.year, .month], from: currentMonth); c.day = day; return calendar.date(from: c)! }
+    private func changeMonth(by v: Int) { if let n = calendar.date(byAdding: .month, value: v, to: currentMonth) { let c = calendar.dateComponents([.year, .month], from: n); currentMonth = calendar.date(from: c)! } }
+    private func monthYearString(for date: Date) -> String { let f = DateFormatter(); f.locale = Locale(identifier: "es_ES"); f.dateFormat = "LLLL yyyy"; return f.string(from: date) }
+}
+
+// MARK: - 7. CREATE REQUEST (Mantenida)
+struct CreateRequestView: View {
+    let shift: MyShiftDisplay; let plantId: String; let onDismiss: () -> Void; @State private var mode: RequestMode = .flexible; private let ref = Database.database().reference(); @EnvironmentObject var authManager: AuthManager
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.8).ignoresSafeArea()
+            VStack(spacing: 25) {
+                Text("Ofrecer Turno").font(.title2.bold()).foregroundColor(.white).padding(.top, 20)
+                VStack(alignment: .leading) {
+                    Text("Estás ofreciendo:").font(.caption).foregroundColor(.gray); HStack { Text(shift.dateString).bold().foregroundColor(.white); Spacer(); Text(shift.shiftName).bold().foregroundColor(.white) }.padding().background(Color.white.opacity(0.1)).cornerRadius(12)
+                }
+                VStack(alignment: .leading) { Text("Modo").font(.caption).foregroundColor(.gray); Picker("Modo", selection: $mode) { Text("Flexible").tag(RequestMode.flexible); Text("Estricto").tag(RequestMode.strict) }.pickerStyle(SegmentedPickerStyle()).colorScheme(.dark) }
+                HStack { Button("Cancelar") { onDismiss() }.foregroundColor(.gray); Spacer(); Button("Publicar") { createRequest() }.bold().foregroundColor(.white) }.padding(.top)
+            }.padding(25).background(Color(red: 0.1, green: 0.1, blue: 0.15)).cornerRadius(20).padding()
+        }
+    }
+    func createRequest() {
+        guard let user = authManager.user else { return }
+        let id = UUID().uuidString
+        let data: [String: Any] = [
+            "type": "SWAP", "status": "SEARCHING", "mode": mode.rawValue, "hardnessLevel": "NORMAL", "requesterId": user.uid, "requesterName": authManager.currentUserName, "requesterRole": authManager.userRole, "requesterShiftDate": shift.dateString, "requesterShiftName": shift.shiftName, "timestamp": ServerValue.timestamp()
+        ]
+        ref.child("plants/\(plantId)/shift_requests/\(id)").setValue(data) { error, _ in if error == nil { onDismiss() } }
     }
 }
