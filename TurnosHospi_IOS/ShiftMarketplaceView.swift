@@ -75,7 +75,6 @@ struct ShiftMarketplaceView: View {
                         .font(.headline)
                         .foregroundColor(.white)
                     Spacer()
-                    // Dummy for alignment
                     Image(systemName: "arrow.left").font(.title2).opacity(0)
                 }
                 .padding()
@@ -87,7 +86,7 @@ struct ShiftMarketplaceView: View {
                         // --- SECTION 1: BALANCES ---
                         if !balances.isEmpty {
                             VStack(alignment: .leading) {
-                                Text("Balances de Favores")
+                                Text("Balances de Turnos") // CAMBIO APLICADO
                                     .font(.headline)
                                     .foregroundColor(Color(hex: "54C7EC")) // Cyan
                                     .padding(.horizontal)
@@ -151,8 +150,6 @@ struct ShiftMarketplaceView: View {
                                             fetchRequesterSchedule(userId: req.requesterId, dateStr: req.requesterShiftDate)
                                         },
                                         onAccept: {
-                                            // Direct accept logic moved to Preview for safety,
-                                            // but if you want direct button, call performCoverage(req)
                                             selectedRequestForPreview = req
                                             fetchRequesterSchedule(userId: req.requesterId, dateStr: req.requesterShiftDate)
                                         }
@@ -215,7 +212,6 @@ struct ShiftMarketplaceView: View {
                 for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
                     if let dict = child.value as? [String: Any],
                        let req = try? parseRequest(dict: dict, id: child.key) {
-                        // Exclude my own requests
                         if req.requesterId != currentUserId {
                             list.append(req)
                         }
@@ -239,7 +235,7 @@ struct ShiftMarketplaceView: View {
     }
     
     func listenToTransactions() {
-        ref.child("plants/\(plantId)/transactions").limitToLast(50).observe(.value) { snapshot in
+        ref.child("plants/\(plantId)/transactions").queryLimited(toLast: 50).observe(.value) { snapshot in
             var list: [FavorTransaction] = []
             for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
                 if let dict = child.value as? [String: Any],
@@ -247,7 +243,6 @@ struct ShiftMarketplaceView: View {
                     list.append(t)
                 }
             }
-            // Filter relevant to me
             self.transactions = list.filter { $0.covererId == currentUserId || $0.requesterId == currentUserId }
                 .sorted(by: { $0.timestamp > $1.timestamp })
         }
@@ -258,13 +253,15 @@ struct ShiftMarketplaceView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         let today = formatter.string(from: Date())
         
-        // Load roughly next 2 months for validation
-        ref.child("plants/\(plantId)/turnos").queryOrderedByKey().queryStarting(atValue: "turnos-\(today)").limitToFirst(60)
+        ref.child("plants/\(plantId)/turnos")
+            .queryOrderedByKey()
+            .queryStarting(atValue: "turnos-\(today)")
+            .queryLimited(toFirst: 60)
             .observe(.value) { snapshot in
                 var schedule: [String: String] = [:]
                 for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
                     let key = child.key
-                    guard let dateStr = key?.replacingOccurrences(of: "turnos-", with: "") else { continue }
+                    let dateStr = key.replacingOccurrences(of: "turnos-", with: "")
                     
                     if let shifts = child.value as? [String: Any] {
                         for (shiftName, data) in shifts {
@@ -282,30 +279,26 @@ struct ShiftMarketplaceView: View {
     }
     
     func fetchStaffNames() {
-        // 1. From personal_de_planta (Names)
         ref.child("plants/\(plantId)/personal_de_planta").observeSingleEvent(of: .value) { snapshot in
             for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
-                if let name = child.child("name").value as? String {
-                    // Try to map ID if possible
+                if let name = child.childSnapshot(forPath: "name").value as? String {
                     self.staffNames[child.key] = name
-                    if let internalId = child.child("id").value as? String {
+                    if let internalId = child.childSnapshot(forPath: "id").value as? String {
                         self.staffNames[internalId] = name
                     }
                 }
             }
         }
-        // 2. From userPlants (Map UID to StaffID if needed, or get name directly)
         ref.child("plants/\(plantId)/userPlants").observeSingleEvent(of: .value) { snapshot in
             for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
                 let uid = child.key
-                if let name = child.child("staffName").value as? String {
+                if let name = child.childSnapshot(forPath: "staffName").value as? String {
                     self.staffNames[uid] = name
                 }
             }
         }
     }
     
-    // Fetch requester schedule for preview (-7 to +7 days around shift)
     func fetchRequesterSchedule(userId: String, dateStr: String) {
         isLoadingPreview = true
         requesterScheduleForPreview = [:]
@@ -317,15 +310,17 @@ struct ShiftMarketplaceView: View {
         let start = Calendar.current.date(byAdding: .day, value: -7, to: date)!
         let startStr = "turnos-" + formatter.string(from: start)
         
-        // Find requester name
         let reqName = resolveName(userId)
         
-        ref.child("plants/\(plantId)/turnos").queryOrderedByKey().queryStarting(atValue: startStr).limitToFirst(15)
+        ref.child("plants/\(plantId)/turnos")
+            .queryOrderedByKey()
+            .queryStarting(atValue: startStr)
+            .queryLimited(toFirst: 15)
             .observeSingleEvent(of: .value) { snapshot in
                 var schedule: [String: String] = [:]
                 for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
                     let key = child.key
-                    guard let dStr = key?.replacingOccurrences(of: "turnos-", with: "") else { continue }
+                    let dStr = key.replacingOccurrences(of: "turnos-", with: "")
                     
                     if let shifts = child.value as? [String: Any] {
                         for (shiftName, data) in shifts {
@@ -342,8 +337,6 @@ struct ShiftMarketplaceView: View {
             }
     }
     
-    // --- HELPER PARSING ---
-    
     func isUserInShift(data: [String: Any], userName: String) -> Bool {
         func checkList(_ list: [[String: Any]]) -> Bool {
             for slot in list {
@@ -353,7 +346,6 @@ struct ShiftMarketplaceView: View {
             }
             return false
         }
-        
         if let nurses = data["nurses"] as? [[String: Any]] { if checkList(nurses) { return true } }
         if let auxs = data["auxiliaries"] as? [[String: Any]] { if checkList(auxs) { return true } }
         return false
@@ -367,7 +359,7 @@ struct ShiftMarketplaceView: View {
         
         return ShiftChangeRequest(
             id: id,
-            type: .coverage, // Assuming marketplace is mostly for coverage
+            type: .coverage,
             status: RequestStatus(rawValue: dict["status"] as? String ?? "") ?? .searching,
             requesterId: rId,
             requesterName: rName,
@@ -378,7 +370,6 @@ struct ShiftMarketplaceView: View {
     }
     
     func parseTransaction(dict: [String: Any], id: String) throws -> FavorTransaction? {
-        // Adapt FavorTransaction struct if needed in Models file, assuming standard fields
         return FavorTransaction(
             id: id,
             covererId: dict["covererId"] as? String ?? "",
@@ -391,22 +382,21 @@ struct ShiftMarketplaceView: View {
         )
     }
     
-    // --- ACTION: PERFORM COVERAGE (TRANSACTION) ---
+    // --- ACTION: PERFORM COVERAGE (TRANSACTION CORREGIDA) ---
     
     func performCoverage(_ req: ShiftChangeRequest) {
         let covererId = currentUserId
         let covererName = authManager.currentUserName
         
-        // 1. Find the shift slot path
         let dateKey = "turnos-\(req.requesterShiftDate)"
         let shiftRef = ref.child("plants/\(plantId)/turnos/\(dateKey)/\(req.requesterShiftName)")
         
         shiftRef.observeSingleEvent(of: .value) { snapshot in
             guard let val = snapshot.value as? [String: Any] else { return }
             
-            var pathFound: String? = nil // "nurses" or "auxiliaries"
+            var pathFound: String? = nil
             var indexFound: Int? = nil
-            var fieldToUpdate: String? = nil // "primary" or "secondary"
+            var fieldToUpdate: String? = nil
             
             func search(key: String) {
                 if let list = val[key] as? [[String: Any]] {
@@ -423,49 +413,42 @@ struct ShiftMarketplaceView: View {
             search(key: "nurses")
             if pathFound == nil { search(key: "auxiliaries") }
             
-            guard let group = pathFound, let idx = indexFound, let field = fieldToUpdate else {
-                print("Error: Could not find user in shift to replace.")
-                return
-            }
+            guard let group = pathFound, let idx = indexFound, let field = fieldToUpdate else { return }
             
-            // 2. Run Transaction for Balances
             let balancesRef = ref.child("plants/\(plantId)/balances")
             
             balancesRef.runTransactionBlock({ (currentData) -> TransactionResult in
                 var data = currentData.value as? [String: Any] ?? [:]
                 
-                // Update Coverer -> Requester (+1)
-                var covererBalances = data[covererId] as? [String: Int] ?? [:]
-                let oldScoreMe = covererBalances[req.requesterId] ?? 0
-                covererBalances[req.requesterId] = oldScoreMe + 1
-                data[covererId] = covererBalances
+                // CASTING SEGURO PARA EVITAR REINICIOS A 0
+                // 1. Coverer -> Requester (+1)
+                var covererData = data[covererId] as? [String: Any] ?? [:]
+                let oldScoreMe = (covererData[req.requesterId] as? NSNumber)?.intValue ?? 0
+                covererData[req.requesterId] = oldScoreMe + 1 // +1 porque hago un favor
+                data[covererId] = covererData
                 
-                // Update Requester -> Coverer (-1)
-                var requesterBalances = data[req.requesterId] as? [String: Int] ?? [:]
-                let oldScoreHim = requesterBalances[covererId] ?? 0
-                requesterBalances[covererId] = oldScoreHim - 1
-                data[req.requesterId] = requesterBalances
+                // 2. Requester -> Coverer (-1)
+                var requesterData = data[req.requesterId] as? [String: Any] ?? [:]
+                let oldScoreHim = (requesterData[covererId] as? NSNumber)?.intValue ?? 0
+                requesterData[covererId] = oldScoreHim - 1 // -1 porque recibo un favor
+                data[req.requesterId] = requesterData
                 
                 currentData.value = data
                 return TransactionResult.success(withValue: currentData)
             }) { (error, committed, _) in
-                if let error = error {
-                    print("Transaction failed: \(error.localizedDescription)")
-                } else if committed {
-                    // 3. Update Shift Data (Atomic update)
-                    let updates: [String: Any] = [
-                        // Replace name in calendar
-                        "plants/\(plantId)/turnos/\(dateKey)/\(req.requesterShiftName)/\(group)/\(idx)/\(field)": covererName,
-                        // Mark request as Approved
-                        "plants/\(plantId)/shift_requests/\(req.id)/status": "APPROVED",
-                        "plants/\(plantId)/shift_requests/\(req.id)/targetUserId": covererId,
-                        // Log Transaction
-                        "plants/\(plantId)/transactions/\(UUID().uuidString)": [
-                            "covererId": covererId, "covererName": covererName,
-                            "requesterId": req.requesterId, "requesterName": req.requesterName,
-                            "date": req.requesterShiftDate, "shiftName": req.requesterShiftName,
-                            "timestamp": ServerValue.timestamp()
-                        ]
+                if committed {
+                    var updates: [String: Any] = [:]
+                    updates["plants/\(plantId)/turnos/\(dateKey)/\(req.requesterShiftName)/\(group)/\(idx)/\(field)"] = covererName
+                    updates["plants/\(plantId)/shift_requests/\(req.id)/status"] = "APPROVED"
+                    updates["plants/\(plantId)/shift_requests/\(req.id)/targetUserId"] = covererId
+                    updates["plants/\(plantId)/transactions/\(UUID().uuidString)"] = [
+                        "covererId": covererId,
+                        "covererName": covererName,
+                        "requesterId": req.requesterId,
+                        "requesterName": req.requesterName,
+                        "date": req.requesterShiftDate,
+                        "shiftName": req.requesterShiftName,
+                        "timestamp": ServerValue.timestamp()
                     ]
                     ref.updateChildValues(updates)
                 }
@@ -481,7 +464,6 @@ struct BalanceCard: View {
     let score: Int
     let history: [FavorTransaction]
     let currentUserId: String
-    
     @State private var isExpanded = false
     
     var isPositive: Bool { score > 0 }
@@ -489,41 +471,27 @@ struct BalanceCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header Row
             Button(action: { withAnimation { isExpanded.toggle() } }) {
                 HStack {
-                    Circle()
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 32, height: 32)
+                    Circle().fill(Color.gray.opacity(0.3)).frame(width: 32, height: 32)
                         .overlay(Text(partnerName.prefix(1)).foregroundColor(.white).bold())
-                    
                     VStack(alignment: .leading) {
                         Text(partnerName).foregroundColor(.white).bold()
-                        Text(isPositive ? "Te debe favores" : "Le debes favores")
-                            .font(.caption)
-                            .foregroundColor(color)
+                        // TEXTO CORREGIDO Y VALOR ABSOLUTO
+                        Text(isPositive ? "Te debe \(score) turnos" : "Le debes \(abs(score)) turnos")
+                            .font(.caption).foregroundColor(color)
                     }
-                    
                     Spacer()
-                    
-                    Text(isPositive ? "+\(score)" : "\(score)")
-                        .font(.title3.bold())
-                        .foregroundColor(color)
-                    
-                    Image(systemName: "chevron.down")
-                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                        .foregroundColor(.gray)
-                }
-                .padding()
+                    Text(isPositive ? "+\(score)" : "\(score)").font(.title3.bold()).foregroundColor(color)
+                    Image(systemName: "chevron.down").rotationEffect(.degrees(isExpanded ? 180 : 0)).foregroundColor(.gray)
+                }.padding()
             }
             .background(isPositive ? Color.green.opacity(0.05) : Color.pink.opacity(0.05))
             
-            // Expanded History
             if isExpanded {
                 Divider().background(Color.white.opacity(0.1))
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Historial reciente").font(.caption).foregroundColor(.gray).padding(.bottom, 4)
-                    
                     if history.isEmpty {
                         Text("No hay movimientos recientes.").font(.caption).italic().foregroundColor(.gray)
                     } else {
@@ -531,24 +499,18 @@ struct BalanceCard: View {
                             let iCovered = t.covererId == currentUserId
                             HStack(alignment: .top) {
                                 Image(systemName: iCovered ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
-                                    .foregroundColor(iCovered ? .green : .orange)
-                                    .font(.caption)
+                                    .foregroundColor(iCovered ? .green : .orange).font(.caption)
                                 VStack(alignment: .leading) {
-                                    Text(iCovered ? "Cubriste su turno" : "Cubrió tu turno")
-                                        .font(.caption).bold().foregroundColor(.white)
-                                    Text("\(t.shiftName) - \(t.date)")
-                                        .font(.caption2).foregroundColor(.gray)
+                                    Text(iCovered ? "Cubriste su turno" : "Cubrió tu turno").font(.caption).bold().foregroundColor(.white)
+                                    Text("\(t.shiftName) - \(t.date)").font(.caption2).foregroundColor(.gray)
                                 }
                             }
                         }
                     }
-                }
-                .padding()
-                .background(Color.black.opacity(0.2))
+                }.padding().background(Color.black.opacity(0.2))
             }
         }
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(color.opacity(0.3), lineWidth: 1))
+        .cornerRadius(12).overlay(RoundedRectangle(cornerRadius: 12).stroke(color.opacity(0.3), lineWidth: 1))
     }
 }
 
@@ -560,73 +522,38 @@ struct MarketplaceItem: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            // Color strip
             Rectangle().fill(Color.blue).frame(width: 4)
-            
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     VStack(alignment: .leading) {
-                        Text("Solicitud de \(req.requesterName)")
-                            .font(.subheadline)
-                            .foregroundColor(.white)
+                        Text("Solicitud de \(req.requesterName)").font(.subheadline).foregroundColor(.white)
                         if balance != 0 {
-                            Text(balance > 0 ? "Te debe \(balance)" : "Le debes \(abs(balance))")
-                                .font(.caption2)
-                                .foregroundColor(balance > 0 ? .green : .pink)
+                            // TEXTO CORREGIDO Y VALOR ABSOLUTO
+                            Text(balance > 0 ? "Te debe \(balance) turnos" : "Le debes \(abs(balance)) turnos")
+                                .font(.caption2).foregroundColor(balance > 0 ? .green : .pink)
                         }
                     }
                     Spacer()
-                    Text(req.requesterShiftName)
-                        .font(.caption.bold())
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
+                    Text(req.requesterShiftName).font(.caption.bold()).padding(.horizontal, 8).padding(.vertical, 4).background(Color.blue).foregroundColor(.white).cornerRadius(8)
                 }
-                
-                Text(formatDate(req.requesterShiftDate))
-                    .font(.title3.bold())
-                    .foregroundColor(Color(hex: "54C7EC"))
-                
+                Text(formatDate(req.requesterShiftDate)).font(.title3.bold()).foregroundColor(Color(hex: "54C7EC"))
                 Divider().background(Color.white.opacity(0.1))
-                
                 HStack(spacing: 12) {
                     Button(action: onAccept) {
-                        HStack {
-                            Image(systemName: "checkmark")
-                            Text("Cubrir")
-                        }
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
+                        HStack { Image(systemName: "checkmark"); Text("Cubrir") }.fontWeight(.bold).frame(maxWidth: .infinity).padding(.vertical, 10).background(Color.green).foregroundColor(.white).cornerRadius(8)
                     }
-                    
                     Button(action: onPreview) {
-                        Image(systemName: "eye.fill")
-                            .padding()
-                            .background(Color.white.opacity(0.1))
-                            .foregroundColor(Color(hex: "54C7EC"))
-                            .clipShape(Circle())
+                        Image(systemName: "eye.fill").padding().background(Color.white.opacity(0.1)).foregroundColor(Color(hex: "54C7EC")).clipShape(Circle())
                     }
                 }
-            }
-            .padding(16)
-            .background(Color.white.opacity(0.05))
-        }
-        .cornerRadius(12)
+            }.padding(16).background(Color.white.opacity(0.05))
+        }.cornerRadius(12)
     }
     
     func formatDate(_ dateStr: String) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
         if let d = f.date(from: dateStr) {
-            f.dateFormat = "EEEE d MMM"
-            f.locale = Locale(identifier: "es_ES")
-            return f.string(from: d).capitalized
+            f.dateFormat = "EEEE d MMM"; f.locale = Locale(identifier: "es_ES"); return f.string(from: d).capitalized
         }
         return dateStr
     }
@@ -641,68 +568,29 @@ struct CoveragePreviewView: View {
     let isLoading: Bool
     let onConfirm: () -> Void
     let onCancel: () -> Void
-    
     @EnvironmentObject var themeManager: ThemeManager
     
-    var date: Date {
-        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
-        return f.date(from: request.requesterShiftDate) ?? Date()
-    }
+    var date: Date { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.date(from: request.requesterShiftDate) ?? Date() }
     
     var body: some View {
         VStack(spacing: 20) {
             Text("Simulación de Cobertura").font(.title2.bold()).foregroundColor(.white).padding(.top)
-            
             if isLoading {
-                Spacer()
-                ProgressView("Cargando horarios...").tint(.white).foregroundColor(.white)
-                Spacer()
+                Spacer(); ProgressView("Cargando horarios...").tint(.white).foregroundColor(.white); Spacer()
             } else {
                 ScrollView {
                     VStack(spacing: 30) {
-                        // ROW 1: ME (Adding shift)
-                        SimulatedScheduleRow(
-                            title: "Tú (Asumes el turno)",
-                            centerDate: date,
-                            originalSchedule: mySchedule,
-                            removeDateStr: nil,
-                            addDateStr: request.requesterShiftDate,
-                            addShiftName: request.requesterShiftName
-                        )
-                        .padding()
-                        .background(Color.white.opacity(0.05))
-                        .cornerRadius(12)
-                        
-                        // ROW 2: REQUESTER (Removing shift)
-                        SimulatedScheduleRow(
-                            title: "\(request.requesterName) (Se libra del turno)",
-                            centerDate: date,
-                            originalSchedule: requesterSchedule,
-                            removeDateStr: request.requesterShiftDate,
-                            addDateStr: nil,
-                            addShiftName: nil
-                        )
-                        .padding()
-                        .background(Color.white.opacity(0.05))
-                        .cornerRadius(12)
-                        
-                        HStack {
-                            Image(systemName: "info.circle").foregroundColor(.gray)
-                            Text("Verifica que no rompes reglas de descanso.").font(.caption).foregroundColor(.gray)
-                        }
-                    }
-                    .padding()
+                        SimulatedScheduleRow(title: "Tú (Asumes el turno)", centerDate: date, originalSchedule: mySchedule, removeDateStr: nil, addDateStr: request.requesterShiftDate, addShiftName: request.requesterShiftName)
+                            .padding().background(Color.white.opacity(0.05)).cornerRadius(12)
+                        SimulatedScheduleRow(title: "\(request.requesterName) (Se libra del turno)", centerDate: date, originalSchedule: requesterSchedule, removeDateStr: request.requesterShiftDate, addDateStr: nil, addShiftName: nil)
+                            .padding().background(Color.white.opacity(0.05)).cornerRadius(12)
+                        HStack { Image(systemName: "info.circle").foregroundColor(.gray); Text("Verifica que no rompes reglas de descanso.").font(.caption).foregroundColor(.gray) }
+                    }.padding()
                 }
-                
                 HStack(spacing: 16) {
-                    Button(action: onCancel) {
-                        Text("Cancelar").foregroundColor(.gray).frame(maxWidth: .infinity).padding()
-                    }
-                    Button(action: onConfirm) {
-                        Text("Confirmar").bold().foregroundColor(.white).frame(maxWidth: .infinity).padding().background(Color.green).cornerRadius(12)
-                    }
-                }
-                .padding()
+                    Button(action: onCancel) { Text("Cancelar").foregroundColor(.gray).frame(maxWidth: .infinity).padding() }
+                    Button(action: onConfirm) { Text("Confirmar").bold().foregroundColor(.white).frame(maxWidth: .infinity).padding().background(Color.green).cornerRadius(12) }
+                }.padding()
             }
         }
     }
