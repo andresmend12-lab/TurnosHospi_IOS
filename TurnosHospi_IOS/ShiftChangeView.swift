@@ -102,6 +102,7 @@ struct ShiftChangeView: View {
                                 selectedDate: $selectedDate,
                                 plantManager: plantManager,
                                 onSelect: { shift in
+                                    // Al asignar esto, se abre el sheet .sheet(item: $selectedShiftForRequest)
                                     selectedShiftForRequest = shift
                                 }
                             )
@@ -250,7 +251,7 @@ struct ShiftChangeView: View {
                             type: .swap, status: .searching, mode: .flexible, hardnessLevel: .normal,
                             requesterId: candidate.userId, requesterName: candidate.userName, requesterRole: candidate.userRole,
                             requesterShiftDate: candidate.dateString, requesterShiftName: candidate.shiftName
-                        ), // Simulamos request del candidato
+                        ),
                         requesterSchedule: mySchedule,
                         candidateSchedule: candidateSchedule
                     ) == false {
@@ -341,7 +342,7 @@ struct ShiftChangeView: View {
     }
 }
 
-// MARK: - 1. PESTAÑA GESTIÓN (ACTUALIZADA)
+// MARK: - 1. PESTAÑA GESTIÓN
 
 struct ManagementTab: View {
     let currentUserId: String
@@ -463,7 +464,7 @@ struct RequestRow: View {
     }
 }
 
-// MARK: - 2. SUGERENCIAS (TAB 2) (MEJORADA)
+// MARK: - 2. SUGERENCIAS (TAB 2)
 
 struct SuggestionsTab: View {
     let myRequests: [ShiftChangeRequest]
@@ -471,17 +472,29 @@ struct SuggestionsTab: View {
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 15) {
-                ForEach(myRequests) { req in
-                    SuggestionCard(req: req, onAction: { onSeeCandidates(req) })
+            if myRequests.isEmpty {
+                VStack(spacing: 15) {
+                    Image(systemName: "tray.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(.gray.opacity(0.5))
+                    Text("No tienes ofertas activas")
+                        .foregroundColor(.gray)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 50)
+            } else {
+                LazyVStack(spacing: 20) {
+                    ForEach(myRequests) { req in
+                        SuggestionCard(req: req, onAction: { onSeeCandidates(req) })
+                    }
+                }
+                .padding()
             }
-            .padding()
         }
     }
 }
 
-// NUEVO: Tarjeta de Sugerencia mejorada
+// TARJETA DE SUGERENCIA MEJORADA
 struct SuggestionCard: View {
     let req: ShiftChangeRequest
     let onAction: () -> Void
@@ -490,96 +503,60 @@ struct SuggestionCard: View {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         guard let date = f.date(from: req.requesterShiftDate) else { return req.requesterShiftDate }
-        f.dateFormat = "EEE, d MMM"
+        f.dateFormat = "EEEE, d 'de' MMMM"
         f.locale = Locale(identifier: "es_ES")
         return f.string(from: date).capitalized
     }
     
+    private var shiftColor: Color {
+        let n = req.requesterShiftName.lowercased()
+        if n.contains("mañana") || n.contains("día") { return .yellow }
+        if n.contains("tarde") { return .orange }
+        if n.contains("noche") { return .indigo }
+        return .blue
+    }
+    
     private var shiftIcon: String {
-        let name = req.requesterShiftName.lowercased()
-        if name.contains("mañana") || name.contains("día") { return "sun.max.fill" }
-        if name.contains("tarde") { return "sunset.fill" }
-        if name.contains("noche") { return "moon.stars.fill" }
+        let n = req.requesterShiftName.lowercased()
+        if n.contains("mañana") || n.contains("día") { return "sun.max.fill" }
+        if n.contains("tarde") { return "sunset.fill" }
+        if n.contains("noche") { return "moon.stars.fill" }
         return "clock.fill"
     }
     
-    private var shiftColor: Color {
-        let name = req.requesterShiftName.lowercased()
-        if name.contains("mañana") || name.contains("día") { return .yellow }
-        if name.contains("tarde") { return .orange }
-        if name.contains("noche") { return .indigo }
-        return .gray
-    }
-    
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Tu Oferta")
-                    .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white.opacity(0.6))
-                    .textCase(.uppercase)
-                Spacer()
-                // Badge de Modo
-                Text(req.mode == .flexible ? "Flexible" : "Estricto")
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(req.mode == .flexible ? Color.green.opacity(0.2) : Color.orange.opacity(0.2))
-                    .foregroundColor(req.mode == .flexible ? .green : .orange)
-                    .cornerRadius(8)
-            }
-            .padding([.horizontal, .top], 12)
-            
-            // Content
-            HStack(alignment: .center, spacing: 15) {
-                // Icono grande
-                ZStack {
-                    Circle()
-                        .fill(shiftColor.opacity(0.2))
-                        .frame(width: 50, height: 50)
-                    Image(systemName: shiftIcon)
-                        .font(.title2)
-                        .foregroundColor(shiftColor)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(formattedDate)
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                    
-                    Text(req.requesterShiftName)
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
-                }
-                
-                Spacer()
-            }
-            .padding(12)
-            
-            Divider().background(Color.white.opacity(0.1))
-            
-            // Action
-            Button(action: onAction) {
+        HStack(spacing: 0) {
+            Rectangle().fill(shiftColor).frame(width: 6)
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("Ver Candidatos")
-                        .fontWeight(.semibold)
-                    Image(systemName: "arrow.right")
+                    HStack(spacing: 6) {
+                        Circle().fill(Color.green).frame(width: 8, height: 8)
+                        Text("Buscando").font(.caption).foregroundColor(.green).fontWeight(.bold).textCase(.uppercase)
+                    }.padding(.horizontal, 8).padding(.vertical, 4).background(Color.green.opacity(0.1)).cornerRadius(20)
+                    Spacer()
+                    Text(req.mode == .flexible ? "Flexible" : "Estricto")
+                        .font(.caption2).padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Color.white.opacity(0.1)).foregroundColor(.white.opacity(0.8)).cornerRadius(4)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .foregroundColor(.blue)
+                Divider().background(Color.white.opacity(0.1))
+                HStack(spacing: 15) {
+                    ZStack { Circle().fill(shiftColor.opacity(0.2)).frame(width: 45, height: 45); Image(systemName: shiftIcon).font(.title3).foregroundColor(shiftColor) }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(formattedDate).font(.title3).fontWeight(.bold).foregroundColor(.white)
+                        Text(req.requesterShiftName).font(.subheadline).foregroundColor(.white.opacity(0.7))
+                    }
+                }
+                Button(action: onAction) {
+                    HStack { Text("Ver Candidatos").fontWeight(.semibold); Spacer(); Image(systemName: "chevron.right") }
+                    .padding(.horizontal, 16).padding(.vertical, 10).background(Color.blue).foregroundColor(.white).cornerRadius(8)
+                }.padding(.top, 5)
             }
+            .padding(16)
         }
-        .background(Color.white.opacity(0.05))
+        .background(Color(red: 0.12, green: 0.12, blue: 0.18))
         .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-        )
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+        .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
     }
 }
 
@@ -601,15 +578,20 @@ struct FullPlantShiftsList: View {
     // Estado para abrir Preview
     @State private var selectedCandidateForPreview: PlantShift?
     
+    // Listas calculadas dinámicamente para los menús
+    var uniqueNames: [String] {
+        Array(Set(allShifts.map { $0.userName })).sorted()
+    }
+    
+    var uniqueShifts: [String] {
+        Array(Set(allShifts.map { $0.shiftName })).sorted()
+    }
+    
     var filteredShifts: [PlantShift] {
         return allShifts.filter { shift in
             if shift.userId == currentUserId { return false }
-            if !filterName.isEmpty {
-                if !shift.userName.localizedCaseInsensitiveContains(filterName) { return false }
-            }
-            if !filterShift.isEmpty {
-                if !shift.shiftName.localizedCaseInsensitiveContains(filterShift) { return false }
-            }
+            if !filterName.isEmpty { if shift.userName != filterName { return false } }
+            if !filterShift.isEmpty { if shift.shiftName != filterShift { return false } }
             if useDateFilter {
                 let calendar = Calendar.current
                 if !calendar.isDate(shift.date, inSameDayAs: filterDate) { return false }
@@ -631,16 +613,48 @@ struct FullPlantShiftsList: View {
                         }.font(.caption).foregroundColor(.blue)
                     }
                 }
+                
+                // Selectores Desplegables (Menus)
                 HStack(spacing: 10) {
-                    HStack {
-                        Image(systemName: "person.magnifyingglass").foregroundColor(.gray)
-                        TextField("Persona...", text: $filterName).foregroundColor(.white).submitLabel(.done)
-                    }.padding(8).background(Color.white.opacity(0.1)).cornerRadius(8)
+                    // MENU NOMBRE
+                    Menu {
+                        Button("Todos") { filterName = "" }
+                        ForEach(uniqueNames, id: \.self) { name in
+                            Button(name) { filterName = name }
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "person.magnifyingglass").foregroundColor(.gray)
+                            Text(filterName.isEmpty ? "Persona..." : filterName)
+                                .foregroundColor(filterName.isEmpty ? .gray : .white)
+                                .lineLimit(1)
+                            Spacer()
+                            Image(systemName: "chevron.down").font(.caption).foregroundColor(.gray)
+                        }
+                        .padding(8)
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(8)
+                    }
                     
-                    HStack {
-                        Image(systemName: "clock").foregroundColor(.gray)
-                        TextField("Turno...", text: $filterShift).foregroundColor(.white).submitLabel(.done)
-                    }.padding(8).background(Color.white.opacity(0.1)).cornerRadius(8)
+                    // MENU TURNO
+                    Menu {
+                        Button("Todos") { filterShift = "" }
+                        ForEach(uniqueShifts, id: \.self) { shift in
+                            Button(shift) { filterShift = shift }
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "clock").foregroundColor(.gray)
+                            Text(filterShift.isEmpty ? "Turno..." : filterShift)
+                                .foregroundColor(filterShift.isEmpty ? .gray : .white)
+                                .lineLimit(1)
+                            Spacer()
+                            Image(systemName: "chevron.down").font(.caption).foregroundColor(.gray)
+                        }
+                        .padding(8)
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(8)
+                    }
                 }
                 
                 HStack {
@@ -723,7 +737,7 @@ struct FullPlantShiftsList: View {
     }
 }
 
-// MARK: - 4. VISTA DE PREVISUALIZACIÓN DE CAMBIO
+// MARK: - 4. PREVIEW
 
 struct ShiftSwapPreviewView: View {
     let request: ShiftChangeRequest // Mi oferta
@@ -815,24 +829,25 @@ struct SimulatedScheduleRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 4) {
                     ForEach(-5...5, id: \.self) { offset in
-                        // Calculamos fecha y estado fuera del ViewBuilder
                         let date = calendar.date(byAdding: .day, value: offset, to: centerDate) ?? centerDate
                         let dateStr = dateFormatter.string(from: date)
                         let isCenter = (offset == 0)
                         
-                        // Determinamos el turno final usando closure
                         let shiftName: String = {
                             if dateStr == removeDateStr { return "Libre" }
                             if dateStr == addDateStr { return addShiftName ?? "Libre" }
                             return originalSchedule[dateStr] ?? "Libre"
                         }()
                         
-                        // Renderizamos la celda
+                        let isLibre = (shiftName == "Libre")
+                        let cellColor = isLibre ? themeManager.freeDayColor : themeManager.color(forShiftName: shiftName)
+                        let displayText = isLibre ? "L" : String(shiftName.prefix(1))
+                        
                         DayCell(
                             dayNum: calendar.component(.day, from: date),
-                            shiftName: shiftName,
+                            text: displayText,
                             isCenter: isCenter,
-                            color: themeManager.color(forShiftName: shiftName)
+                            color: cellColor
                         )
                     }
                 }.padding(.horizontal)
@@ -842,7 +857,7 @@ struct SimulatedScheduleRow: View {
     
     struct DayCell: View {
         let dayNum: Int
-        let shiftName: String
+        let text: String
         let isCenter: Bool
         let color: Color
         
@@ -857,7 +872,7 @@ struct SimulatedScheduleRow: View {
                     .fill(color)
                     .frame(width: 24, height: 24)
                     .overlay(
-                        Text(String(shiftName.prefix(1)))
+                        Text(text)
                             .font(.caption2.bold())
                             .foregroundColor(.white)
                     )
@@ -870,25 +885,21 @@ struct SimulatedScheduleRow: View {
     }
 }
 
-// MARK: - 6. CALENDARIO (Visual) - Mantenido
+// MARK: - 6. CALENDARIO (Mantenido)
 struct MyShiftsCalendarTab: View {
     @Binding var currentMonth: Date; @Binding var selectedDate: Date; @ObservedObject var plantManager: PlantManager; let onSelect: (MyShiftDisplay) -> Void; @EnvironmentObject var themeManager: ThemeManager; @EnvironmentObject var authManager: AuthManager
-    private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]
-    private var calendar: Calendar { var c = Calendar(identifier: .gregorian); c.firstWeekday = 2; c.locale = Locale(identifier: "es_ES"); return c }
+    private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]; private var calendar: Calendar { var c = Calendar(identifier: .gregorian); c.firstWeekday = 2; c.locale = Locale(identifier: "es_ES"); return c }
     var body: some View {
         ScrollView {
             VStack(spacing: 15) {
-                HStack {
-                    Text(monthYearString(for: currentMonth).capitalized).font(.title3.bold()).foregroundColor(.white); Spacer(); HStack(spacing: 20) { Button(action: { changeMonth(by: -1) }) { Image(systemName: "chevron.left") }; Button(action: { changeMonth(by: 1) }) { Image(systemName: "chevron.right") } }.foregroundColor(.blue)
-                }.padding(.horizontal)
+                HStack { Text(monthYearString(for: currentMonth).capitalized).font(.title3.bold()).foregroundColor(.white); Spacer(); HStack(spacing: 20) { Button(action: { changeMonth(by: -1) }) { Image(systemName: "chevron.left") }; Button(action: { changeMonth(by: 1) }) { Image(systemName: "chevron.right") } }.foregroundColor(.blue) }.padding(.horizontal)
                 HStack { ForEach(weekDays, id: \.self) { day in Text(day).font(.caption.bold()).foregroundColor(.gray).frame(maxWidth: .infinity) } }
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8) {
                     ForEach(0..<firstWeekdayOffset, id: \.self) { _ in Color.clear.frame(height: 36) }
                     ForEach(daysInMonth, id: \.self) { day in
                         let date = dateFor(day: day); let isSelected = calendar.isDate(date, inSameDayAs: selectedDate); let worker = getMyShiftWorker(for: date); let type = worker != nil ? mapStringToShiftType(worker!.shiftName ?? "", role: worker!.role) : nil
                         Button { withAnimation { selectedDate = date } } label: {
-                            ZStack { if let t = type { themeManager.color(for: t).opacity(isSelected ? 1.0 : 0.8) } else { Color.white.opacity(0.05) }; Text("\(day)").font(.system(size: 14, weight: .bold)).foregroundColor(.white) }
-                            .frame(height: 36).cornerRadius(8).overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? Color.white : Color.clear, lineWidth: 2))
+                            ZStack { if let t = type { themeManager.color(for: t).opacity(isSelected ? 1.0 : 0.8) } else { Color.white.opacity(0.05) }; Text("\(day)").font(.system(size: 14, weight: .bold)).foregroundColor(.white) }.frame(height: 36).cornerRadius(8).overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? Color.white : Color.clear, lineWidth: 2))
                         }.buttonStyle(.plain)
                     }
                 }.padding(.horizontal, 4)
@@ -912,22 +923,51 @@ struct MyShiftsCalendarTab: View {
     private func monthYearString(for date: Date) -> String { let f = DateFormatter(); f.locale = Locale(identifier: "es_ES"); f.dateFormat = "LLLL yyyy"; return f.string(from: date) }
 }
 
-// MARK: - 7. CREATE REQUEST (Mantenida)
+// MARK: - 7. CREATE REQUEST (Mantenida con estilos)
 struct CreateRequestView: View {
     let shift: MyShiftDisplay; let plantId: String; let onDismiss: () -> Void; @State private var mode: RequestMode = .flexible; private let ref = Database.database().reference(); @EnvironmentObject var authManager: AuthManager
     var body: some View {
         ZStack {
             Color.black.opacity(0.8).ignoresSafeArea()
             VStack(spacing: 25) {
-                Text("Ofrecer Turno").font(.title2.bold()).foregroundColor(.white).padding(.top, 20)
+                VStack(spacing: 5) {
+                    Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 40)).foregroundStyle(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    Text("Ofrecer Turno").font(.title2.bold()).foregroundColor(.white)
+                }.padding(.top, 20)
+                
                 VStack(alignment: .leading) {
-                    Text("Estás ofreciendo:").font(.caption).foregroundColor(.gray); HStack { Text(shift.dateString).bold().foregroundColor(.white); Spacer(); Text(shift.shiftName).bold().foregroundColor(.white) }.padding().background(Color.white.opacity(0.1)).cornerRadius(12)
+                    Text("Estás ofreciendo:").font(.caption).foregroundColor(.gray)
+                    HStack {
+                        Image(systemName: "calendar").foregroundColor(.blue)
+                        Text(shift.dateString).bold().foregroundColor(.white)
+                        Spacer()
+                        Image(systemName: "clock").foregroundColor(.purple)
+                        Text(shift.shiftName).bold().foregroundColor(.white)
+                    }.padding().background(Color.white.opacity(0.1)).cornerRadius(12).overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
-                VStack(alignment: .leading) { Text("Modo").font(.caption).foregroundColor(.gray); Picker("Modo", selection: $mode) { Text("Flexible").tag(RequestMode.flexible); Text("Estricto").tag(RequestMode.strict) }.pickerStyle(SegmentedPickerStyle()).colorScheme(.dark) }
-                HStack { Button("Cancelar") { onDismiss() }.foregroundColor(.gray); Spacer(); Button("Publicar") { createRequest() }.bold().foregroundColor(.white) }.padding(.top)
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Modo de cambio").font(.caption).foregroundColor(.gray)
+                    Picker("Modo", selection: $mode) {
+                        Text("Flexible (Cualquier cambio)").tag(RequestMode.flexible)
+                        Text("Estricto (Mismo rol/horario)").tag(RequestMode.strict)
+                    }.pickerStyle(SegmentedPickerStyle()).colorScheme(.dark)
+                }
+                
+                Spacer()
+                
+                HStack(spacing: 15) {
+                    Button(action: onDismiss) {
+                        Text("Cancelar").foregroundColor(.white.opacity(0.7)).frame(maxWidth: .infinity).padding()
+                    }
+                    Button(action: createRequest) {
+                        Text("Publicar").bold().foregroundColor(.white).frame(maxWidth: .infinity).padding().background(LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing)).cornerRadius(15)
+                    }
+                }
             }.padding(25).background(Color(red: 0.1, green: 0.1, blue: 0.15)).cornerRadius(20).padding()
         }
     }
+    
     func createRequest() {
         guard let user = authManager.user else { return }
         let id = UUID().uuidString
