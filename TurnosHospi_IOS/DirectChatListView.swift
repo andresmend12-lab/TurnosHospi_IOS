@@ -6,7 +6,7 @@ struct DirectChatListView: View {
     
     // Estado para la búsqueda y lista de usuarios
     @State private var searchText = ""
-    @State private var users: [ChatUser] = [] // Asegúrate de que ChatUser sea Hashable
+    @State private var users: [ChatUser] = []
     @State private var isLoading = false
     
     var body: some View {
@@ -65,7 +65,7 @@ struct DirectChatListView: View {
                         ScrollView {
                             LazyVStack(spacing: 12) {
                                 ForEach(filteredUsers) { user in
-                                    // CORRECCIÓN 1: Usar NavigationLink con valor
+                                    // CORRECCIÓN: Ahora ChatUser es Hashable, por lo que esto funciona
                                     NavigationLink(value: user) {
                                         UserChatRow(user: user)
                                     }
@@ -77,9 +77,13 @@ struct DirectChatListView: View {
                     }
                 }
             }
-            // CORRECCIÓN 2: Manejador de navegación
+            // CORRECCIÓN: ChatUser es Hashable y pasamos los parámetros que DirectChatView necesita
             .navigationDestination(for: ChatUser.self) { user in
-                DirectChatView(user: user)
+                DirectChatView(
+                    targetUser: user,
+                    currentUserId: authManager.user?.uid ?? "",
+                    plantId: authManager.userPlantId
+                )
             }
             .onAppear {
                 fetchUsers()
@@ -91,14 +95,15 @@ struct DirectChatListView: View {
     var filteredUsers: [ChatUser] {
         if searchText.isEmpty { return users }
         return users.filter {
-            $0.username.localizedCaseInsensitiveContains(searchText) ||
+            // CORRECCIÓN: Usamos 'name' en lugar de 'username'
+            $0.name.localizedCaseInsensitiveContains(searchText) ||
             $0.email.localizedCaseInsensitiveContains(searchText)
         }
     }
     
-    // Carga de usuarios (Simulada o conectada a Firebase)
+    // Carga de usuarios
     func fetchUsers() {
-        // Aquí iría tu lógica real, por ejemplo:
+        // Ejemplo de lógica de carga
         /*
         isLoading = true
         let ref = Database.database().reference().child("users")
@@ -125,15 +130,18 @@ struct UserChatRow: View {
                 .fill(LinearGradient(colors: [Color.blue, Color.purple], startPoint: .top, endPoint: .bottom))
                 .frame(width: 50, height: 50)
                 .overlay(
-                    Text(String(user.username.prefix(1)).uppercased())
+                    // CORRECCIÓN: Usamos 'name'
+                    Text(String(user.name.prefix(1)).uppercased())
                         .font(.headline)
                         .foregroundColor(.white)
                 )
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(user.username)
+                // CORRECCIÓN: Usamos 'name'
+                Text(user.name)
                     .font(.headline)
                     .foregroundColor(.white)
+                // CORRECCIÓN: Ahora 'email' existe en el modelo
                 Text(user.email)
                     .font(.caption)
                     .foregroundColor(.gray)
@@ -150,15 +158,3 @@ struct UserChatRow: View {
         .cornerRadius(12)
     }
 }
-
-// IMPORTANTE: Si ChatUser no es Hashable, añade esto en tu archivo de modelos:
-/*
-extension ChatUser: Hashable {
-    static func == (lhs: ChatUser, rhs: ChatUser) -> Bool {
-        return lhs.id == rhs.id
-    }
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
-}
-*/

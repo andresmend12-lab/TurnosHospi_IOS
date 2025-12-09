@@ -18,8 +18,10 @@ struct DirectMessage: Identifiable, Codable, Equatable {
 }
 
 // Modelo simple para mostrar usuarios en la lista
-struct ChatUser: Identifiable {
+// CORRECCIÓN: Añadido Hashable, Codable y el campo email
+struct ChatUser: Identifiable, Hashable, Codable {
     let id: String
     let name: String
     let role: String
+    let email: String
 }

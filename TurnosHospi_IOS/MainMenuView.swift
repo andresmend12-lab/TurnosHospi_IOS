@@ -152,7 +152,8 @@ struct MainMenuView: View {
             }
             // --- NUEVO: Navegación a Chats ---
             .navigationDestination(isPresented: $showDirectChats) {
-                DirectChatListView(plantId: authManager.userPlantId)
+                // CORRECCIÓN: DirectChatListView ya obtiene el ID del AuthManager, no necesita argumentos.
+                DirectChatListView()
             }
         }
         .onAppear {
