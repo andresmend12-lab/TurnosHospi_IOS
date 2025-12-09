@@ -111,6 +111,10 @@ struct PlantDashboardView: View {
                             let plantId = authManager.userPlantId
                             
                             switch selectedOption {
+                            case "Chat de grupo":
+                                // Pasamos el plantId del usuario
+                                GroupChatView(plantId: authManager.userPlantId)
+                                
                             case "Calendario":
                                 ScrollView {
                                     VStack(spacing: 20) {

@@ -96,7 +96,7 @@ struct ShiftChangeView: View {
                     } else {
                         switch selectedTab {
                         case 0:
-                            // CALENDARIO VISUAL
+                            // CALENDARIO VISUAL (Ahora con Saliente y Libre)
                             MyShiftsCalendarTab(
                                 currentMonth: $currentMonth,
                                 selectedDate: $selectedDate,
@@ -885,55 +885,203 @@ struct SimulatedScheduleRow: View {
     }
 }
 
-// MARK: - 6. CALENDARIO (Mantenido)
+// MARK: - 6. CALENDARIO MEJORADO (SALIENTE + LIBRE)
+
 struct MyShiftsCalendarTab: View {
-    @Binding var currentMonth: Date; @Binding var selectedDate: Date; @ObservedObject var plantManager: PlantManager; let onSelect: (MyShiftDisplay) -> Void; @EnvironmentObject var themeManager: ThemeManager; @EnvironmentObject var authManager: AuthManager
-    private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]; private var calendar: Calendar { var c = Calendar(identifier: .gregorian); c.firstWeekday = 2; c.locale = Locale(identifier: "es_ES"); return c }
+    @Binding var currentMonth: Date
+    @Binding var selectedDate: Date
+    @ObservedObject var plantManager: PlantManager
+    let onSelect: (MyShiftDisplay) -> Void
+    
+    @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var authManager: AuthManager
+    
+    private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]
+    private var calendar: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.firstWeekday = 2
+        c.locale = Locale(identifier: "es_ES")
+        return c
+    }
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 15) {
-                HStack { Text(monthYearString(for: currentMonth).capitalized).font(.title3.bold()).foregroundColor(.white); Spacer(); HStack(spacing: 20) { Button(action: { changeMonth(by: -1) }) { Image(systemName: "chevron.left") }; Button(action: { changeMonth(by: 1) }) { Image(systemName: "chevron.right") } }.foregroundColor(.blue) }.padding(.horizontal)
-                HStack { ForEach(weekDays, id: \.self) { day in Text(day).font(.caption.bold()).foregroundColor(.gray).frame(maxWidth: .infinity) } }
+                // Header Mes
+                HStack {
+                    Text(monthYearString(for: currentMonth).capitalized)
+                        .font(.title3.bold())
+                        .foregroundColor(.white)
+                    Spacer()
+                    HStack(spacing: 20) {
+                        Button(action: { changeMonth(by: -1) }) { Image(systemName: "chevron.left") }
+                        Button(action: { changeMonth(by: 1) }) { Image(systemName: "chevron.right") }
+                    }
+                    .foregroundColor(.blue)
+                }
+                .padding(.horizontal)
+                
+                // Días semana
+                HStack {
+                    ForEach(weekDays, id: \.self) { day in
+                        Text(day).font(.caption.bold()).foregroundColor(.gray).frame(maxWidth: .infinity)
+                    }
+                }
+                
+                // Rejilla
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8) {
                     ForEach(0..<firstWeekdayOffset, id: \.self) { _ in Color.clear.frame(height: 36) }
+                    
                     ForEach(daysInMonth, id: \.self) { day in
-                        let date = dateFor(day: day); let isSelected = calendar.isDate(date, inSameDayAs: selectedDate); let worker = getMyShiftWorker(for: date); let type = worker != nil ? mapStringToShiftType(worker!.shiftName ?? "", role: worker!.role) : nil
-                        Button { withAnimation { selectedDate = date } } label: {
-                            ZStack { if let t = type { themeManager.color(for: t).opacity(isSelected ? 1.0 : 0.8) } else { Color.white.opacity(0.05) }; Text("\(day)").font(.system(size: 14, weight: .bold)).foregroundColor(.white) }.frame(height: 36).cornerRadius(8).overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? Color.white : Color.clear, lineWidth: 2))
-                        }.buttonStyle(.plain)
+                                            let date = dateFor(day: day)
+                                            let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
+                                            
+                                            let worker = getMyShiftWorker(for: date)
+                                            let type = worker != nil ? mapStringToShiftType(worker!.shiftName ?? "", role: worker!.role) : nil
+                                            
+                                            // CORRECCIÓN: Calculamos el color en una variable 'let' usando una clausura.
+                                            // Esto evita que el ViewBuilder confunda la lógica con Vistas.
+                                            let displayColor: Color = {
+                                                if let t = type {
+                                                    return themeManager.color(for: t)
+                                                } else if isSaliente(date: date) {
+                                                    return themeManager.salienteColor
+                                                } else {
+                                                    return themeManager.freeDayColor
+                                                }
+                                            }()
+                        
+                        Button {
+                            withAnimation { selectedDate = date }
+                        } label: {
+                            ZStack {
+                                displayColor.opacity(isSelected ? 1.0 : 0.8)
+                                Text("\(day)").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                            }
+                            .frame(height: 36)
+                            .cornerRadius(8)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? Color.white : Color.clear, lineWidth: 2))
+                        }
+                        .buttonStyle(.plain)
                     }
-                }.padding(.horizontal, 4)
+                }
+                .padding(.horizontal, 4)
+                
+                // Detalle del día seleccionado
                 if let worker = getMyShiftWorker(for: selectedDate), let sName = worker.shiftName {
                     HStack {
-                        VStack(alignment: .leading) { Text("Turno seleccionado:").font(.caption).foregroundColor(.gray); Text(sName).font(.headline).foregroundColor(.white) }; Spacer(); Button("Solicitar Cambio") {
+                        VStack(alignment: .leading) {
+                            Text("Turno seleccionado:").font(.caption).foregroundColor(.gray)
+                            Text(sName).font(.headline).foregroundColor(.white)
+                        }
+                        Spacer()
+                        Button("Solicitar Cambio") {
                             let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
-                            onSelect(MyShiftDisplay(dateString: f.string(from: selectedDate), shiftName: sName, fullDate: selectedDate, fullDateString: f.string(from: selectedDate)))
-                        }.buttonStyle(.borderedProminent).tint(Color(red: 0.2, green: 0.4, blue: 1.0))
-                    }.padding().background(Color.white.opacity(0.1)).cornerRadius(12).padding(.top, 10)
-                } else { Text("Selecciona un día con turno para gestionar cambios.").font(.caption).foregroundColor(.gray).padding(.top, 20) }
-            }.padding()
+                            onSelect(MyShiftDisplay(
+                                dateString: f.string(from: selectedDate),
+                                shiftName: sName,
+                                fullDate: selectedDate,
+                                fullDateString: f.string(from: selectedDate)
+                            ))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color(red: 0.2, green: 0.4, blue: 1.0))
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.1))
+                    .cornerRadius(12)
+                    .padding(.top, 10)
+                } else {
+                    Text("Día libre o sin turno asignado.").font(.caption).foregroundColor(.gray).padding(.top, 20)
+                }
+            }
+            .padding()
         }
     }
-    private func getMyShiftWorker(for date: Date) -> PlantShiftWorker? { let start = calendar.startOfDay(for: date); return plantManager.monthlyAssignments[start]?.first(where: { $0.name == (plantManager.myPlantName ?? authManager.currentUserName) }) }
-    private func mapStringToShiftType(_ name: String, role: String) -> ShiftType? { let l = name.lowercased(); let h = role.localizedCaseInsensitiveContains("media"); if l.contains("mañana") || l.contains("dia") || l.contains("día") { return h ? .mediaManana : .manana }; if l.contains("tarde") { return h ? .mediaTarde : .tarde }; if l.contains("noche") { return .noche }; return nil }
-    private var daysInMonth: [Int] { return Array(calendar.range(of: .day, in: .month, for: currentMonth)!) }
-    private var firstWeekdayOffset: Int { let c = calendar.dateComponents([.year, .month], from: currentMonth); let d = calendar.date(from: c)!; return (calendar.component(.weekday, from: d) + 5) % 7 }
-    private func dateFor(day: Int) -> Date { var c = calendar.dateComponents([.year, .month], from: currentMonth); c.day = day; return calendar.date(from: c)! }
-    private func changeMonth(by v: Int) { if let n = calendar.date(byAdding: .month, value: v, to: currentMonth) { let c = calendar.dateComponents([.year, .month], from: n); currentMonth = calendar.date(from: c)! } }
-    private func monthYearString(for date: Date) -> String { let f = DateFormatter(); f.locale = Locale(identifier: "es_ES"); f.dateFormat = "LLLL yyyy"; return f.string(from: date) }
+    
+    // Función auxiliar para detectar si ayer fue noche
+    private func isSaliente(date: Date) -> Bool {
+        // Obtenemos el día anterior
+        guard let prevDate = calendar.date(byAdding: .day, value: -1, to: date) else { return false }
+        // Verificamos si hubo turno ayer
+        if let worker = getMyShiftWorker(for: prevDate) {
+            let type = mapStringToShiftType(worker.shiftName ?? "", role: worker.role)
+            // Si el turno de ayer fue Noche, hoy es saliente
+            return type == .noche
+        }
+        return false
+    }
+    
+    private func getMyShiftWorker(for date: Date) -> PlantShiftWorker? {
+        let start = calendar.startOfDay(for: date)
+        return plantManager.monthlyAssignments[start]?.first(where: {
+            $0.name == (plantManager.myPlantName ?? authManager.currentUserName)
+        })
+    }
+    
+    private func mapStringToShiftType(_ name: String, role: String) -> ShiftType? {
+        let l = name.lowercased()
+        let h = role.localizedCaseInsensitiveContains("media")
+        if l.contains("mañana") || l.contains("dia") || l.contains("día") { return h ? .mediaManana : .manana }
+        if l.contains("tarde") { return h ? .mediaTarde : .tarde }
+        if l.contains("noche") { return .noche }
+        return nil
+    }
+    
+    private var daysInMonth: [Int] {
+        return Array(calendar.range(of: .day, in: .month, for: currentMonth)!)
+    }
+    
+    private var firstWeekdayOffset: Int {
+        let c = calendar.dateComponents([.year, .month], from: currentMonth)
+        let d = calendar.date(from: c)!
+        return (calendar.component(.weekday, from: d) + 5) % 7
+    }
+    
+    private func dateFor(day: Int) -> Date {
+        var c = calendar.dateComponents([.year, .month], from: currentMonth)
+        c.day = day
+        return calendar.date(from: c)!
+    }
+    
+    private func changeMonth(by v: Int) {
+        if let n = calendar.date(byAdding: .month, value: v, to: currentMonth) {
+            let c = calendar.dateComponents([.year, .month], from: n)
+            currentMonth = calendar.date(from: c)!
+        }
+    }
+    
+    private func monthYearString(for date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "es_ES")
+        f.dateFormat = "LLLL yyyy"
+        return f.string(from: date)
+    }
 }
 
 // MARK: - 7. CREATE REQUEST (Mantenida con estilos)
+
 struct CreateRequestView: View {
-    let shift: MyShiftDisplay; let plantId: String; let onDismiss: () -> Void; @State private var mode: RequestMode = .flexible; private let ref = Database.database().reference(); @EnvironmentObject var authManager: AuthManager
+    let shift: MyShiftDisplay
+    let plantId: String
+    let onDismiss: () -> Void
+    @State private var mode: RequestMode = .flexible
+    private let ref = Database.database().reference()
+    @EnvironmentObject var authManager: AuthManager
+    
     var body: some View {
         ZStack {
             Color.black.opacity(0.8).ignoresSafeArea()
             VStack(spacing: 25) {
                 VStack(spacing: 5) {
-                    Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 40)).foregroundStyle(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    Text("Ofrecer Turno").font(.title2.bold()).foregroundColor(.white)
-                }.padding(.top, 20)
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 40))
+                        .foregroundStyle(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    Text("Ofrecer Turno")
+                        .font(.title2.bold())
+                        .foregroundColor(.white)
+                }
+                .padding(.top, 20)
                 
                 VStack(alignment: .leading) {
                     Text("Estás ofreciendo:").font(.caption).foregroundColor(.gray)
@@ -943,7 +1091,11 @@ struct CreateRequestView: View {
                         Spacer()
                         Image(systemName: "clock").foregroundColor(.purple)
                         Text(shift.shiftName).bold().foregroundColor(.white)
-                    }.padding().background(Color.white.opacity(0.1)).cornerRadius(12).overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.2), lineWidth: 1))
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.1))
+                    .cornerRadius(12)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.2), lineWidth: 1))
                 }
                 
                 VStack(alignment: .leading, spacing: 8) {
@@ -951,20 +1103,35 @@ struct CreateRequestView: View {
                     Picker("Modo", selection: $mode) {
                         Text("Flexible (Cualquier cambio)").tag(RequestMode.flexible)
                         Text("Estricto (Mismo rol/horario)").tag(RequestMode.strict)
-                    }.pickerStyle(SegmentedPickerStyle()).colorScheme(.dark)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .colorScheme(.dark)
                 }
                 
                 Spacer()
                 
                 HStack(spacing: 15) {
                     Button(action: onDismiss) {
-                        Text("Cancelar").foregroundColor(.white.opacity(0.7)).frame(maxWidth: .infinity).padding()
+                        Text("Cancelar")
+                            .foregroundColor(.white.opacity(0.7))
+                            .frame(maxWidth: .infinity)
+                            .padding()
                     }
                     Button(action: createRequest) {
-                        Text("Publicar").bold().foregroundColor(.white).frame(maxWidth: .infinity).padding().background(LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing)).cornerRadius(15)
+                        Text("Publicar")
+                            .bold()
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing))
+                            .cornerRadius(15)
                     }
                 }
-            }.padding(25).background(Color(red: 0.1, green: 0.1, blue: 0.15)).cornerRadius(20).padding()
+            }
+            .padding(25)
+            .background(Color(red: 0.1, green: 0.1, blue: 0.15))
+            .cornerRadius(20)
+            .padding()
         }
     }
     
@@ -972,8 +1139,22 @@ struct CreateRequestView: View {
         guard let user = authManager.user else { return }
         let id = UUID().uuidString
         let data: [String: Any] = [
-            "type": "SWAP", "status": "SEARCHING", "mode": mode.rawValue, "hardnessLevel": "NORMAL", "requesterId": user.uid, "requesterName": authManager.currentUserName, "requesterRole": authManager.userRole, "requesterShiftDate": shift.dateString, "requesterShiftName": shift.shiftName, "timestamp": ServerValue.timestamp()
+            "type": "SWAP",
+            "status": "SEARCHING",
+            "mode": mode.rawValue,
+            "hardnessLevel": "NORMAL",
+            "requesterId": user.uid,
+            "requesterName": authManager.currentUserName,
+            "requesterRole": authManager.userRole,
+            "requesterShiftDate": shift.dateString,
+            "requesterShiftName": shift.shiftName,
+            "timestamp": ServerValue.timestamp()
         ]
-        ref.child("plants/\(plantId)/shift_requests/\(id)").setValue(data) { error, _ in if error == nil { onDismiss() } }
+        
+        ref.child("plants/\(plantId)/shift_requests/\(id)").setValue(data) { error, _ in
+            if error == nil {
+                onDismiss()
+            }
+        }
     }
 }

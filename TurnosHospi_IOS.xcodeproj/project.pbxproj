@@ -16,6 +16,10 @@
 		979C54FF2EE3078D00F21427 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C54FE2EE3078D00F21427 /* SettingsView.swift */; };
 		979C55012EE320A000F21427 /* ImportShiftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C55002EE320A000F21427 /* ImportShiftsView.swift */; };
 		979C55032EE3306500F21427 /* StatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C55022EE3306500F21427 /* StatisticsView.swift */; };
+		97AB1A522EE75A1900F34304 /* GroupChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97AB1A512EE75A1800F34304 /* GroupChatView.swift */; };
+		97AB1A542EE75FED00F34304 /* DirectChatModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97AB1A532EE75FED00F34304 /* DirectChatModels.swift */; };
+		97AB1A582EE7601D00F34304 /* DirectChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97AB1A572EE7601D00F34304 /* DirectChatView.swift */; };
+		97AB1A5A2EE7604200F34304 /* DirectChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97AB1A592EE7604200F34304 /* DirectChatListView.swift */; };
 		97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */; };
 		97E962CA2EE18973006E7707 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C92EE18973006E7707 /* ContentView.swift */; };
 		97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97E962CB2EE18976006E7707 /* Assets.xcassets */; };
@@ -73,6 +77,10 @@
 		979C54FE2EE3078D00F21427 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		979C55002EE320A000F21427 /* ImportShiftsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportShiftsView.swift; sourceTree = "<group>"; };
 		979C55022EE3306500F21427 /* StatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsView.swift; sourceTree = "<group>"; };
+		97AB1A512EE75A1800F34304 /* GroupChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupChatView.swift; sourceTree = "<group>"; };
+		97AB1A532EE75FED00F34304 /* DirectChatModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectChatModels.swift; sourceTree = "<group>"; };
+		97AB1A572EE7601D00F34304 /* DirectChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectChatView.swift; sourceTree = "<group>"; };
+		97AB1A592EE7604200F34304 /* DirectChatListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectChatListView.swift; sourceTree = "<group>"; };
 		97E962C42EE18973006E7707 /* TurnosHospi_IOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TurnosHospi_IOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSApp.swift; sourceTree = "<group>"; };
 		97E962C92EE18973006E7707 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -165,7 +173,11 @@
 				97FB936D2EE1DAF300F5490F /* MainMenuView.swift */,
 				976F1F3E2EE46A0C0036A9E0 /* OfflineCalendarView.swift */,
 				976F1F422EE4909A0036A9E0 /* ShiftChangeView.swift */,
+				97AB1A532EE75FED00F34304 /* DirectChatModels.swift */,
+				97AB1A572EE7601D00F34304 /* DirectChatView.swift */,
+				97AB1A592EE7604200F34304 /* DirectChatListView.swift */,
 				976F1F462EE492F90036A9E0 /* ShiftMarketplaceView.swift */,
+				97AB1A512EE75A1800F34304 /* GroupChatView.swift */,
 				976F1F4A2EE494DF0036A9E0 /* ShiftChangeModels.swift */,
 				976F1F442EE492D40036A9E0 /* ShiftRulesEngine.swift */,
 				979C54FC2EE3077300F21427 /* ThemeManager.swift */,
@@ -372,12 +384,16 @@
 				97FB93852EE1F69400F5490F /* EditProfilesView.swift in Sources */,
 				97FB93892EE2049300F5490F /* Extensions.swift in Sources */,
 				976F1F472EE492F90036A9E0 /* ShiftMarketplaceView.swift in Sources */,
+				97AB1A5A2EE7604200F34304 /* DirectChatListView.swift in Sources */,
 				97E962CA2EE18973006E7707 /* ContentView.swift in Sources */,
+				97AB1A522EE75A1900F34304 /* GroupChatView.swift in Sources */,
 				97FB93912EE212C400F5490F /* CreatePlantView.swift in Sources */,
 				97FB938B2EE20B4F00F5490F /* Shift.swift in Sources */,
+				97AB1A582EE7601D00F34304 /* DirectChatView.swift in Sources */,
 				979C54FD2EE3077300F21427 /* ThemeManager.swift in Sources */,
 				97FB937B2EE1E19700F5490F /* SignUpView.swift in Sources */,
 				979C55032EE3306500F21427 /* StatisticsView.swift in Sources */,
+				97AB1A542EE75FED00F34304 /* DirectChatModels.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
 				97FB937F2EE1F26100F5490F /* PlantModels.swift in Sources */,
 				976F1F432EE4909A0036A9E0 /* ShiftChangeView.swift in Sources */,

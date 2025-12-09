@@ -10,8 +10,11 @@ struct ShiftMarketplaceView: View {
     
     // --- Data States ---
     @State private var rawRequests: [ShiftChangeRequest] = []
+    
+    // El balance ahora se calcula localmente basado en el historial
     @State private var balances: [String: Int] = [:]
     @State private var transactions: [FavorTransaction] = []
+    
     @State private var staffNames: [String: String] = [:] // ID -> Name
     
     // My Schedule for validation
@@ -84,19 +87,23 @@ struct ShiftMarketplaceView: View {
                     VStack(spacing: 20) {
                         
                         // --- SECTION 1: BALANCES ---
-                        if !balances.isEmpty {
+                        // Solo mostramos tarjetas si hay algún saldo distinto de 0
+                        if !balances.filter({ $0.value != 0 }).isEmpty {
                             VStack(alignment: .leading) {
-                                Text("Balances de Turnos") // CAMBIO APLICADO
+                                Text("Balances de Turnos")
                                     .font(.headline)
                                     .foregroundColor(Color(hex: "54C7EC")) // Cyan
                                     .padding(.horizontal)
                                 
                                 ScrollView(.vertical) {
                                     VStack(spacing: 10) {
+                                        // Ordenar: primero los que me deben más
                                         ForEach(balances.sorted(by: { $0.value > $1.value }), id: \.key) { userId, score in
-                                            let name = resolveName(userId)
-                                            let history = getHistoryWith(partnerId: userId)
-                                            BalanceCard(partnerName: name, score: score, history: history, currentUserId: currentUserId)
+                                            if score != 0 {
+                                                let name = resolveName(userId)
+                                                let history = getHistoryWith(partnerId: userId)
+                                                BalanceCard(partnerName: name, score: score, history: history, currentUserId: currentUserId)
+                                            }
                                         }
                                     }
                                     .padding(.horizontal)
@@ -165,8 +172,8 @@ struct ShiftMarketplaceView: View {
         }
         .onAppear {
             listenToRequests()
-            listenToBalances()
-            listenToTransactions()
+            // listenToBalances() -> YA NO SE USA
+            listenToTransactions() // Ahora esto calcula los balances
             listenToMySchedule()
             fetchStaffNames()
         }
@@ -201,6 +208,27 @@ struct ShiftMarketplaceView: View {
         }
     }
     
+    // MARK: - NUEVA LÓGICA DE BALANCE
+    
+    func recalculateBalances() {
+        var newBalances: [String: Int] = [:]
+        
+        for t in transactions {
+            if t.covererId == currentUserId {
+                // Yo cubrí a 'requesterId' -> Me deben (+1)
+                newBalances[t.requesterId, default: 0] += 1
+            } else if t.requesterId == currentUserId {
+                // 'covererId' me cubrió a mí -> Le debo (-1)
+                newBalances[t.covererId, default: 0] -= 1
+            }
+        }
+        
+        // Actualizamos estado en el hilo principal
+        DispatchQueue.main.async {
+            self.balances = newBalances
+        }
+    }
+    
     // --- FIREBASE LISTENERS ---
     
     func listenToRequests() {
@@ -222,30 +250,28 @@ struct ShiftMarketplaceView: View {
             }
     }
     
-    func listenToBalances() {
-        ref.child("plants/\(plantId)/balances/\(currentUserId)").observe(.value) { snapshot in
-            var newBalances: [String: Int] = [:]
-            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
-                if let score = child.value as? Int {
-                    newBalances[child.key] = score
-                }
-            }
-            self.balances = newBalances
-        }
-    }
-    
     func listenToTransactions() {
-        ref.child("plants/\(plantId)/transactions").queryLimited(toLast: 50).observe(.value) { snapshot in
-            var list: [FavorTransaction] = []
-            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
-                if let dict = child.value as? [String: Any],
-                   let t = try? parseTransaction(dict: dict, id: child.key) {
-                    list.append(t)
+        // CAMBIO: Quitamos el límite para tener el historial completo y calcular bien el saldo
+        ref.child("plants/\(plantId)/transactions")
+            // .queryLimited(toLast: 50) -> ELIMINADO para asegurar consistencia
+            .observe(.value) { snapshot in
+                var list: [FavorTransaction] = []
+                for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                    if let dict = child.value as? [String: Any],
+                       let t = try? parseTransaction(dict: dict, id: child.key) {
+                        list.append(t)
+                    }
                 }
+                
+                // Filtramos solo las mías
+                let myTransactions = list.filter { $0.covererId == currentUserId || $0.requesterId == currentUserId }
+                
+                // Ordenar por fecha (más reciente primero)
+                self.transactions = myTransactions.sorted(by: { $0.timestamp > $1.timestamp })
+                
+                // RECALCULAR BALANCES BASADO EN ESTA LISTA
+                self.recalculateBalances()
             }
-            self.transactions = list.filter { $0.covererId == currentUserId || $0.requesterId == currentUserId }
-                .sorted(by: { $0.timestamp > $1.timestamp })
-        }
     }
     
     func listenToMySchedule() {
@@ -382,12 +408,45 @@ struct ShiftMarketplaceView: View {
         )
     }
     
-    // --- ACTION: PERFORM COVERAGE (TRANSACTION CORREGIDA) ---
+    // --- ACCIÓN CORREGIDA: COBERTURA SEGURA ---
     
     func performCoverage(_ req: ShiftChangeRequest) {
         let covererId = currentUserId
         let covererName = authManager.currentUserName
         
+        // 1. Reclamar la solicitud (Atomicidad)
+        let requestRef = ref.child("plants/\(plantId)/shift_requests/\(req.id)")
+        
+        requestRef.runTransactionBlock { currentData in
+            var data = currentData.value as? [String: Any] ?? [:]
+            
+            // Verificación: ¿Sigue disponible?
+            let status = data["status"] as? String ?? ""
+            if status != "SEARCHING" {
+                return TransactionResult.abort()
+            }
+            
+            // Marcar como aprobada y asignada a mí
+            data["status"] = "APPROVED"
+            data["targetUserId"] = covererId
+            data["targetUserName"] = covererName
+            
+            currentData.value = data
+            return TransactionResult.success(withValue: currentData)
+            
+        } andCompletionBlock: { error, committed, snapshot in
+            if !committed || error != nil {
+                print("Error o solicitud ya cogida.")
+                return
+            }
+            
+            // 2. Si ganamos la solicitud, actualizamos el turno y guardamos el historial.
+            // NO TOCAMOS BALANCES DIRECTAMENTE AQUÍ. Se actualizarán solos al leer el historial.
+            self.finalizeCoverage(req: req, covererId: covererId, covererName: covererName)
+        }
+    }
+    
+    private func finalizeCoverage(req: ShiftChangeRequest, covererId: String, covererName: String) {
         let dateKey = "turnos-\(req.requesterShiftDate)"
         let shiftRef = ref.child("plants/\(plantId)/turnos/\(dateKey)/\(req.requesterShiftName)")
         
@@ -415,49 +474,29 @@ struct ShiftMarketplaceView: View {
             
             guard let group = pathFound, let idx = indexFound, let field = fieldToUpdate else { return }
             
-            let balancesRef = ref.child("plants/\(plantId)/balances")
+            var updates: [String: Any] = [:]
             
-            balancesRef.runTransactionBlock({ (currentData) -> TransactionResult in
-                var data = currentData.value as? [String: Any] ?? [:]
-                
-                // CASTING SEGURO PARA EVITAR REINICIOS A 0
-                // 1. Coverer -> Requester (+1)
-                var covererData = data[covererId] as? [String: Any] ?? [:]
-                let oldScoreMe = (covererData[req.requesterId] as? NSNumber)?.intValue ?? 0
-                covererData[req.requesterId] = oldScoreMe + 1 // +1 porque hago un favor
-                data[covererId] = covererData
-                
-                // 2. Requester -> Coverer (-1)
-                var requesterData = data[req.requesterId] as? [String: Any] ?? [:]
-                let oldScoreHim = (requesterData[covererId] as? NSNumber)?.intValue ?? 0
-                requesterData[covererId] = oldScoreHim - 1 // -1 porque recibo un favor
-                data[req.requesterId] = requesterData
-                
-                currentData.value = data
-                return TransactionResult.success(withValue: currentData)
-            }) { (error, committed, _) in
-                if committed {
-                    var updates: [String: Any] = [:]
-                    updates["plants/\(plantId)/turnos/\(dateKey)/\(req.requesterShiftName)/\(group)/\(idx)/\(field)"] = covererName
-                    updates["plants/\(plantId)/shift_requests/\(req.id)/status"] = "APPROVED"
-                    updates["plants/\(plantId)/shift_requests/\(req.id)/targetUserId"] = covererId
-                    updates["plants/\(plantId)/transactions/\(UUID().uuidString)"] = [
-                        "covererId": covererId,
-                        "covererName": covererName,
-                        "requesterId": req.requesterId,
-                        "requesterName": req.requesterName,
-                        "date": req.requesterShiftDate,
-                        "shiftName": req.requesterShiftName,
-                        "timestamp": ServerValue.timestamp()
-                    ]
-                    ref.updateChildValues(updates)
-                }
-            }
+            // 1. Poner mi nombre en el turno (físico)
+            updates["plants/\(plantId)/turnos/\(dateKey)/\(req.requesterShiftName)/\(group)/\(idx)/\(field)"] = covererName
+            
+            // 2. Registrar la transacción en el historial
+            // Al guardarse esto, 'listenToTransactions' lo detectará y sumará +1 en tu balance localmente.
+            updates["plants/\(plantId)/transactions/\(UUID().uuidString)"] = [
+                "covererId": covererId,
+                "covererName": covererName,
+                "requesterId": req.requesterId,
+                "requesterName": req.requesterName,
+                "date": req.requesterShiftDate,
+                "shiftName": req.requesterShiftName,
+                "timestamp": ServerValue.timestamp()
+            ]
+            
+            ref.updateChildValues(updates)
         }
     }
 }
 
-// MARK: - UI COMPONENTS
+// MARK: - UI COMPONENTS (BalanceCard & MarketplaceItem maintained)
 
 struct BalanceCard: View {
     let partnerName: String
@@ -477,7 +516,6 @@ struct BalanceCard: View {
                         .overlay(Text(partnerName.prefix(1)).foregroundColor(.white).bold())
                     VStack(alignment: .leading) {
                         Text(partnerName).foregroundColor(.white).bold()
-                        // TEXTO CORREGIDO Y VALOR ABSOLUTO
                         Text(isPositive ? "Te debe \(score) turnos" : "Le debes \(abs(score)) turnos")
                             .font(.caption).foregroundColor(color)
                     }
@@ -528,7 +566,6 @@ struct MarketplaceItem: View {
                     VStack(alignment: .leading) {
                         Text("Solicitud de \(req.requesterName)").font(.subheadline).foregroundColor(.white)
                         if balance != 0 {
-                            // TEXTO CORREGIDO Y VALOR ABSOLUTO
                             Text(balance > 0 ? "Te debe \(balance) turnos" : "Le debes \(abs(balance)) turnos")
                                 .font(.caption2).foregroundColor(balance > 0 ? .green : .pink)
                         }

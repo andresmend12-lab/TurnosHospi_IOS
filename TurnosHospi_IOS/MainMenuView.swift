@@ -9,6 +9,9 @@ struct MainMenuView: View {
     @State private var selectedDate = Date()
     @State private var currentMonth = Date()
     
+    // --- NUEVO: Estado para abrir chats ---
+    @State private var showDirectChats = false
+    
     private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]
     
     // --- CALENDARIO GREGORIANO (ESPAÑOL - LUNES) ---
@@ -37,6 +40,14 @@ struct MainMenuView: View {
         return nil
     }
     
+    // --- LÓGICA DE SALIENTE ---
+    private func isSaliente(date: Date) -> Bool {
+        // Miramos el día anterior
+        guard let prevDate = calendar.date(byAdding: .day, value: -1, to: date) else { return false }
+        // Si ayer trabajé de Noche, hoy es Saliente
+        return getMyShiftFor(date: prevDate) == .noche
+    }
+    
     private func mapStringToShiftType(_ name: String, role: String) -> ShiftType? {
         let lowerName = name.lowercased()
         let isHalf = role.localizedCaseInsensitiveContains("media")
@@ -59,6 +70,7 @@ struct MainMenuView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
                 
+                // --- CONTENEDOR PRINCIPAL (Se mueve con el menú) ---
                 ZStack {
                     // Usamos Color(hex:) asumiendo que la extensión está en ThemeManager.swift
                     Color(hex: "0F172A").ignoresSafeArea()
@@ -69,7 +81,7 @@ struct MainMenuView: View {
                         headerView
                         
                         // --- CONTENIDO PRINCIPAL ---
-                        // AQUÍ ESTÁ EL CAMBIO: Comprobamos si hay planta
+                        // Comprobamos si hay planta
                         if authManager.userPlantId.isEmpty {
                             
                             // CASO 1: MODO OFFLINE (Tu Planilla)
@@ -95,6 +107,31 @@ struct MainMenuView: View {
                             }
                         }
                     }
+                    
+                    // --- NUEVO: BOTÓN FLOTANTE DE CHAT (Inferior Izquierda) ---
+                    if !authManager.userPlantId.isEmpty {
+                        VStack {
+                            Spacer() // Empuja el contenido hacia abajo
+                            HStack {
+                                Button(action: {
+                                    showDirectChats = true
+                                }) {
+                                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                                        .font(.title2)
+                                        .foregroundColor(.white)
+                                        .padding(18) // Tamaño del círculo
+                                        .background(Color(red: 0.2, green: 0.4, blue: 1.0)) // Electric Blue
+                                        .clipShape(Circle())
+                                        .shadow(color: .black.opacity(0.4), radius: 5, x: 0, y: 4)
+                                }
+                                .padding(.leading, 25) // Margen izquierdo
+                                .padding(.bottom, 30)  // Margen inferior
+                                
+                                Spacer() // Empuja hacia la izquierda
+                            }
+                        }
+                    }
+                    
                 }
                 .cornerRadius(showMenu ? 30 : 0)
                 .offset(x: showMenu ? 260 : 0)
@@ -112,6 +149,10 @@ struct MainMenuView: View {
                         .offset(x: -UIScreen.main.bounds.width / 2 + 130)
                         .zIndex(2)
                 }
+            }
+            // --- NUEVO: Navegación a Chats ---
+            .navigationDestination(isPresented: $showDirectChats) {
+                DirectChatListView(plantId: authManager.userPlantId)
             }
         }
         .onAppear {
@@ -238,12 +279,16 @@ struct MainMenuView: View {
                         withAnimation { selectedDate = date }
                     } label: {
                         ZStack {
-                            // Fondo coloreado SI es mi turno
+                            // Fondo coloreado
                             if let s = shift {
+                                // 1. Si hay turno
                                 themeManager.color(for: s).opacity(isSelected ? 0.9 : 0.7)
+                            } else if isSaliente(date: date) {
+                                // 2. Si es saliente (después de noche)
+                                themeManager.salienteColor.opacity(isSelected ? 0.9 : 0.7)
                             } else {
-                                // Día libre
-                                themeManager.holidayColor.opacity(isSelected ? 0.6 : 0.2)
+                                // 3. Día libre (Verde por defecto)
+                                themeManager.freeDayColor.opacity(isSelected ? 0.6 : 0.2)
                             }
                             
                             Text("\(day)")
@@ -314,9 +359,6 @@ struct MainMenuView: View {
                                 .foregroundColor(.gray)
                         }
                         Spacer()
-                        
-                        // Icono (opcional)
-                        // Image(systemName: "sun.max.fill") ...
                     }
                     
                     // Compañeros en el mismo turno
@@ -372,19 +414,53 @@ struct MainMenuView: View {
                 )
                 .padding(.horizontal)
                 
+            } else if isSaliente(date: selectedDate) {
+                // CASO SALIENTE
+                HStack {
+                    Rectangle()
+                        .fill(themeManager.salienteColor)
+                        .frame(width: 5)
+                        .cornerRadius(2)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Saliente")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Text("Descanso post-nocturno")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                    }
+                    Spacer()
+                    Image(systemName: "moon.zzz.fill")
+                        .foregroundColor(themeManager.salienteColor)
+                        .font(.title2)
+                }
+                .padding()
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(15)
+                .overlay(RoundedRectangle(cornerRadius: 15).stroke(themeManager.salienteColor.opacity(0.5), lineWidth: 1))
+                .padding(.horizontal)
+                
             } else {
+                // CASO LIBRE
                 HStack {
                     Spacer()
                     VStack(spacing: 10) {
-                        Image(systemName: "calendar.badge.exclamationmark")
+                        Image(systemName: "sparkles")
                             .font(.largeTitle)
-                            .foregroundColor(.gray.opacity(0.5))
-                        Text("No tienes turnos para este día")
+                            .foregroundColor(themeManager.freeDayColor)
+                        Text("Día Libre")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        Text("Disfruta de tu descanso")
                             .foregroundColor(.gray)
                     }
                     Spacer()
                 }
                 .padding(.vertical, 30)
+                .background(Color.white.opacity(0.02))
+                .cornerRadius(15)
+                .padding(.horizontal)
             }
         }
     }
@@ -423,4 +499,3 @@ struct MainMenuView: View {
         }
     }
 }
-// FIN DEL ARCHIVO - SIN EXTENSIONES DEBAJO

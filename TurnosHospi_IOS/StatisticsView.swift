@@ -205,7 +205,8 @@ struct StatisticsView: View {
     // Procesa un día completo para TODOS los empleados (Supervisor)
     private func processDaySnapshotForSupervisor(_ daySnapshot: DataSnapshot, shiftDurations: [String: [String: String]], stats: inout [String: StaffStats]) {
         for shiftSnap in daySnapshot.children.allObjects as? [DataSnapshot] ?? [] {
-            let shiftName = shiftSnap.key ?? ""
+            // CORRECCIÓN: key es String, no String?
+            let shiftName = shiftSnap.key
             let hours = getHoursForShift(shiftName: shiftName, durations: shiftDurations)
             
             // Procesar Enfermeros
@@ -243,7 +244,8 @@ struct StatisticsView: View {
     private func processDaySnapshotForUser(_ daySnapshot: DataSnapshot, targetName: String, shiftDurations: [String: [String: String]], totalHours: inout Double, totalShifts: inout Int, breakdown: inout [String: Double]) {
         
         for shiftSnap in daySnapshot.children.allObjects as? [DataSnapshot] ?? [] {
-            let shiftName = shiftSnap.key ?? ""
+            // CORRECCIÓN: key es String, no String?
+            let shiftName = shiftSnap.key
             let hours = getHoursForShift(shiftName: shiftName, durations: shiftDurations)
             var workedHours: Double = 0
             
