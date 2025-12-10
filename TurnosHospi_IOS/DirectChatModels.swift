@@ -1,6 +1,6 @@
 import Foundation
 
-// Modelo de un mensaje individual (Historial)
+// Modelo de un mensaje individual (Igual que en Android)
 struct DirectMessage: Identifiable, Codable, Equatable {
     var id: String
     var senderId: String
@@ -17,7 +17,7 @@ struct DirectMessage: Identifiable, Codable, Equatable {
     }
 }
 
-// Modelo de usuario
+// Modelo de usuario para la lista
 struct ChatUser: Identifiable, Hashable, Codable {
     let id: String
     let name: String
@@ -25,16 +25,15 @@ struct ChatUser: Identifiable, Hashable, Codable {
     let email: String
 }
 
-// --- NUEVO: Modelo para la Lista de Chats (Compatible con Android) ---
+// Modelo para la lista de conversaciones recientes
 struct ChatConversation: Identifiable {
-    var id: String { otherUser.id } // La ID visual es el otro usuario
+    var id: String { otherUser.id }
     let otherUser: ChatUser
     let lastMessage: String
     let timestamp: TimeInterval
     let unreadCount: Int
     let chatId: String
     
-    // Formato de hora inteligente (Hora hoy, Fecha otros días)
     var timeString: String {
         let date = Date(timeIntervalSince1970: timestamp / 1000)
         let calendar = Calendar.current
