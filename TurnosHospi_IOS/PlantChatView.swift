@@ -6,8 +6,8 @@ struct PlantChatView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     
-    // Reutilizamos el modelo de mensajes existente
-    @State private var messages: [DirectMessage] = [] // Usando tu modelo DirectMessage
+    // Usamos el modelo DirectMessage (compartido con el chat directo)
+    @State private var messages: [DirectMessage] = []
     @State private var textInput: String = ""
     
     // Referencia
@@ -40,41 +40,45 @@ struct PlantChatView: View {
                 .padding()
                 .background(Color.black.opacity(0.3))
                 
-                // Área de mensajes (Placeholder)
-                ScrollView {
-                    LazyVStack(spacing: 15) {
-                        ForEach(messages) { msg in
-                            // Reutiliza tu burbuja de DirectChatView
-                            DirectMessageBubble(
-                                message: msg,
-                                isMe: msg.senderId == authManager.user?.uid,
-                                myColor: Color.electricBlue,
-                                otherColor: Color(red: 0.12, green: 0.16, blue: 0.23)
-                            )
+                // Área de mensajes
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 8) { // Ajustado espaciado para coincidir con el estilo nuevo
+                            ForEach(messages) { msg in
+                                // CORRECCIÓN: Eliminados parámetros de color 'myColor' y 'otherColor'
+                                DirectMessageBubble(
+                                    message: msg,
+                                    isMe: msg.senderId == authManager.user?.uid
+                                )
+                                .id(msg.id)
+                            }
                         }
+                        .padding()
                     }
-                    .padding()
+                    .onChange(of: messages) { _ in scrollToBottom(proxy) }
+                    .onAppear { scrollToBottom(proxy) }
                 }
                 
                 // Input Area
-                HStack {
+                HStack(spacing: 10) {
                     TextField("", text: $textInput)
                         .placeholder(when: textInput.isEmpty) {
                             Text("Escribe a tu planta...").foregroundColor(.gray)
                         }
-                        .padding(10)
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(20)
+                        .padding(12)
                         .foregroundColor(.white)
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(24)
                     
                     Button(action: sendMessage) {
                         Image(systemName: "paperplane.fill")
-                            .font(.title2)
-                            .foregroundColor(.electricBlue)
+                            .font(.title3)
+                            .foregroundColor(textInput.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .cyan)
                             .padding(10)
                             .background(Color.white.opacity(0.05))
                             .clipShape(Circle())
                     }
+                    .disabled(textInput.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
                 .padding()
                 .background(Color.black.opacity(0.2))
@@ -88,9 +92,10 @@ struct PlantChatView: View {
     
     func listenToMessages() {
         let chatRef = ref.child("plant_chats").child(session.id).child("messages")
+        
         chatRef.queryLimited(toLast: 50).observe(.childAdded) { snapshot in
             if let dict = snapshot.value as? [String: Any] {
-                // Adaptación a tu modelo DirectMessage
+                // Adaptación al modelo DirectMessage
                 let msg = DirectMessage(
                     id: snapshot.key,
                     senderId: dict["senderId"] as? String ?? "",
@@ -106,23 +111,31 @@ struct PlantChatView: View {
     }
     
     func sendMessage() {
-        guard !textInput.isEmpty, let uid = authManager.user?.uid else { return }
+        guard !textInput.trimmingCharacters(in: .whitespaces).isEmpty,
+              let uid = authManager.user?.uid else { return }
         
         let chatRef = ref.child("plant_chats").child(session.id).child("messages")
         let msgId = chatRef.childByAutoId().key ?? UUID().uuidString
         
         let msgData: [String: Any] = [
             "senderId": uid,
-            "text": textInput,
+            "text": textInput.trimmingCharacters(in: .whitespaces),
             "timestamp": ServerValue.timestamp()
         ]
         
         chatRef.child(msgId).setValue(msgData)
         
-        // NOTA: Aquí es donde el backend usaría session.targetFcmToken
-        // para enviar la notificación push si responde una IA o experto.
-        print("Mensaje enviado. Token objetivo para respuesta: \(session.targetFcmToken)")
+        // Aquí el backend usaría session.targetFcmToken para notificar
+        print("Mensaje enviado. Token objetivo: \(session.targetFcmToken)")
         
         textInput = ""
+    }
+    
+    func scrollToBottom(_ proxy: ScrollViewProxy) {
+        if let last = messages.last {
+            withAnimation {
+                proxy.scrollTo(last.id, anchor: .bottom)
+            }
+        }
     }
 }

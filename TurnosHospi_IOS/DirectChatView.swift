@@ -2,48 +2,47 @@ import SwiftUI
 import FirebaseDatabase
 
 struct DirectChatView: View {
-    // Parámetros
     let targetUser: ChatUser
     let currentUserId: String
-    let plantId: String // Para notificaciones o contexto
+    let plantId: String
     
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var authManager: AuthManager
     
-    // Estado
+    // Estados
     @State private var messages: [DirectMessage] = []
     @State private var textInput: String = ""
-    @State private var isLoading = true
+    @State private var initialLoadFinished = false // Para controlar el scroll
     
+    // Referencia Database
     private let ref = Database.database().reference()
     
-    // Generar ID único consistente para el chat (MinID_MaxID)
-    private var chatId: String {
-        return currentUserId < targetUser.id
-            ? "\(currentUserId)_\(targetUser.id)"
-            : "\(targetUser.id)_\(currentUserId)"
+    var chatId: String {
+        return generateChatId(id1: currentUserId, id2: targetUser.id)
     }
-    
-    // Colores
-    let myBubbleColor = Color(red: 0.33, green: 0.78, blue: 0.93) // Cyan
-    let otherBubbleColor = Color(red: 0.12, green: 0.16, blue: 0.23) // Dark Slate
     
     var body: some View {
         ZStack {
-            Color(red: 0.1, green: 0.1, blue: 0.18).ignoresSafeArea()
+            // Fondo oscuro
+            Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // --- HEADER ---
-                HStack {
+                HStack(spacing: 15) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "arrow.left")
                             .font(.title2)
                             .foregroundColor(.white)
                     }
                     
-                    Spacer()
+                    ZStack {
+                        Circle().fill(Color.gray.opacity(0.3))
+                            .frame(width: 35, height: 35)
+                        Text(String(targetUser.name.prefix(1)))
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
                     
-                    VStack {
+                    VStack(alignment: .leading) {
                         Text(targetUser.name)
                             .font(.headline)
                             .foregroundColor(.white)
@@ -51,149 +50,178 @@ struct DirectChatView: View {
                             .font(.caption)
                             .foregroundColor(.gray)
                     }
-                    
                     Spacer()
-                    Image(systemName: "arrow.left").font(.title2).opacity(0)
                 }
                 .padding()
                 .background(Color.black.opacity(0.3))
                 
-                // --- MENSAJES ---
+                // --- AREA DE MENSAJES ---
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(spacing: 12) {
+                        LazyVStack(spacing: 8) {
                             ForEach(messages) { msg in
                                 DirectMessageBubble(
                                     message: msg,
-                                    isMe: msg.senderId == currentUserId,
-                                    myColor: myBubbleColor,
-                                    otherColor: otherBubbleColor
+                                    isMe: msg.senderId == currentUserId
                                 )
                                 .id(msg.id)
                             }
                         }
                         .padding()
                     }
-                    .onChange(of: messages) { _ in
-                        scrollToBottom(proxy: proxy)
+                    // Optimizamos el scroll: Solo animamos si NO es la carga inicial masiva
+                    .onChange(of: messages.count) { _ in
+                        if initialLoadFinished {
+                            scrollToBottom(proxy, animated: true)
+                        }
                     }
+                    // Scroll inicial forzado al aparecer
                     .onAppear {
-                        scrollToBottom(proxy: proxy)
+                        if !messages.isEmpty {
+                            scrollToBottom(proxy, animated: false)
+                        }
                     }
                 }
                 
-                // --- INPUT ---
+                // --- AREA DE TEXTO ---
                 HStack(spacing: 10) {
                     TextField("", text: $textInput)
                         .placeholder(when: textInput.isEmpty) {
-                            Text("Mensaje para \(String(targetUser.name.prefix(10)))...").foregroundColor(.gray)
+                            Text("Escribe un mensaje...").foregroundColor(.gray)
                         }
                         .padding(12)
                         .foregroundColor(.white)
                         .background(Color.white.opacity(0.1))
                         .cornerRadius(24)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 24)
-                                .stroke(textInput.isEmpty ? Color.white.opacity(0.4) : myBubbleColor, lineWidth: 1)
-                        )
                     
                     Button(action: sendMessage) {
                         Image(systemName: "paperplane.fill")
                             .font(.title3)
-                            .foregroundColor(textInput.isBlank ? .gray : myBubbleColor)
-                            .rotationEffect(.degrees(45))
+                            .foregroundColor(textInput.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .cyan)
                             .padding(10)
                             .background(Color.white.opacity(0.05))
                             .clipShape(Circle())
                     }
-                    .disabled(textInput.isBlank)
+                    .disabled(textInput.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
                 .padding()
                 .background(Color.black.opacity(0.2))
             }
         }
-        .navigationBarBackButtonHidden(true)
+        .navigationBarHidden(true)
         .onAppear {
             listenToMessages()
         }
+        .onDisappear {
+            // Limpieza básica: Quitamos observers al salir para liberar memoria
+            ref.child("direct_chats").child(chatId).child("messages").removeAllObservers()
+        }
     }
     
-    // MARK: - Lógica
+    // --- LÓGICA OPTIMIZADA ---
     
     func listenToMessages() {
-        // Ruta: direct_chats/{chatId}/messages
-        let messagesRef = ref.child("direct_chats").child(chatId).child("messages")
+        let chatRef = ref.child("direct_chats").child(chatId).child("messages")
         
-        messagesRef.queryLimited(toLast: 100).observe(.childAdded) { snapshot in
-            if let dict = snapshot.value as? [String: Any] {
-                let id = dict["id"] as? String ?? snapshot.key
-                let senderId = dict["senderId"] as? String ?? ""
-                let text = dict["text"] as? String ?? ""
-                let timestamp = dict["timestamp"] as? TimeInterval ?? 0
-                let read = dict["read"] as? Bool ?? false
+        // 1. CARGA INICIAL MASIVA (Evita el freeze)
+        // Pedimos los datos UNA SOLA VEZ (.value) en lugar de evento por evento
+        chatRef.queryLimited(toLast: 50).observeSingleEvent(of: .value) { snapshot in
+            var tempMessages: [DirectMessage] = []
+            
+            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                if let dict = child.value as? [String: Any] {
+                    let msg = mapDictToMessage(id: child.key, dict: dict)
+                    tempMessages.append(msg)
+                }
+            }
+            
+            // Actualizamos la UI una sola vez
+            DispatchQueue.main.async {
+                self.messages = tempMessages
+                self.initialLoadFinished = true // Permitimos animaciones futuras
                 
-                let msg = DirectMessage(id: id, senderId: senderId, text: text, timestamp: timestamp, read: read)
-                
-                DispatchQueue.main.async {
+                // Esperamos un pelín a que se dibuje para hacer el scroll inicial
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    // Buscamos el último ID para scroll directo sin animación
+                    if let lastId = tempMessages.last?.id {
+                        // Usamos NotificationCenter o simplemente confiamos en que el usuario ya verá lo último
+                        // Aquí no tenemos acceso directo al proxy, pero al setear 'messages', SwiftUI redibuja.
+                    }
+                }
+            }
+            
+            // 2. ESCUCHAR NUEVOS (En tiempo real)
+            // Iniciamos el listener para mensajes que lleguen DESPUÉS de ahora
+            setupRealtimeListener()
+        }
+    }
+    
+    func setupRealtimeListener() {
+        let chatRef = ref.child("direct_chats").child(chatId).child("messages")
+        
+        // Escuchamos solo nuevos añadidos
+        chatRef.queryLimited(toLast: 1).observe(.childAdded) { snapshot in
+            guard let dict = snapshot.value as? [String: Any] else { return }
+            let msg = mapDictToMessage(id: snapshot.key, dict: dict)
+            
+            DispatchQueue.main.async {
+                // Evitamos duplicados que ya vinieron en la carga inicial
+                if !self.messages.contains(where: { $0.id == msg.id }) {
                     self.messages.append(msg)
+                    // El .onChange se encargará del scroll animado
                 }
             }
         }
     }
     
+    func mapDictToMessage(id: String, dict: [String: Any]) -> DirectMessage {
+        return DirectMessage(
+            id: id,
+            senderId: dict["senderId"] as? String ?? "",
+            text: dict["text"] as? String ?? "",
+            timestamp: dict["timestamp"] as? TimeInterval ?? 0,
+            read: false
+        )
+    }
+    
     func sendMessage() {
-        guard !textInput.isBlank else { return }
+        let trimmed = textInput.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
         
-        let messagesRef = ref.child("direct_chats").child(chatId).child("messages")
-        guard let msgId = messagesRef.childByAutoId().key else { return }
-        
-        let textToSend = textInput.trimmingCharacters(in: .whitespaces)
-        let timestamp = ServerValue.timestamp()
+        let chatRef = ref.child("direct_chats").child(chatId).child("messages")
+        let msgId = chatRef.childByAutoId().key ?? UUID().uuidString
         
         let msgData: [String: Any] = [
-            "id": msgId,
             "senderId": currentUserId,
-            "text": textToSend,
-            "timestamp": timestamp,
-            "read": false
+            "text": trimmed,
+            "timestamp": ServerValue.timestamp()
         ]
         
-        // 1. Guardar mensaje
-        messagesRef.child(msgId).setValue(msgData)
-        
-        // 2. Notificación (Simulación)
-        let myName = authManager.currentUserName // O nombre completo
-        sendNotification(
-            fanoutId: "DIRECT_CHAT_FANOUT_ID",
-            type: "CHAT_DIRECT",
-            message: "Mensaje de \(myName)",
-            targetUserId: targetUser.id
-        )
-        
+        chatRef.child(msgId).setValue(msgData)
         textInput = ""
     }
     
-    func scrollToBottom(proxy: ScrollViewProxy) {
-        if let lastId = messages.last?.id {
+    func scrollToBottom(_ proxy: ScrollViewProxy, animated: Bool) {
+        guard let lastMsg = messages.last else { return }
+        
+        if animated {
             withAnimation {
-                proxy.scrollTo(lastId, anchor: .bottom)
+                proxy.scrollTo(lastMsg.id, anchor: .bottom)
             }
+        } else {
+            proxy.scrollTo(lastMsg.id, anchor: .bottom)
         }
     }
     
-    func sendNotification(fanoutId: String, type: String, message: String, targetUserId: String) {
-        // Aquí implementarías la lógica de escritura en Firebase para activar tu función Cloud
-        // o tu sistema de notificaciones push.
-        print("Notificación DIRECTA enviada a \(targetUserId): \(message)")
+    func generateChatId(id1: String, id2: String) -> String {
+        return id1 < id2 ? "\(id1)_\(id2)" : "\(id2)_\(id1)"
     }
 }
 
-// Burbuja Visual
+// MARK: - Componentes Auxiliares
 struct DirectMessageBubble: View {
     let message: DirectMessage
     let isMe: Bool
-    let myColor: Color
-    let otherColor: Color
     
     var body: some View {
         HStack(alignment: .bottom) {
@@ -202,30 +230,15 @@ struct DirectMessageBubble: View {
             VStack(alignment: isMe ? .trailing : .leading, spacing: 4) {
                 Text(message.text)
                     .foregroundColor(isMe ? .black : .white)
-                    .font(.body)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(12)
+                    .background(isMe ? Color(red: 0.33, green: 0.78, blue: 0.93) : Color(red: 0.12, green: 0.16, blue: 0.23))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                 
-                HStack(spacing: 4) {
-                    Text(message.timeString)
-                        .font(.system(size: 10))
-                        .foregroundColor(isMe ? .black.opacity(0.6) : .white.opacity(0.5))
-                    
-                    // Doble check simple si soy yo
-                    if isMe {
-                        Image(systemName: "checkmark") // Podrías cambiar a checkmark.double si implementas lectura real
-                            .font(.system(size: 10))
-                            .foregroundColor(.black.opacity(0.6))
-                    }
-                }
+                Text(message.timeString)
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+                    .padding(isMe ? .trailing : .leading, 4)
             }
-            .padding(12)
-            .background(isMe ? myColor : otherColor)
-            .clipShape(
-                RoundedCorner(
-                    radius: 16,
-                    corners: isMe ? [.topLeft, .topRight, .bottomLeft] : [.topLeft, .topRight, .bottomRight]
-                )
-            )
             .frame(maxWidth: 280, alignment: isMe ? .trailing : .leading)
             
             if !isMe { Spacer() }

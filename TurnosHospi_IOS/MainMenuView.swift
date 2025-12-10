@@ -9,7 +9,7 @@ struct MainMenuView: View {
     @State private var selectedDate = Date()
     @State private var currentMonth = Date()
     
-    // --- NUEVO: Estado para abrir chats ---
+    // Estado para abrir chats
     @State private var showDirectChats = false
     
     private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]
@@ -108,11 +108,13 @@ struct MainMenuView: View {
                         }
                     }
                     
-                    // --- NUEVO: BOTÓN FLOTANTE DE CHAT (Inferior Izquierda) ---
+                    // --- BOTÓN FLOTANTE DE CHAT (Inferior DERECHA) ---
                     if !authManager.userPlantId.isEmpty {
                         VStack {
                             Spacer() // Empuja el contenido hacia abajo
                             HStack {
+                                Spacer() // Empuja hacia la derecha
+                                
                                 Button(action: {
                                     showDirectChats = true
                                 }) {
@@ -124,10 +126,8 @@ struct MainMenuView: View {
                                         .clipShape(Circle())
                                         .shadow(color: .black.opacity(0.4), radius: 5, x: 0, y: 4)
                                 }
-                                .padding(.leading, 25) // Margen izquierdo
+                                .padding(.trailing, 25) // Margen derecho
                                 .padding(.bottom, 30)  // Margen inferior
-                                
-                                Spacer() // Empuja hacia la izquierda
                             }
                         }
                     }
@@ -150,9 +150,8 @@ struct MainMenuView: View {
                         .zIndex(2)
                 }
             }
-            // --- NUEVO: Navegación a Chats ---
+            // --- Navegación a Chats ---
             .navigationDestination(isPresented: $showDirectChats) {
-                // CORRECCIÓN: DirectChatListView ya obtiene el ID del AuthManager, no necesita argumentos.
                 DirectChatListView()
             }
         }

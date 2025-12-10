@@ -31,6 +31,9 @@ struct PlantDashboardView: View {
     @State private var showImportShiftsSheet = false
     @State private var showStatisticsSheet = false
     
+    // --- NUEVO: Estado para mostrar chat directo ---
+    @State private var showDirectChats = false
+    
     // Estado de edición para supervisor
     @State private var supervisorAssignments: [String: ShiftAssignmentState] = [:]
     @State private var isLoadingSupervisorAssignments = false
@@ -53,213 +56,243 @@ struct PlantDashboardView: View {
     }
     
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            
+        NavigationStack {
             ZStack {
-                Color(red: 0.1, green: 0.1, blue: 0.18).ignoresSafeArea()
+                Color.black.ignoresSafeArea()
                 
-                VStack(spacing: 0) {
+                ZStack {
+                    Color(red: 0.1, green: 0.1, blue: 0.18).ignoresSafeArea()
                     
-                    // HEADER
-                    HStack {
-                        Button(action: {
-                            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                                isMenuOpen.toggle()
-                            }
-                        }) {
-                            Image(systemName: "line.3.horizontal")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(10)
-                                .contentShape(Rectangle())
-                        }
-                        .zIndex(100)
+                    VStack(spacing: 0) {
                         
-                        Spacer()
-                        
-                        VStack(alignment: .trailing) {
-                            Text("Mi Planta")
-                                .font(.headline.bold())
-                                .foregroundColor(.white)
-                            Text(authManager.userRole)
-                                .font(.caption)
-                                .foregroundColor(Color(red: 0.7, green: 0.5, blue: 1.0))
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 10)
-                    .padding(.top, 60)
-                    .background(Color.black.opacity(0.3))
-                    
-                    // CONTENIDO
-                    VStack(spacing: 20) {
-                        
-                        // Título de la sección (Ocultar para vistas que tienen su propio header)
-                        if !["Cambio de turnos", "Gestión de cambios", "Bolsa de Turnos"].contains(selectedOption) {
-                            HStack {
-                                Text(selectedOption)
-                                    .font(.largeTitle.bold())
-                                    .foregroundColor(.white)
-                                Spacer()
-                            }
-                            .padding(.horizontal)
-                            .padding(.top, 20)
-                        }
-                        
-                        Group {
-                            let plantId = authManager.userPlantId
-                            
-                            switch selectedOption {
-                            case "Chat de grupo":
-                                // Pasamos el plantId del usuario
-                                GroupChatView(plantId: authManager.userPlantId)
-                                
-                            case "Calendario":
-                                ScrollView {
-                                    VStack(spacing: 20) {
-                                        
-                                        // CALENDARIO PROPIO DE LA PLANTA
-                                        PlantDashboardCalendarView(
-                                            selectedDate: $selectedDate,
-                                            currentMonth: $currentMonth,
-                                            monthlyAssignments: plantManager.monthlyAssignments
-                                        )
-                                        .onChange(of: selectedDate) { newDate in
-                                            // Recarga mes si cambia
-                                            if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
-                                                resetCurrentMonthToFirstDay(of: newDate)
-                                                if !plantId.isEmpty {
-                                                    plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
-                                                }
-                                            }
-                                            
-                                            // Recarga día
-                                            if !plantId.isEmpty {
-                                                plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
-                                            }
-                                            
-                                            if authManager.userRole == "Supervisor" {
-                                                loadSupervisorAssignments()
-                                            }
-                                        }
-                                        
-                                        // CONTENIDO BAJO EL CALENDARIO
-                                        if authManager.userRole == "Supervisor",
-                                           let plant = plantManager.currentPlant,
-                                           !plantId.isEmpty {
-                                            
-                                            SupervisorAssignmentsSection(
-                                                plant: plant,
-                                                assignments: $supervisorAssignments,
-                                                selectedDate: selectedDate,
-                                                isLoading: isLoadingSupervisorAssignments,
-                                                isSaving: isSavingSupervisorAssignments,
-                                                statusMessage: supervisorStatusMessage,
-                                                onSave: {
-                                                    saveSupervisorAssignments(plant: plant, plantId: plantId)
-                                                }
-                                            )
-                                            .padding(.bottom, 40)
-                                            
-                                        } else {
-                                            DailyStaffContent(
-                                                selectedDate: $selectedDate,
-                                                plantManager: plantManager
-                                            )
-                                            .padding(.bottom, 80)
-                                        }
-                                    }
+                        // HEADER
+                        HStack {
+                            Button(action: {
+                                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                                    isMenuOpen.toggle()
                                 }
-                                
-                            case "Lista de personal":
-                                if !plantId.isEmpty && !staffScope.isEmpty {
-                                    StaffListView(plantId: plantId, staffScope: staffScope)
-                                        .padding(.horizontal)
-                                } else {
-                                    Text("Cargando lista de personal...")
-                                        .foregroundColor(.gray)
-                                        .padding(.top, 50)
+                            }) {
+                                Image(systemName: "line.3.horizontal")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(10)
+                                    .contentShape(Rectangle())
+                            }
+                            .zIndex(100)
+                            
+                            Spacer()
+                            
+                            VStack(alignment: .trailing) {
+                                Text("Mi Planta")
+                                    .font(.headline.bold())
+                                    .foregroundColor(.white)
+                                Text(authManager.userRole)
+                                    .font(.caption)
+                                    .foregroundColor(Color(red: 0.7, green: 0.5, blue: 1.0))
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 10)
+                        .padding(.top, 60)
+                        .background(Color.black.opacity(0.3))
+                        
+                        // CONTENIDO
+                        VStack(spacing: 20) {
+                            
+                            // Título de la sección (Ocultar para vistas que tienen su propio header)
+                            if !["Cambio de turnos", "Gestión de cambios", "Bolsa de Turnos"].contains(selectedOption) {
+                                HStack {
+                                    Text(selectedOption)
+                                        .font(.largeTitle.bold())
+                                        .foregroundColor(.white)
                                     Spacer()
                                 }
+                                .padding(.horizontal)
+                                .padding(.top, 20)
+                            }
+                            
+                            Group {
+                                let plantId = authManager.userPlantId
                                 
-                            // --- NUEVOS CASOS AÑADIDOS ---
-                            case "Cambio de turnos", "Gestión de cambios":
-                                ShiftChangeView(plantId: plantId)
-                                
-                            case "Bolsa de Turnos":
-                                ShiftMarketplaceView(plantId: plantId)
-                                
-                            default:
-                                ScrollView {
-                                    PlantPlaceholderView(
-                                        iconName: getIconForOption(selectedOption),
-                                        title: selectedOption
-                                    )
-                                    .padding(.top, 50)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                switch selectedOption {
+                                case "Chat de grupo":
+                                    // Pasamos el plantId del usuario
+                                    GroupChatView(plantId: authManager.userPlantId)
+                                    
+                                case "Calendario":
+                                    ScrollView {
+                                        VStack(spacing: 20) {
+                                            
+                                            // CALENDARIO PROPIO DE LA PLANTA
+                                            PlantDashboardCalendarView(
+                                                selectedDate: $selectedDate,
+                                                currentMonth: $currentMonth,
+                                                monthlyAssignments: plantManager.monthlyAssignments
+                                            )
+                                            .onChange(of: selectedDate) { newDate in
+                                                // Recarga mes si cambia
+                                                if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
+                                                    resetCurrentMonthToFirstDay(of: newDate)
+                                                    if !plantId.isEmpty {
+                                                        plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
+                                                    }
+                                                }
+                                                
+                                                // Recarga día
+                                                if !plantId.isEmpty {
+                                                    plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
+                                                }
+                                                
+                                                if authManager.userRole == "Supervisor" {
+                                                    loadSupervisorAssignments()
+                                                }
+                                            }
+                                            
+                                            // CONTENIDO BAJO EL CALENDARIO
+                                            if authManager.userRole == "Supervisor",
+                                               let plant = plantManager.currentPlant,
+                                               !plantId.isEmpty {
+                                                
+                                                SupervisorAssignmentsSection(
+                                                    plant: plant,
+                                                    assignments: $supervisorAssignments,
+                                                    selectedDate: selectedDate,
+                                                    isLoading: isLoadingSupervisorAssignments,
+                                                    isSaving: isSavingSupervisorAssignments,
+                                                    statusMessage: supervisorStatusMessage,
+                                                    onSave: {
+                                                        saveSupervisorAssignments(plant: plant, plantId: plantId)
+                                                    }
+                                                )
+                                                .padding(.bottom, 40)
+                                                
+                                            } else {
+                                                DailyStaffContent(
+                                                    selectedDate: $selectedDate,
+                                                    plantManager: plantManager
+                                                )
+                                                .padding(.bottom, 80)
+                                            }
+                                        }
+                                    }
+                                    
+                                case "Lista de personal":
+                                    if !plantId.isEmpty && !staffScope.isEmpty {
+                                        StaffListView(plantId: plantId, staffScope: staffScope)
+                                            .padding(.horizontal)
+                                    } else {
+                                        Text("Cargando lista de personal...")
+                                            .foregroundColor(.gray)
+                                            .padding(.top, 50)
+                                        Spacer()
+                                    }
+                                    
+                                // --- NUEVOS CASOS AÑADIDOS ---
+                                case "Cambio de turnos", "Gestión de cambios":
+                                    ShiftChangeView(plantId: plantId)
+                                    
+                                case "Bolsa de Turnos":
+                                    ShiftMarketplaceView(plantId: plantId)
+                                    
+                                default:
+                                    ScrollView {
+                                        PlantPlaceholderView(
+                                            iconName: getIconForOption(selectedOption),
+                                            title: selectedOption
+                                        )
+                                        .padding(.top, 50)
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    }
                                 }
                             }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    }
+                    
+                    // --- BOTÓN FLOTANTE CHAT (INFERIOR DERECHA) ---
+                    // Se muestra siempre o solo en la vista Calendario, según prefieras.
+                    // Aquí lo muestro siempre que el usuario tenga planta.
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer() // Empuja a la derecha
+                            
+                            Button(action: {
+                                showDirectChats = true
+                            }) {
+                                Image(systemName: "bubble.left.and.bubble.right.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.white)
+                                    .padding(18)
+                                    .background(Color(red: 0.2, green: 0.4, blue: 1.0))
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.4), radius: 5, x: 0, y: 4)
+                            }
+                            .padding(.trailing, 25) // Margen derecho
+                            .padding(.bottom, 30)   // Margen inferior
+                        }
+                    }
+                    
+                    if isMenuOpen {
+                        Color.white.opacity(0.001)
+                            .ignoresSafeArea()
+                            .onTapGesture {
+                                withAnimation { isMenuOpen = false }
+                            }
                     }
                 }
+                .cornerRadius(isMenuOpen ? 30 : 0)
+                .offset(x: isMenuOpen ? 280 : 0, y: isMenuOpen ? 40 : 0)
+                .scaleEffect(isMenuOpen ? 0.9 : 1)
+                .shadow(color: .black.opacity(0.5), radius: 20, x: -10, y: 0)
+                .ignoresSafeArea()
+                .disabled(isMenuOpen)
                 
                 if isMenuOpen {
-                    Color.white.opacity(0.001)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation { isMenuOpen = false }
-                        }
+                    PlantMenuDrawer(
+                        isMenuOpen: $isMenuOpen,
+                        selectedOption: $selectedOption,
+                        onLogout: { dismiss() },
+                        onImportShifts: { showImportShiftsSheet = true },
+                        onOpenStatistics: { showStatisticsSheet = true }
+                    )
+                    .transition(.move(edge: .leading))
+                    .zIndex(2)
                 }
             }
-            .cornerRadius(isMenuOpen ? 30 : 0)
-            .offset(x: isMenuOpen ? 280 : 0, y: isMenuOpen ? 40 : 0)
-            .scaleEffect(isMenuOpen ? 0.9 : 1)
-            .shadow(color: .black.opacity(0.5), radius: 20, x: -10, y: 0)
-            .ignoresSafeArea()
-            .disabled(isMenuOpen)
-            
-            if isMenuOpen {
-                PlantMenuDrawer(
-                    isMenuOpen: $isMenuOpen,
-                    selectedOption: $selectedOption,
-                    onLogout: { dismiss() },
-                    onImportShifts: { showImportShiftsSheet = true },
-                    onOpenStatistics: { showStatisticsSheet = true }
-                )
-                .transition(.move(edge: .leading))
-                .zIndex(2)
+            .navigationBarBackButtonHidden(true)
+            .navigationBarHidden(true)
+            // --- Navegación a DirectChatListView ---
+            .navigationDestination(isPresented: $showDirectChats) {
+                DirectChatListView()
             }
-        }
-        .navigationBarBackButtonHidden(true)
-        .navigationBarHidden(true)
-        .sheet(isPresented: $showImportShiftsSheet) {
-            ImportShiftsView()
-        }
-        .sheet(isPresented: $showStatisticsSheet) {
-            if !authManager.userPlantId.isEmpty {
-                StatisticsView(
-                    plantId: authManager.userPlantId,
-                    isSupervisor: authManager.userRole == "Supervisor"
-                )
+            .sheet(isPresented: $showImportShiftsSheet) {
+                ImportShiftsView()
             }
-        }
-        
-        .onAppear {
-            if !authManager.userPlantId.isEmpty {
-                let plantId = authManager.userPlantId
-                plantManager.fetchCurrentPlant(plantId: plantId)
-                
-                // Asegurar mes correcto al día 1
-                resetCurrentMonthToFirstDay(of: selectedDate)
-                
-                plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
-                plantManager.fetchDailyStaff(plantId: plantId, date: selectedDate)
+            .sheet(isPresented: $showStatisticsSheet) {
+                if !authManager.userPlantId.isEmpty {
+                    StatisticsView(
+                        plantId: authManager.userPlantId,
+                        isSupervisor: authManager.userRole == "Supervisor"
+                    )
+                }
             }
             
-            if authManager.userRole == "Supervisor" {
-                loadSupervisorAssignments()
+            .onAppear {
+                if !authManager.userPlantId.isEmpty {
+                    let plantId = authManager.userPlantId
+                    plantManager.fetchCurrentPlant(plantId: plantId)
+                    
+                    // Asegurar mes correcto al día 1
+                    resetCurrentMonthToFirstDay(of: selectedDate)
+                    
+                    plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
+                    plantManager.fetchDailyStaff(plantId: plantId, date: selectedDate)
+                }
+                
+                if authManager.userRole == "Supervisor" {
+                    loadSupervisorAssignments()
+                }
             }
         }
     }

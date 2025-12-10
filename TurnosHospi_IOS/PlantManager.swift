@@ -13,6 +13,9 @@ class PlantManager: ObservableObject {
     @Published var currentPlant: HospitalPlant?
     @Published var myPlantName: String? = nil
     
+    // NUEVO: Lista de usuarios registrados en la planta (con UID real) para el chat
+    @Published var plantUsers: [ChatUser] = []
+    
     // Datos para la vista
     @Published var dailyAssignments: [String: [PlantShiftWorker]] = [:]
     @Published var monthlyAssignments: [Date: [PlantShiftWorker]] = [:]
@@ -137,23 +140,43 @@ class PlantManager: ObservableObject {
                 shiftTimes: shiftTimes
             )
             
-            // Identificar usuario actual
+            // --- NUEVO: Procesar usuarios registrados (userPlants) ---
+            var loadedChatUsers: [ChatUser] = []
             var identifiedName: String? = nil
-            if let userPlants = value["userPlants"] as? [String: [String: Any]],
-               let uid = Auth.auth().currentUser?.uid,
-               let myData = userPlants[uid] {
-                
-                if let myStaffId = myData["staffId"] as? String,
-                   let me = staffMembers.first(where: { $0.id == myStaffId }) {
-                    identifiedName = me.name
-                } else if let savedName = myData["staffName"] as? String {
-                    identifiedName = savedName
+            let currentUid = Auth.auth().currentUser?.uid
+            
+            if let userPlants = value["userPlants"] as? [String: [String: Any]] {
+                for (uid, userData) in userPlants {
+                    // Identificarme a mí mismo para el nombre en la app
+                    if uid == currentUid {
+                        if let myStaffId = userData["staffId"] as? String,
+                           let me = staffMembers.first(where: { $0.id == myStaffId }) {
+                            identifiedName = me.name
+                        } else if let savedName = userData["staffName"] as? String {
+                            identifiedName = savedName
+                        }
+                    }
+                    
+                    // Crear ChatUser para la lista de contactos
+                    // Usamos el UID como ID para el chat
+                    let staffId = userData["staffId"] as? String
+                    
+                    // Intentamos obtener datos frescos de la lista de personal si es posible
+                    let linkedStaff = staffMembers.first(where: { $0.id == staffId })
+                    
+                    let name = linkedStaff?.name ?? (userData["staffName"] as? String ?? "Usuario")
+                    let role = linkedStaff?.role ?? (userData["staffRole"] as? String ?? "Personal")
+                    let email = linkedStaff?.email ?? ""
+                    
+                    let chatUser = ChatUser(id: uid, name: name, role: role, email: email)
+                    loadedChatUsers.append(chatUser)
                 }
             }
             
             DispatchQueue.main.async {
                 self.currentPlant = plant
                 self.myPlantName = identifiedName
+                self.plantUsers = loadedChatUsers // <--- Actualizamos la lista filtrada
             }
         })
     }
@@ -281,21 +304,17 @@ class PlantManager: ObservableObject {
             }
     }
     
-    // MARK: - IMPORTACIÓN CSV MATRICIAL (NUEVO)
+    // MARK: - IMPORTACIÓN CSV MATRICIAL
     func processMatrixCSVImport(csvContent: String, plant: HospitalPlant, completion: @escaping (Bool, String) -> Void) {
-        // Separar líneas, eliminando retornos de carro \r
         let rows = csvContent.replacingOccurrences(of: "\r", with: "").components(separatedBy: "\n")
-        
         guard rows.count > 1 else {
             completion(false, "El archivo está vacío o no tiene cabeceras.")
             return
         }
         
-        // 1. Procesar Cabecera (Fechas)
         let headerRow = rows[0].components(separatedBy: ",")
-        var dateMap: [Int: String] = [:] // Índice Columna -> Fecha (yyyy-MM-dd)
+        var dateMap: [Int: String] = [:]
         
-        // Empezamos en 1 porque la columna 0 es el nombre
         for i in 1..<headerRow.count {
             let dateStr = headerRow[i].trimmingCharacters(in: .whitespacesAndNewlines)
             if !dateStr.isEmpty {
@@ -310,30 +329,24 @@ class PlantManager: ObservableObject {
             return
         }
         
-        // Mapa rápido de personal: NombreNormalizado -> Rol
         var staffRoleMap: [String: String] = [:]
         for staff in plant.allStaffList {
             let normalizedName = staff.name.trimmingCharacters(in: .whitespaces).lowercased()
             staffRoleMap[normalizedName] = staff.role
         }
         
-        // Estructura temporal para agrupar actualizaciones
-        // [Fecha: [Turno: (nurses: [Nombres], auxs: [Nombres])]]
         var updatesByDate: [String: [String: (nurses: [String], auxs: [String])]] = [:]
         
-        // 2. Procesar Filas de Personal
         for rowIndex in 1..<rows.count {
             let rowStr = rows[rowIndex].trimmingCharacters(in: .whitespacesAndNewlines)
             if rowStr.isEmpty { continue }
             
-            // Dividir por comas, pero cuidado si el nombre tiene comas (asumimos que no por simplicidad en CSV estándar)
             let cols = rowStr.components(separatedBy: ",")
             if cols.isEmpty { continue }
             
             let rawName = cols[0].trimmingCharacters(in: .whitespaces)
             if rawName.isEmpty { continue }
             
-            // Buscar rol de la persona
             guard let role = staffRoleMap[rawName.lowercased()] else {
                 print("Aviso: \(rawName) no encontrado en personal de planta. Se ignora.")
                 continue
@@ -342,27 +355,21 @@ class PlantManager: ObservableObject {
             let isNurse = role.lowercased().contains("enfermer")
             let isAux = role.lowercased().contains("auxiliar") || role.lowercased().contains("tcae")
             
-            if !isNurse && !isAux { continue } // Rol desconocido
+            if !isNurse && !isAux { continue }
             
-            // Recorrer columnas de días para esta persona
             for (colIndex, dateKey) in dateMap {
                 if colIndex >= cols.count { break }
                 
                 let shiftValue = cols[colIndex].trimmingCharacters(in: .whitespacesAndNewlines)
-                // Si la celda está vacía o es "Libre", ignoramos (no asignamos nada)
                 if shiftValue.isEmpty || shiftValue.lowercased() == "libre" { continue }
                 
-                // Normalizar nombre del turno (Capitalizar primera letra)
-                // Ej: "tarde" -> "Tarde", "MAÑANA" -> "Mañana"
                 let shiftName = shiftValue.prefix(1).uppercased() + shiftValue.dropFirst().lowercased()
                 
-                // Inicializar estructura si no existe
                 if updatesByDate[dateKey] == nil { updatesByDate[dateKey] = [:] }
                 if updatesByDate[dateKey]![shiftName] == nil {
                     updatesByDate[dateKey]![shiftName] = (nurses: [], auxs: [])
                 }
                 
-                // Añadir persona a la lista correspondiente
                 if isNurse {
                     updatesByDate[dateKey]![shiftName]?.nurses.append(rawName)
                 } else {
@@ -371,7 +378,6 @@ class PlantManager: ObservableObject {
             }
         }
         
-        // 3. Convertir a Payload de Firebase y Subir
         if updatesByDate.isEmpty {
             completion(false, "No se encontraron asignaciones válidas para importar.")
             return
@@ -382,9 +388,6 @@ class PlantManager: ObservableObject {
         for (dateKey, shiftsMap) in updatesByDate {
             for (shiftName, lists) in shiftsMap {
                 let path = "plants/\(plant.id)/turnos/turnos-\(dateKey)/\(shiftName)"
-                
-                // Convertir lista de nombres a objetos de Firebase
-                // NOTA: Sobrescribe lo que hubiera en ese turno/día
                 
                 var nursesArray: [[String: Any]] = []
                 for (i, name) in lists.nurses.enumerated() {
@@ -417,7 +420,6 @@ class PlantManager: ObservableObject {
             }
         }
         
-        // Subida masiva
         ref.updateChildValues(firebaseUpdates) { error, _ in
             if let error = error {
                 completion(false, "Error al guardar en BD: \(error.localizedDescription)")
@@ -427,7 +429,6 @@ class PlantManager: ObservableObject {
         }
     }
     
-    // Helper para normalizar fechas de entrada a yyyy-MM-dd
     private func normalizeDate(_ dateStr: String) -> String? {
         let inputFormats = ["yyyy-MM-dd", "dd/MM/yyyy", "dd-MM-yyyy", "d/M/yyyy"]
         let outputFormatter = DateFormatter()
@@ -436,7 +437,6 @@ class PlantManager: ObservableObject {
         for format in inputFormats {
             let inputFormatter = DateFormatter()
             inputFormatter.dateFormat = format
-            // Importante: setear locale para evitar conflictos regionales
             inputFormatter.locale = Locale(identifier: "en_US_POSIX")
             if let date = inputFormatter.date(from: dateStr) {
                 return outputFormatter.string(from: date)
