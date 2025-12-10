@@ -5,27 +5,23 @@ struct DirectChatListView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     
-    // Gestor de planta para obtener nombres y roles
-    @StateObject var plantManager = PlantManager()
-    
-    // --- ESTADOS ---
-    @State private var activeChatPartners: [ChatUser] = [] // Historial de chats
+    // Lista de conversaciones
+    @State private var conversations: [ChatConversation] = []
     @State private var isLoading = true
     
-    // Estados para navegación
+    // Para iniciar nuevo chat
     @State private var showNewChatSheet = false
-    @State private var selectedUserForNavigation: ChatUser? // Usuario elegido en el modal
-    @State private var navigateToNewChat = false // Trigger para activar navegación
+    @State private var availableUsers: [ChatUser] = []
     
-    private let ref = Database.database().reference()
+    // Cache de usuarios para evitar descargas repetidas
+    @State private var userCache: [String: ChatUser] = [:]
     
-    var currentUserId: String {
-        return authManager.user?.uid ?? ""
+    private var ref: DatabaseReference {
+        return Database.database().reference()
     }
     
     var body: some View {
         ZStack {
-            // Fondo
             Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -37,7 +33,7 @@ struct DirectChatListView: View {
                             .foregroundColor(.white)
                     }
                     Spacer()
-                    Text("Chats Directos")
+                    Text("Mis Mensajes")
                         .font(.headline)
                         .foregroundColor(.white)
                     Spacer()
@@ -46,247 +42,284 @@ struct DirectChatListView: View {
                 .padding()
                 .background(Color.black.opacity(0.3))
                 
-                // --- LISTA DE HISTORIAL ---
+                // --- LISTA ---
                 if isLoading {
                     Spacer()
-                    ProgressView().tint(.white)
+                    ProgressView("Cargando...").tint(.white)
                     Spacer()
-                } else if activeChatPartners.isEmpty {
-                    // Estado Vacío
-                    VStack(spacing: 15) {
-                        Image(systemName: "bubble.left.and.bubble.right.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(.gray.opacity(0.3))
-                        Text("No tienes chats recientes")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                        Text("Pulsa el botón + para iniciar uno")
-                            .font(.caption)
-                            .foregroundColor(.gray.opacity(0.7))
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if conversations.isEmpty {
+                    emptyStateView
                 } else {
-                    // Lista de chats abiertos
-                    ScrollView {
-                        LazyVStack(spacing: 10) {
-                            ForEach(activeChatPartners) { user in
-                                NavigationLink(destination: DirectChatView(
-                                    targetUser: user,
-                                    currentUserId: currentUserId,
-                                    plantId: authManager.userPlantId
-                                )) {
-                                    ChatHistoryRow(user: user)
+                    List {
+                        ForEach(conversations) { conversation in
+                            ZStack {
+                                NavigationLink(value: conversation.otherUser) {
+                                    EmptyView()
+                                }.opacity(0)
+                                
+                                ConversationRow(conversation: conversation)
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    deleteChat(chatId: conversation.chatId)
+                                } label: {
+                                    Label("Borrar", systemImage: "trash")
                                 }
-                                .buttonStyle(.plain) // Evita el efecto de selección azul por defecto
                             }
                         }
-                        .padding()
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                 }
             }
             
-            // --- BOTÓN FLOTANTE (+) ---
+            // --- BOTÓN FLOTANTE ---
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
-                    Button(action: {
-                        showNewChatSheet = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.title2.bold())
+                    Button(action: { showNewChatSheet = true }) {
+                        Image(systemName: "square.and.pencil")
+                            .font(.title2)
                             .foregroundColor(.white)
-                            .padding(18)
-                            .background(Color(red: 0.2, green: 0.4, blue: 1.0)) // Electric Blue
+                            .padding()
+                            .background(Color.blue)
                             .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.4), radius: 5, x: 0, y: 4)
+                            .shadow(radius: 5)
                     }
-                    .padding(.trailing, 25)
-                    .padding(.bottom, 30)
+                    .padding()
                 }
             }
         }
-        // --- NAVEGACIÓN PROGRAMÁTICA (Desde el botón +) ---
-        .navigationDestination(isPresented: $navigateToNewChat) {
-            if let user = selectedUserForNavigation {
+        .navigationBarHidden(true)
+        .navigationDestination(for: ChatUser.self) { user in
+            if let uid = authManager.user?.uid, !uid.isEmpty {
                 DirectChatView(
                     targetUser: user,
-                    currentUserId: currentUserId,
+                    currentUserId: uid,
                     plantId: authManager.userPlantId
                 )
             }
         }
-        // --- MODAL NUEVO CHAT ---
         .sheet(isPresented: $showNewChatSheet) {
-            NewChatUserListView(
-                plantManager: plantManager,
-                currentUserId: currentUserId,
-                onSelectUser: { user in
-                    // 1. Cerrar el modal
-                    showNewChatSheet = false
-                    // 2. Preparar y ejecutar navegación con un pequeño retraso para suavidad
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        self.selectedUserForNavigation = user
-                        self.navigateToNewChat = true
-                    }
-                }
-            )
+            NewChatUserSelectionView(users: availableUsers, onSelect: { user in
+                showNewChatSheet = false
+            })
         }
         .onAppear {
-            if !authManager.userPlantId.isEmpty {
-                // Cargar datos de planta si no están listos
-                plantManager.fetchCurrentPlant(plantId: authManager.userPlantId)
-                fetchChatHistory()
-            }
+            // Cargar datos en paralelo
+            loadPlantStaff()
+            observeConversations()
         }
     }
     
-    // --- LÓGICA DE HISTORIAL ---
-    func fetchChatHistory() {
-        isLoading = true
+    var emptyStateView: some View {
+        VStack(spacing: 15) {
+            Spacer()
+            Image(systemName: "bubble.left.and.bubble.right.fill")
+                .font(.system(size: 50))
+                .foregroundColor(.gray.opacity(0.5))
+            Text("No tienes mensajes recientes")
+                .foregroundColor(.gray)
+            Button("Iniciar nuevo chat") { showNewChatSheet = true }
+                .padding(.top, 10)
+            Spacer()
+        }
+    }
+    
+    // MARK: - LÓGICA DE CARGA PROGRESIVA
+    
+    func observeConversations() {
+        guard let myId = authManager.user?.uid, !myId.isEmpty else {
+            isLoading = false
+            return
+        }
         
-        ref.child("direct_chats").observeSingleEvent(of: .value) { snapshot in
-            var partnerIds = Set<String>()
+        // Escuchamos 'user_direct_chats' en tiempo real
+        ref.child("user_direct_chats").child(myId).observe(.value) { snapshot in
+            var newConversations: [ChatConversation] = []
             
-            // 1. Buscar claves que contengan mi UID (formato: uid1_uid2)
             for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
-                let chatKey = child.key
-                if chatKey.contains(currentUserId) {
-                    let parts = chatKey.components(separatedBy: "_")
-                    if parts.count == 2 {
-                        let otherId = (parts[0] == currentUserId) ? parts[1] : parts[0]
-                        partnerIds.insert(otherId)
+                if let dict = child.value as? [String: Any] {
+                    let otherUserId = dict["otherUserId"] as? String ?? ""
+                    if otherUserId.isEmpty { continue }
+                    
+                    let lastMsg = dict["lastMessage"] as? String ?? ""
+                    let timestamp = dict["timestamp"] as? TimeInterval ?? 0
+                    let unread = dict["unreadCount"] as? Int ?? 0
+                    let chatId = child.key
+                    
+                    // 1. Buscamos usuario en caché (Rápido)
+                    if let cachedUser = userCache[otherUserId] {
+                        let conv = ChatConversation(
+                            otherUser: cachedUser,
+                            lastMessage: lastMsg,
+                            timestamp: timestamp,
+                            unreadCount: unread,
+                            chatId: chatId
+                        )
+                        newConversations.append(conv)
+                    } else {
+                        // 2. Si no está, usamos placeholder y cargamos en segundo plano
+                        let placeholderUser = ChatUser(
+                            id: otherUserId,
+                            name: "Cargando...",
+                            role: "",
+                            email: ""
+                        )
+                        let conv = ChatConversation(
+                            otherUser: placeholderUser,
+                            lastMessage: lastMsg,
+                            timestamp: timestamp,
+                            unreadCount: unread,
+                            chatId: chatId
+                        )
+                        newConversations.append(conv)
+                        
+                        // Disparamos carga individual sin bloquear
+                        fetchUserDetails(uid: otherUserId)
                     }
                 }
             }
             
-            // 2. Esperar a que PlantManager tenga los usuarios cargados para resolver nombres
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                // Filtramos de la lista completa de usuarios aquellos con los que tenemos chat
-                let historyUsers = self.plantManager.plantUsers.filter { partnerIds.contains($0.id) }
-                self.activeChatPartners = historyUsers
+            // Actualizamos la UI inmediatamente
+            DispatchQueue.main.async {
+                self.conversations = newConversations.sorted(by: { $0.timestamp > $1.timestamp })
                 self.isLoading = false
             }
         }
     }
-}
-
-// MARK: - Componente Fila de Historial
-struct ChatHistoryRow: View {
-    let user: ChatUser
     
-    var body: some View {
-        HStack(spacing: 15) {
-            // Avatar con inicial
-            ZStack {
-                Circle()
-                    .fill(Color(red: 0.15, green: 0.15, blue: 0.25))
-                    .frame(width: 55, height: 55)
-                
-                Text(String(user.name.prefix(1)).uppercased())
-                    .font(.title3.bold())
-                    .foregroundColor(Color(red: 0.33, green: 0.8, blue: 0.95))
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(user.name)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                HStack {
-                    Text(user.role)
-                        .font(.caption)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(4)
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+    // Carga individual de usuarios faltantes (Asíncrona)
+    func fetchUserDetails(uid: String) {
+        // Primero intentamos buscar en userPlants (más rápido)
+        ref.child("plants").child(authManager.userPlantId).child("userPlants").child(uid).observeSingleEvent(of: .value) { snap in
+            if let dict = snap.value as? [String: Any] {
+                let name = dict["staffName"] as? String ?? "Usuario"
+                let role = dict["staffRole"] as? String ?? "Personal"
+                let user = ChatUser(id: uid, name: name, role: role, email: "")
+                updateCacheAndRefresh(user: user)
+            } else {
+                // Si no está en planta, buscamos en users global
+                ref.child("users").child(uid).observeSingleEvent(of: .value) { userSnap in
+                    if let uDict = userSnap.value as? [String: Any] {
+                        let name = uDict["firstName"] as? String ?? "Usuario"
+                        let role = uDict["role"] as? String ?? ""
+                        let user = ChatUser(id: uid, name: name, role: role, email: "")
+                        updateCacheAndRefresh(user: user)
+                    }
                 }
-                .foregroundColor(.gray)
             }
         }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(12)
+    }
+    
+    func updateCacheAndRefresh(user: ChatUser) {
+        DispatchQueue.main.async {
+            self.userCache[user.id] = user
+            // Actualizamos la lista de conversaciones reemplazando el placeholder
+            if let index = self.conversations.firstIndex(where: { $0.otherUser.id == user.id }) {
+                let oldConv = self.conversations[index]
+                let newConv = ChatConversation(
+                    otherUser: user, // Ya con nombre real
+                    lastMessage: oldConv.lastMessage,
+                    timestamp: oldConv.timestamp,
+                    unreadCount: oldConv.unreadCount,
+                    chatId: oldConv.chatId
+                )
+                self.conversations[index] = newConv
+            }
+        }
+    }
+    
+    func loadPlantStaff() {
+        let plantId = authManager.userPlantId
+        guard !plantId.isEmpty else { return }
+        
+        ref.child("plants").child(plantId).child("userPlants").observeSingleEvent(of: .value) { snapshot in
+            var loaded: [ChatUser] = []
+            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                if child.key != authManager.user?.uid, let dict = child.value as? [String: Any] {
+                    let name = dict["staffName"] as? String ?? "Compañero"
+                    let role = dict["staffRole"] as? String ?? "Personal"
+                    let user = ChatUser(id: child.key, name: name, role: role, email: "")
+                    loaded.append(user)
+                    // Pre-llenamos caché
+                    self.userCache[child.key] = user
+                }
+            }
+            DispatchQueue.main.async {
+                self.availableUsers = loaded.sorted(by: { $0.name < $1.name })
+            }
+        }
+    }
+    
+    func deleteChat(chatId: String) {
+        guard let myId = authManager.user?.uid else { return }
+        ref.child("user_direct_chats").child(myId).child(chatId).removeValue()
     }
 }
 
-// MARK: - Vista Modal: Selección de Usuario para Nuevo Chat
-struct NewChatUserListView: View {
-    @Environment(\.dismiss) var dismiss
-    @ObservedObject var plantManager: PlantManager
-    var currentUserId: String
-    var onSelectUser: (ChatUser) -> Void
-    
-    // Lista filtrada: todos menos yo
-    var availableUsers: [ChatUser] {
-        return plantManager.plantUsers.filter { $0.id != currentUserId }
-    }
-    
+// --- SUBVISTAS (Igual que antes) ---
+
+struct ConversationRow: View {
+    let conversation: ChatConversation
     var body: some View {
-        ZStack {
-            Color(red: 0.08, green: 0.08, blue: 0.12).ignoresSafeArea()
-            
-            VStack(spacing: 20) {
-                // Header Modal
+        HStack(spacing: 15) {
+            ZStack {
+                Circle().fill(LinearGradient(colors: [.blue, .purple], startPoint: .top, endPoint: .bottom)).frame(width: 50, height: 50)
+                Text(String(conversation.otherUser.name.prefix(1)).uppercased()).font(.headline).foregroundColor(.white)
+            }
+            VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Nuevo Chat")
-                        .font(.title2.bold())
-                        .foregroundColor(.white)
+                    Text(conversation.otherUser.name).font(.headline).foregroundColor(.white)
                     Spacer()
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.gray)
+                    Text(conversation.timeString).font(.caption2).foregroundColor(conversation.unreadCount > 0 ? .green : .gray)
+                }
+                HStack {
+                    Text(conversation.lastMessage).font(.subheadline)
+                        .foregroundColor(conversation.unreadCount > 0 ? .white : .gray)
+                        .fontWeight(conversation.unreadCount > 0 ? .bold : .regular)
+                        .lineLimit(1)
+                    Spacer()
+                    if conversation.unreadCount > 0 {
+                        Text("\(conversation.unreadCount)").font(.caption2).bold().foregroundColor(.black).padding(6).background(Color.green).clipShape(Circle())
                     }
                 }
-                .padding()
-                
-                if availableUsers.isEmpty {
-                    Spacer()
-                    VStack(spacing: 10) {
-                        Image(systemName: "person.slash.fill")
-                            .font(.largeTitle)
-                            .foregroundColor(.gray.opacity(0.5))
-                        Text("No se encontró personal disponible.")
-                            .foregroundColor(.gray)
-                    }
-                    Spacer()
-                } else {
-                    List(availableUsers) { user in
-                        Button(action: {
-                            onSelectUser(user)
-                        }) {
-                            HStack(spacing: 15) {
-                                Circle()
-                                    .fill(Color.blue.opacity(0.2))
-                                    .frame(width: 40, height: 40)
-                                    .overlay(
-                                        Image(systemName: "person.fill")
-                                            .foregroundColor(.blue)
-                                    )
-                                
-                                VStack(alignment: .leading) {
-                                    Text(user.name)
-                                        .font(.headline)
-                                        .foregroundColor(.white)
-                                    Text(user.role)
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                }
-                                Spacer()
-                            }
-                            .padding(.vertical, 5)
+            }
+        }.padding(10).background(Color.white.opacity(0.05)).cornerRadius(12)
+    }
+}
+
+struct NewChatUserSelectionView: View {
+    let users: [ChatUser]
+    let onSelect: (ChatUser) -> Void
+    @Environment(\.dismiss) var dismiss
+    @State private var searchText = ""
+    var filtered: [ChatUser] {
+        if searchText.isEmpty { return users }
+        return users.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(red: 0.1, green: 0.1, blue: 0.15).ignoresSafeArea()
+                List(filtered) { user in
+                    Button(action: { onSelect(user) }) {
+                        HStack {
+                            Text(user.name).foregroundColor(.white)
+                            Spacer()
+                            Image(systemName: "chevron.right").foregroundColor(.gray)
                         }
-                        .listRowBackground(Color.white.opacity(0.05))
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
+                    .listRowBackground(Color.clear)
+                }
+                .listStyle(.plain)
+                .searchable(text: $searchText, prompt: "Buscar compañero")
+                .navigationTitle("Nuevo Chat")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { dismiss() } }
                 }
             }
         }
