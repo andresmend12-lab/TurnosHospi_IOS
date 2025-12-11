@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseDatabase
+import FirebaseAuth
 
 struct DirectChatView: View {
     let chatId: String
@@ -91,7 +92,10 @@ struct DirectChatView: View {
     
     func resetUnreadCount() {
         guard !currentUserId.isEmpty else { return }
-        ref.child("user_direct_chats").child(currentUserId).child(chatId).child("unreadCount").setValue(0)
+        ref.child("user_direct_chats")
+            .child(currentUserId)
+            .child(chatId)
+            .updateChildValues(["unreadCount": 0])
     }
     
     func listenToMessages() {
@@ -131,17 +135,60 @@ struct DirectChatView: View {
         textInput = ""
         
         let msgRef = ref.child("plants/\(currentPlantId)/direct_chats/\(chatId)/messages").childByAutoId()
+        let timestamp = Date().timeIntervalSince1970 * 1000
         
         let msgData: [String: Any] = [
             "id": msgRef.key ?? UUID().uuidString,
             "senderId": currentUserId,
             "text": textToSend,
-            "timestamp": ServerValue.timestamp(),
+            "timestamp": timestamp,
             "read": false
         ]
         
         msgRef.setValue(msgData)
+        updateChatMetadata(
+            for: currentUserId,
+            otherId: otherUserId,
+            otherName: otherUserName,
+            lastMessage: textToSend,
+            timestamp: timestamp,
+            incrementUnread: false
+        )
+        let composedName = [authManager.currentUserName, authManager.currentUserLastName]
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
+        let senderDisplayName = composedName.isEmpty ? (Auth.auth().currentUser?.email ?? "Usuario") : composedName
+        updateChatMetadata(
+            for: otherUserId,
+            otherId: currentUserId,
+            otherName: senderDisplayName.isEmpty ? "Usuario" : senderDisplayName,
+            lastMessage: textToSend,
+            timestamp: timestamp,
+            incrementUnread: true
+        )
         sendNotification(text: textToSend)
+    }
+    
+    private func updateChatMetadata(for uid: String,
+                                    otherId: String,
+                                    otherName: String,
+                                    lastMessage: String,
+                                    timestamp: TimeInterval,
+                                    incrementUnread: Bool) {
+        let metaRef = ref.child("user_direct_chats").child(uid).child(chatId)
+        metaRef.runTransactionBlock { currentData in
+            var data = currentData.value as? [String: Any] ?? [:]
+            data["chatId"] = self.chatId
+            data["plantId"] = self.currentPlantId
+            data["otherUserId"] = otherId
+            data["otherUserName"] = otherName
+            data["lastMessage"] = lastMessage
+            data["timestamp"] = timestamp
+            let unread = data["unreadCount"] as? Int ?? 0
+            data["unreadCount"] = incrementUnread ? unread + 1 : 0
+            currentData.value = data
+            return TransactionResult.success(withValue: currentData)
+        }
     }
     
     func sendNotification(text: String) {

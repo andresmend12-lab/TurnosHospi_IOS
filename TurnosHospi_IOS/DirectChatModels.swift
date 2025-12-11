@@ -35,10 +35,10 @@ struct DirectChat: Identifiable, Codable, Hashable {
     // Datos calculados dinámicamente
     var lastMessage: String
     var timestamp: TimeInterval
+    var unreadCount: Int
     
     // Datos del otro usuario
     var otherUserName: String
-    var otherUserRole: String
     var otherUserId: String
     
     // Helper ID único: Orden alfabético estricto (Igual que en Android)

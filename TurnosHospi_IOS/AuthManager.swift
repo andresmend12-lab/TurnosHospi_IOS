@@ -12,8 +12,12 @@ class AuthManager: ObservableObject {
     @Published var currentUserLastName: String = ""
     @Published var userRole: String = ""
     @Published var userPlantId: String = ""
+    @Published var totalUnreadChats: Int = 0
+    @Published var unreadChatsById: [String: Int] = [:]
     
     private let ref = Database.database().reference()
+    private var unreadChatsRef: DatabaseReference?
+    private var unreadChatsHandle: DatabaseHandle?
     
     // Clave para guardar el token localmente si no hay usuario logueado aún
     private let fcmTokenKey = "cached_fcm_token"
@@ -25,7 +29,9 @@ class AuthManager: ObservableObject {
                 self?.fetchUserData(uid: user.uid)
                 // Al iniciar sesión, intentamos subir el token si lo tenemos guardado
                 self?.uploadPendingFcmToken()
+                self?.startListeningUnreadChats(uid: user.uid)
             } else {
+                self?.stopListeningUnreadChats()
                 self?.cleanSession()
             }
         }
@@ -157,6 +163,7 @@ class AuthManager: ObservableObject {
             // if let uid = user?.uid { ref.child("users").child(uid).child("fcmToken").removeValue() }
             
             try Auth.auth().signOut()
+            stopListeningUnreadChats()
             cleanSession()
         } catch {
             print("Error logout: \(error.localizedDescription)")
@@ -168,5 +175,44 @@ class AuthManager: ObservableObject {
         self.currentUserLastName = ""
         self.userRole = ""
         self.userPlantId = ""
+        self.totalUnreadChats = 0
+        self.unreadChatsById = [:]
+    }
+    
+    private func startListeningUnreadChats(uid: String) {
+        stopListeningUnreadChats()
+        let userChatsRef = Database.database().reference().child("user_direct_chats").child(uid)
+        unreadChatsRef = userChatsRef
+        
+        unreadChatsHandle = userChatsRef.observe(.value) { snapshot in
+            var total = 0
+            var map: [String: Int] = [:]
+            
+            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                let chatId = child.key
+                if let data = child.value as? [String: Any] {
+                    let unread = data["unreadCount"] as? Int ?? 0
+                    map[chatId] = unread
+                    total += unread
+                }
+            }
+            
+            DispatchQueue.main.async {
+                self.totalUnreadChats = total
+                self.unreadChatsById = map
+            }
+        }
+    }
+    
+    private func stopListeningUnreadChats() {
+        if let handle = unreadChatsHandle {
+            unreadChatsRef?.removeObserver(withHandle: handle)
+        }
+        unreadChatsRef = nil
+        unreadChatsHandle = nil
+        DispatchQueue.main.async {
+            self.totalUnreadChats = 0
+            self.unreadChatsById = [:]
+        }
     }
 }

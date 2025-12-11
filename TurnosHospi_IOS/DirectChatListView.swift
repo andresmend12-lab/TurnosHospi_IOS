@@ -16,6 +16,9 @@ struct DirectChatListView: View {
     @State private var activeChatRoute: ChatRoute?
     @State private var navigateToChat = false
     
+    @State private var userChatsRef: DatabaseReference?
+    @State private var chatsObserverHandle: DatabaseHandle?
+    
     private let ref = Database.database().reference()
     
     var currentUserId: String { authManager.user?.uid ?? "" }
@@ -112,7 +115,8 @@ struct DirectChatListView: View {
             }
         }
         .navigationBarHidden(true)
-        .onAppear { fetchChatsDirectlyFromPlant() }
+        .onAppear { attachChatsListenerIfNeeded() }
+        .onDisappear { detachChatsListener() }
         .sheet(isPresented: $showNewChatSheet) {
             NewChatSelectionView(
                 plantManager: plantManager,
@@ -135,67 +139,81 @@ struct DirectChatListView: View {
     }
     
     // MARK: - Lógica Firebase
-    func fetchChatsDirectlyFromPlant() {
-        guard !currentUserId.isEmpty, !currentPlantId.isEmpty else { return }
+    private func attachChatsListenerIfNeeded() {
+        guard chatsObserverHandle == nil, !currentUserId.isEmpty else { return }
         isLoading = true
         
-        let chatsRef = ref.child("plants").child(currentPlantId).child("direct_chats")
+        let userRef = ref.child("user_direct_chats").child(currentUserId)
+        userChatsRef = userRef
         
-        chatsRef.observe(.value) { snapshot in
-            var loadedChats: [DirectChat] = []
+        chatsObserverHandle = userRef.observe(.value) { snapshot in
+            var pendingChats: [DirectChat] = []
             let group = DispatchGroup()
+            let appendQueue = DispatchQueue(label: "directChatList.append")
+            
+            if snapshot.childrenCount == 0 {
+                DispatchQueue.main.async {
+                    self.chats = []
+                    self.isLoading = false
+                }
+                return
+            }
             
             for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                guard let value = child.value as? [String: Any] else { continue }
                 let chatId = child.key
-                if chatId.contains(currentUserId) {
-                    
-                    let parts = chatId.components(separatedBy: "_")
-                    let otherId = (parts.first == currentUserId) ? parts.last ?? "" : parts.first ?? ""
-                    if otherId.isEmpty { continue }
-                    
-                    group.enter()
-                    
-                    let messagesSnap = child.childSnapshot(forPath: "messages")
-                    var lastMsgText = "Chat iniciado"
-                    var lastTimestamp: TimeInterval = 0
-                    
-                    if let lastMsgSnap = messagesSnap.children.allObjects.last as? DataSnapshot,
-                       let msgDict = lastMsgSnap.value as? [String: Any] {
-                        lastMsgText = msgDict["text"] as? String ?? "Imagen"
-                        if let ts = msgDict["timestamp"] as? TimeInterval { lastTimestamp = ts }
-                        else if let ts = msgDict["timestamp"] as? Int { lastTimestamp = TimeInterval(ts) }
-                    }
-                    
-                    ref.child("users").child(otherId).observeSingleEvent(of: .value) { userSnap in
-                        let userVal = userSnap.value as? [String: Any]
-                        let fName = userVal?["firstName"] as? String ?? ""
-                        let lName = userVal?["lastName"] as? String ?? ""
-                        let email = userVal?["email"] as? String ?? "Usuario"
-                        
-                        var displayName = "\(fName) \(lName)".trimmingCharacters(in: .whitespaces)
-                        if displayName.isEmpty { displayName = email }
-                        
-                        let role = userVal?["role"] as? String ?? "Personal"
-                        
-                        let chat = DirectChat(
+                let otherId = value["otherUserId"] as? String ?? ""
+                var otherName = value["otherUserName"] as? String ?? ""
+                let lastMessage = value["lastMessage"] as? String ?? "Chat iniciado"
+                let timestamp = value["timestamp"] as? TimeInterval ?? 0
+                let unreadCount = value["unreadCount"] as? Int ?? 0
+                
+                group.enter()
+                
+                func appendChat(with name: String) {
+                    appendQueue.async {
+                        pendingChats.append(DirectChat(
                             id: chatId,
-                            lastMessage: lastMsgText,
-                            timestamp: lastTimestamp,
-                            otherUserName: displayName,
-                            otherUserRole: role,
+                            lastMessage: lastMessage,
+                            timestamp: timestamp,
+                            unreadCount: unreadCount,
+                            otherUserName: name.isEmpty ? "Usuario" : name,
                             otherUserId: otherId
-                        )
-                        loadedChats.append(chat)
+                        ))
                         group.leave()
                     }
+                }
+                
+                if otherName.isEmpty, !otherId.isEmpty {
+                    ref.child("users").child(otherId).observeSingleEvent(of: .value) { snap in
+                        if let data = snap.value as? [String: Any] {
+                            let fName = data["firstName"] as? String ?? ""
+                            let lName = data["lastName"] as? String ?? ""
+                            let email = data["email"] as? String ?? "Usuario"
+                            otherName = "\(fName) \(lName)".trimmingCharacters(in: .whitespaces)
+                            if otherName.isEmpty { otherName = email }
+                            userRef.child(chatId).child("otherUserName").setValue(otherName)
+                        }
+                        appendChat(with: otherName)
+                    }
+                } else {
+                    appendChat(with: otherName)
                 }
             }
             
             group.notify(queue: .main) {
-                self.chats = loadedChats.sorted { $0.timestamp > $1.timestamp }
+                self.chats = pendingChats.sorted { $0.timestamp > $1.timestamp }
                 self.isLoading = false
             }
         }
+    }
+    
+    private func detachChatsListener() {
+        if let handle = chatsObserverHandle {
+            userChatsRef?.removeObserver(withHandle: handle)
+        }
+        chatsObserverHandle = nil
+        userChatsRef = nil
     }
 }
 
@@ -231,7 +249,7 @@ struct ChatRow: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
+                HStack(spacing: 8) {
                     Text(chat.otherUserName)
                         .font(.headline)
                         .foregroundColor(.white)
@@ -240,6 +258,15 @@ struct ChatRow: View {
                         Text(Date(timeIntervalSince1970: chat.timestamp / 1000), style: .time)
                             .font(.caption)
                             .foregroundColor(.gray)
+                    }
+                    if chat.unreadCount > 0 {
+                        Text(chat.unreadCount > 99 ? "99+" : "\(chat.unreadCount)")
+                            .font(.caption2.bold())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.red)
+                            .clipShape(Capsule())
                     }
                 }
                 Text(chat.lastMessage)
