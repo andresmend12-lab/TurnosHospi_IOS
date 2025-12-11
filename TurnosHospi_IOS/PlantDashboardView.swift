@@ -21,6 +21,7 @@ struct PlantDashboardView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var notificationManager: NotificationCenterManager
+    @EnvironmentObject var vacationManager: VacationManager
     
     @StateObject var shiftManager = ShiftManager()
     @StateObject var plantManager = PlantManager()
@@ -152,7 +153,8 @@ struct PlantDashboardView: View {
                                             PlantDashboardCalendarView(
                                                 selectedDate: $selectedDate,
                                                 currentMonth: $currentMonth,
-                                                monthlyAssignments: plantManager.monthlyAssignments
+                                                monthlyAssignments: plantManager.monthlyAssignments,
+                                                vacationDays: vacationManager.vacationDays
                                             )
                                             .onChange(of: selectedDate) { newDate in
                                                 // Recarga mes si cambia
@@ -200,6 +202,9 @@ struct PlantDashboardView: View {
                                             }
                                         }
                                     }
+                                    
+                                case "Días de vacaciones":
+                                    VacationDaysView(plantId: plantId)
                                     
                                 case "Lista de personal":
                                     if !plantId.isEmpty && !staffScope.isEmpty {
@@ -342,6 +347,14 @@ struct PlantDashboardView: View {
                 if authManager.userRole == "Supervisor" {
                     loadSupervisorAssignments()
                 }
+                
+                updateVacationContext()
+            }
+            .onChange(of: authManager.userPlantId) { _ in
+                updateVacationContext()
+            }
+            .onChange(of: authManager.user?.uid ?? "") { _ in
+                updateVacationContext()
             }
         }
     }
@@ -351,6 +364,15 @@ struct PlantDashboardView: View {
         if let firstOfMonth = calendar.date(from: components) {
             currentMonth = firstOfMonth
         }
+    }
+    
+    private func updateVacationContext() {
+        let userId = authManager.user?.uid
+        let plantId = authManager.userPlantId
+        vacationManager.updateContext(
+            userId: userId,
+            plantId: plantId.isEmpty ? nil : plantId
+        )
     }
     
     // MARK: - Lógica Supervisor
@@ -542,6 +564,7 @@ struct PlantDashboardCalendarView: View {
     @Binding var selectedDate: Date
     @Binding var currentMonth: Date
     var monthlyAssignments: [Date: [PlantShiftWorker]]
+    var vacationDays: Set<Date> = []
     
     private let daysSymbols = ["L", "M", "X", "J", "V", "S", "D"]
     
@@ -620,6 +643,7 @@ struct PlantDashboardCalendarView: View {
                     let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
                     let startOfDay = calendar.startOfDay(for: date)
                     let hasAssignments = (monthlyAssignments[startOfDay]?.isEmpty == false)
+                    let isVacationDay = vacationDays.contains(startOfDay)
                     
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -629,7 +653,7 @@ struct PlantDashboardCalendarView: View {
                         VStack(spacing: 4) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.white.opacity(0.05))
+                                    .fill(isVacationDay ? Color.red.opacity(0.25) : Color.white.opacity(0.05))
                                 
                                 RoundedRectangle(cornerRadius: 10)
                                     .stroke(isSelected ? Color.blue.opacity(0.7) : Color.clear, lineWidth: 2)
@@ -637,11 +661,31 @@ struct PlantDashboardCalendarView: View {
                                 Text("\(day)")
                                     .font(.system(size: 14, weight: .bold))
                                     .foregroundColor(.white)
+                                
+                                if isVacationDay {
+                                    VStack {
+                                        HStack {
+                                            Spacer()
+                                            Image(systemName: "sun.max.fill")
+                                                .font(.system(size: 10))
+                                                .foregroundColor(.red.opacity(0.9))
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(4)
+                                }
                             }
                             .frame(height: 32)
                             
-                            // Puntito si hay personal asignado ese día
-                            if hasAssignments {
+                            if isVacationDay {
+                                Text("VAC")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.red.opacity(0.8))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(Color.red.opacity(0.15))
+                                    .cornerRadius(4)
+                            } else if hasAssignments {
                                 Circle()
                                     .fill(Color(red: 0.33, green: 0.8, blue: 0.95))
                                     .frame(width: 6, height: 6)
