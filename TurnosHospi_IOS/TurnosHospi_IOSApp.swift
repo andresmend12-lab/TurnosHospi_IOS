@@ -91,6 +91,7 @@ struct TurnosHospi_IOSApp: App {
     @StateObject var authManager = AuthManager.shared
     @StateObject var themeManager = ThemeManager.shared
     @StateObject var notificationManager = NotificationCenterManager()
+    @StateObject var vacationManager = VacationManager()
     
     var body: some Scene {
         WindowGroup {
@@ -98,6 +99,7 @@ struct TurnosHospi_IOSApp: App {
                 .environmentObject(authManager)
                 .environmentObject(themeManager)
                 .environmentObject(notificationManager)
+                .environmentObject(vacationManager)
         }
     }
 }
