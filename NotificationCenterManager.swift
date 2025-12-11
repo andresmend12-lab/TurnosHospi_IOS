@@ -2,19 +2,23 @@ import Foundation
 import FirebaseDatabase
 import FirebaseAuth
 
+// 1. Actualizamos el modelo para incluir 'title' y 'read'
+struct NotificationItem: Identifiable, Codable, Equatable {
+    let id: String
+    let title: String      // Nuevo campo
+    let message: String
+    let timestamp: Date
+    var read: Bool         // Nuevo campo
+}
+
 private struct TrackedShiftRequestState {
     let status: RequestStatus
     let targetUserId: String?
 }
 
-struct NotificationItem: Identifiable, Codable, Equatable {
-    let id: String
-    let message: String
-    let timestamp: Date
-}
-
 class NotificationCenterManager: ObservableObject {
     @Published private(set) var notifications: [NotificationItem] = []
+    
     private var currentUserId: String?
     private var currentPlantId: String?
     private var isCurrentUserSupervisor = false
@@ -25,8 +29,9 @@ class NotificationCenterManager: ObservableObject {
     private var lastShiftRequestStates: [String: TrackedShiftRequestState] = [:]
     private var shiftRequestsInitialized = false
     
+    // Propiedad calculada para el contador
     var unreadCount: Int {
-        return notifications.count
+        return notifications.filter { !$0.read }.count
     }
     
     func updateContext(userId: String?, plantId: String?, isSupervisor: Bool) {
@@ -53,34 +58,52 @@ class NotificationCenterManager: ObservableObject {
         }
     }
     
-    func addNotification(message: String, sendPush: Bool = true) {
+    // 2. Método actualizado para incluir título y estado de lectura
+    func addNotification(title: String = "Aviso", message: String, sendPush: Bool = true) {
         guard currentUserId != nil else { return }
-        let item = NotificationItem(id: UUID().uuidString, message: message, timestamp: Date())
+        
+        let item = NotificationItem(
+            id: UUID().uuidString,
+            title: title,
+            message: message,
+            timestamp: Date(),
+            read: false
+        )
+        
         notifications.insert(item, at: 0)
         persistNotifications()
+        
         if sendPush {
             enqueuePushNotification(message: message)
         }
     }
     
     func addScheduleNotification(message: String) {
-        addNotification(message: message, sendPush: true)
+        addNotification(title: "Turnos", message: message, sendPush: true)
     }
     
-    func removeNotifications(at offsets: IndexSet) {
-        notifications.remove(atOffsets: offsets)
-        persistNotifications()
-    }
-    
-    func remove(_ item: NotificationItem) {
+    // 3. Renombrado de 'remove' a 'delete' para coincidir con la vista
+    func delete(_ item: NotificationItem) {
         notifications.removeAll { $0.id == item.id }
         persistNotifications()
+    }
+    
+    // 4. Nuevo método para marcar como leído
+    func markAsRead(_ item: NotificationItem) {
+        if let index = notifications.firstIndex(where: { $0.id == item.id }) {
+            var updatedItem = item
+            updatedItem.read = true
+            notifications[index] = updatedItem
+            persistNotifications()
+        }
     }
     
     func clearAll() {
         notifications.removeAll()
         persistNotifications()
     }
+    
+    // MARK: - Persistencia
     
     private func loadNotifications() {
         guard let uid = currentUserId, !uid.isEmpty else {
@@ -107,6 +130,8 @@ class NotificationCenterManager: ObservableObject {
     private func storageKey(for uid: String) -> String {
         return "notifications_\(uid)"
     }
+    
+    // MARK: - Lógica de Firebase (Turnos)
     
     private func startListeningShiftRequests() {
         guard let uid = currentUserId,
@@ -186,26 +211,26 @@ class NotificationCenterManager: ObservableObject {
         switch current.status {
         case .pendingPartner:
             if userIsTarget && (previous?.status != .pendingPartner || previous?.targetUserId != uid) {
-                addNotification(message: "\(requesterName) quiere intercambiar su turno \(shiftName) del \(shiftDate) contigo.")
+                addNotification(title: "Solicitud de Cambio", message: "\(requesterName) quiere intercambiar su turno \(shiftName) del \(shiftDate) contigo.")
             }
         case .awaitingSupervisor:
             if previous?.status != .awaitingSupervisor {
                 if userIsRequester {
-                    addNotification(message: "\(targetName) aceptó tu solicitud de cambio para \(shiftName) del \(shiftDate).")
+                    addNotification(title: "Cambio Aceptado", message: "\(targetName) aceptó tu solicitud para \(shiftName) del \(shiftDate).")
                 }
                 if isCurrentUserSupervisor {
-                    addNotification(message: "\(requesterName) y \(targetName) esperan tu aprobación del cambio \(shiftName) del \(shiftDate).")
+                    addNotification(title: "Aprobación Requerida", message: "\(requesterName) y \(targetName) esperan tu aprobación para el cambio del \(shiftDate).")
                 }
             }
         case .rejected:
             if previous?.status == .pendingPartner && userIsRequester {
-                addNotification(message: "\(targetName) rechazó tu solicitud para \(shiftName) del \(shiftDate).")
+                addNotification(title: "Solicitud Rechazada", message: "\(targetName) rechazó tu solicitud para \(shiftName) del \(shiftDate).")
             } else if previous?.status == .awaitingSupervisor && (userIsRequester || userIsTarget) {
-                addNotification(message: "El supervisor rechazó el cambio \(shiftName) del \(shiftDate).")
+                addNotification(title: "Cambio Denegado", message: "El supervisor rechazó el cambio \(shiftName) del \(shiftDate).")
             }
         case .approved:
             if previous?.status != .approved && (userIsRequester || userIsTarget) {
-                addNotification(message: "El supervisor aprobó el cambio \(shiftName) del \(shiftDate).")
+                addNotification(title: "Cambio Aprobado", message: "El supervisor aprobó el cambio \(shiftName) del \(shiftDate).")
             }
         default:
             break
