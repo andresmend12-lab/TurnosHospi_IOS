@@ -304,7 +304,7 @@ struct PlantDashboardView: View {
             .navigationBarHidden(true)
             // --- Navegación a DirectChatListView ---
             .navigationDestination(isPresented: $showDirectChats) {
-                DirectChatListView(pendingRoute: .constant(nil as ChatRoute?))
+                DirectChatListView()
             }
             .sheet(isPresented: $showNotificationCenter) {
                 NotificationCenterView()

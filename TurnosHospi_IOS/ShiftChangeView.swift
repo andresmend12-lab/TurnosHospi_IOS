@@ -471,7 +471,8 @@ struct ShiftChangeView: View {
     }
     
     private func approveCoverage(request: ShiftChangeRequest) {
-        guard let covererName = request.targetUserName else { return }
+        let covererName = request.targetUserName ?? ""
+        guard !covererName.isEmpty else { return }
         let turnosRef = ref.child("plants/\(plantId)/turnos/turnos-\(request.requesterShiftDate)")
         turnosRef.observeSingleEvent(of: .value) { snapshot in
             guard let shiftSnapshot = self.findShiftSnapshot(in: snapshot, shiftName: request.requesterShiftName),
@@ -528,17 +529,17 @@ struct ShiftChangeView: View {
                 let halfDay = slot.childSnapshot(forPath: "halfDay").value as? Bool ?? false
                 if primary.caseInsensitiveCompare(targetName) == .orderedSame {
                     return ShiftSlotInfo(
-                        shiftKey: shiftSnapshot.key ?? "",
+                        shiftKey: shiftSnapshot.key,
                         group: group,
-                        slotKey: slot.key ?? "0",
+                        slotKey: slot.key,
                         field: "primary",
                         isHalfDay: halfDay
                     )
                 } else if secondary.caseInsensitiveCompare(targetName) == .orderedSame {
                     return ShiftSlotInfo(
-                        shiftKey: shiftSnapshot.key ?? "",
+                        shiftKey: shiftSnapshot.key,
                         group: group,
-                        slotKey: slot.key ?? "0",
+                        slotKey: slot.key,
                         field: "secondary",
                         isHalfDay: halfDay
                     )

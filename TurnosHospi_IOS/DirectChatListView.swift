@@ -17,7 +17,7 @@ struct DirectChatListView: View {
     
     // Estados para Nuevo Chat
     @State private var showNewChatSheet = false
-    @State private var activeChatRoute: ChatRoute?
+    @State private var navPath = NavigationPath()
     
     @State private var userChatsRef: DatabaseReference?
     @State private var chatsObserverHandle: DatabaseHandle?
@@ -28,7 +28,7 @@ struct DirectChatListView: View {
     var currentPlantId: String { authManager.userPlantId }
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navPath) {
             ZStack {
                 Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea()
                 
@@ -70,15 +70,30 @@ struct DirectChatListView: View {
                             VStack(spacing: 0) {
                                 ForEach(chats) { chat in
                                     Button {
-                                    activeChatRoute = ChatRoute(
+                                        let route = ChatRoute(
                                             chatId: chat.id,
                                             otherUserId: chat.otherUserId,
                                             otherUserName: chat.otherUserName
                                         )
+                                        navPath.append(route)
                                     } label: {
                                         ChatRow(chat: chat)
                                     }
                                     .buttonStyle(.plain)
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            deleteChat(chat)
+                                        } label: {
+                                            Label("Eliminar chat", systemImage: "trash")
+                                        }
+                                    }
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            deleteChat(chat)
+                                        } label: {
+                                            Label("Eliminar", systemImage: "trash")
+                                        }
+                                    }
                                     
                                     Divider().background(Color.white.opacity(0.1))
                                 }
@@ -113,6 +128,9 @@ struct DirectChatListView: View {
             }
             .navigationBarHidden(true)
             .onAppear {
+                if plantManager.plantUsers.isEmpty && !currentPlantId.isEmpty {
+                    plantManager.fetchCurrentPlant(plantId: currentPlantId)
+                }
                 attachChatsListenerIfNeeded()
                 consumePendingRoute()
             }
@@ -131,14 +149,18 @@ struct DirectChatListView: View {
                         showNewChatSheet = false
                         
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            activeChatRoute = route
+                            navPath.append(route)
                         }
                     }
                 )
                 .presentationDetents([.medium, .large])
             }
-            .navigationDestination(item: $activeChatRoute) { route in
-                ChatDestination(route: route)
+            .navigationDestination(for: ChatRoute.self) { route in
+                DirectChatView(
+                    chatId: route.chatId,
+                    otherUserId: route.otherUserId,
+                    otherUserName: route.otherUserName
+                )
             }
         }
     }
@@ -168,41 +190,46 @@ struct DirectChatListView: View {
                 guard let value = child.value as? [String: Any] else { continue }
                 let chatId = child.key
                 let otherId = value["otherUserId"] as? String ?? ""
-                var otherName = value["otherUserName"] as? String ?? ""
+                let storedName = (value["otherUserName"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                let needsHydration = shouldHydrateName(storedName)
                 let lastMessage = value["lastMessage"] as? String ?? "Chat iniciado"
                 let timestamp = value["timestamp"] as? TimeInterval ?? 0
                 let unreadCount = value["unreadCount"] as? Int ?? 0
                 
                 group.enter()
                 
-                func appendChat(with name: String) {
+                func appendChat(using rawName: String) {
                     appendQueue.async {
+                        let finalName = self.resolveDisplayName(rawName: rawName, userId: otherId)
                         pendingChats.append(DirectChat(
                             id: chatId,
                             lastMessage: lastMessage,
                             timestamp: timestamp,
                             unreadCount: unreadCount,
-                            otherUserName: name.isEmpty ? "Usuario" : name,
+                            otherUserName: finalName,
                             otherUserId: otherId
                         ))
+                        if needsHydration, finalName != storedName {
+                            userRef.child(chatId).child("otherUserName").setValue(finalName)
+                        }
                         group.leave()
                     }
                 }
                 
-                if otherName.isEmpty, !otherId.isEmpty {
+                if needsHydration, !otherId.isEmpty {
                     ref.child("users").child(otherId).observeSingleEvent(of: .value) { snap in
+                        var resolvedName = storedName
                         if let data = snap.value as? [String: Any] {
                             let fName = data["firstName"] as? String ?? ""
                             let lName = data["lastName"] as? String ?? ""
                             let email = data["email"] as? String ?? "Usuario"
-                            otherName = "\(fName) \(lName)".trimmingCharacters(in: .whitespaces)
-                            if otherName.isEmpty { otherName = email }
-                            userRef.child(chatId).child("otherUserName").setValue(otherName)
+                            let composed = "\(fName) \(lName)".trimmingCharacters(in: .whitespaces)
+                            resolvedName = composed.isEmpty ? email : composed
                         }
-                        appendChat(with: otherName)
+                        appendChat(using: resolvedName)
                     }
                 } else {
-                    appendChat(with: otherName)
+                    appendChat(using: storedName)
                 }
             }
             
@@ -220,28 +247,46 @@ struct DirectChatListView: View {
         chatsObserverHandle = nil
         userChatsRef = nil
     }
-
+    
     private func consumePendingRoute() {
         guard let route = pendingRoute else { return }
-        activeChatRoute = route
+        navPath.append(route)
         DispatchQueue.main.async {
             pendingRoute = nil
         }
     }
-}
-
-private struct ChatDestination: View {
-    let route: ChatRoute?
     
-    var body: some View {
-        if let route = route {
-            DirectChatView(
-                chatId: route.chatId,
-                otherUserId: route.otherUserId,
-                otherUserName: route.otherUserName
-            )
-        } else {
-            EmptyView()
+    private func resolveDisplayName(rawName: String, userId: String) -> String {
+        let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !shouldHydrateName(trimmed) {
+            return trimmed
+        }
+        if let match = plantManager.plantUsers.first(where: { $0.id == userId }) {
+            return match.name
+        }
+        return "Usuario"
+    }
+    
+    private func shouldHydrateName(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return true }
+        let normalized = trimmed.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .replacingOccurrences(of: " ", with: "")
+            .lowercased()
+        let placeholders: Set<String> = ["usuario", "uusario", "user", "usuario/a", "usuarioa"]
+        return placeholders.contains(normalized)
+    }
+    
+    private func deleteChat(_ chat: DirectChat) {
+        guard !currentUserId.isEmpty else { return }
+        let userMetaRef = ref.child("user_direct_chats").child(currentUserId).child(chat.id)
+        userMetaRef.removeValue()
+        
+        // Check if the other participant still has metadata; if not, remove the conversation.
+        ref.child("user_direct_chats").child(chat.otherUserId).child(chat.id).observeSingleEvent(of: .value) { snapshot in
+            if !snapshot.exists() {
+                ref.child("plants/\(currentPlantId)/direct_chats/\(chat.id)").removeValue()
+            }
         }
     }
 }
