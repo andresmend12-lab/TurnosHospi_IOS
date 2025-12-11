@@ -13,8 +13,7 @@ struct DirectChatListView: View {
     
     // Estados para Nuevo Chat
     @State private var showNewChatSheet = false
-    @State private var navigateToNewChat = false
-    @State private var tempSelectedChat: ChatRoute? // Variable temporal
+    @State private var activeChatRoute: ChatRoute?
     
     private let ref = Database.database().reference()
     
@@ -24,17 +23,6 @@ struct DirectChatListView: View {
     var body: some View {
         ZStack {
             Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea()
-            
-            // --- ENLACE INVISIBLE PARA NAVEGACIÓN PROGRAMÁTICA (NUEVO CHAT) ---
-            // Usamos esto para evitar el congelamiento al cerrar el sheet.
-            // Se activa cuando navigateToNewChat es true.
-            NavigationLink(
-                destination: destinationView(),
-                isActive: $navigateToNewChat
-            ) {
-                EmptyView()
-            }
-            .hidden()
             
             VStack(spacing: 0) {
                 // MARK: - Header
@@ -73,17 +61,17 @@ struct DirectChatListView: View {
                     ScrollView {
                         VStack(spacing: 0) {
                             ForEach(chats) { chat in
-                                // MARK: - NAVEGACIÓN EXPLÍCITA (LISTA)
-                                // Usamos destination directo para no depender del MainMenu
-                                NavigationLink(destination: DirectChatView(
-                                    chatId: chat.id,
-                                    otherUserId: chat.otherUserId,
-                                    otherUserName: chat.otherUserName
-                                )) {
+                                Button {
+                                    activeChatRoute = ChatRoute(
+                                        chatId: chat.id,
+                                        otherUserId: chat.otherUserId,
+                                        otherUserName: chat.otherUserName
+                                    )
+                                } label: {
                                     ChatRow(chat: chat)
                                 }
                                 .buttonStyle(.plain)
-                                
+
                                 Divider().background(Color.white.opacity(0.1))
                             }
                         }
@@ -123,32 +111,25 @@ struct DirectChatListView: View {
                 currentUserId: currentUserId,
                 onUserSelected: { user in
                     let newChatId = DirectChat.getChatId(user1: currentUserId, user2: user.id)
-                    tempSelectedChat = ChatRoute(chatId: newChatId, otherUserId: user.id, otherUserName: user.name)
-                    
+                    let route = ChatRoute(chatId: newChatId, otherUserId: user.id, otherUserName: user.name)
+
                     showNewChatSheet = false
-                    
-                    // Aumentamos el retardo a 0.5s para evitar el congelamiento de UI
-                    // mientras se cierra el modal
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        navigateToNewChat = true
+
+                    // Esperamos a que el sheet termine de cerrarse antes de navegar
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        activeChatRoute = route
                     }
                 }
             )
             .presentationDetents([.medium, .large])
         }
-    }
-    
-    // Helper para construir la vista de destino de forma segura
-    @ViewBuilder
-    func destinationView() -> some View {
-        if let route = tempSelectedChat {
+
+        .navigationDestination(item: $activeChatRoute) { route in
             DirectChatView(
                 chatId: route.chatId,
                 otherUserId: route.otherUserId,
                 otherUserName: route.otherUserName
             )
-        } else {
-            EmptyView()
         }
     }
     

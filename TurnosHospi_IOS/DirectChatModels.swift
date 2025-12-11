@@ -25,6 +25,10 @@ struct ChatRoute: Hashable {
     }
 }
 
+extension ChatRoute: Identifiable {
+    var id: String { chatId }
+}
+
 // MARK: - Modelo de Chat (Resumen para la lista)
 struct DirectChat: Identifiable, Codable, Hashable {
     let id: String
