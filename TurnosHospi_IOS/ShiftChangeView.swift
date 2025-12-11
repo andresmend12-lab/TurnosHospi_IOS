@@ -110,7 +110,10 @@ struct ShiftChangeView: View {
                             // GESTIÓN (Con historial y estados)
                             ManagementTab(
                                 currentUserId: currentUserId,
-                                requests: allRequests
+                                currentUserDisplayName: plantManager.myPlantName ?? authManager.currentUserName,
+                                requests: allRequests,
+                                onAccept: acceptRequest,
+                                onReject: rejectRequest
                             )
                         case 2:
                             // SUGERENCIAS (TARJETAS MEJORADAS)
@@ -272,7 +275,10 @@ struct ShiftChangeView: View {
     // Helper para añadir turnos a las estructuras temporales
     func addShift(name: String, defaultRole: String, date: Date, dateStr: String, shiftName: String, tempSchedules: inout [String: [String: String]], potentialCandidates: inout [PlantShift], staffList: [PlantStaff]) {
         let staff = staffList.first(where: { $0.name == name })
-        let uid = staff?.id ?? name // Mejor ID, fallback a nombre
+        let chatUser = plantManager.plantUsers.first {
+            $0.name.caseInsensitiveCompare(name) == .orderedSame
+        }
+        let uid = chatUser?.id ?? staff?.id ?? name // Priorizar UID real
         let role = staff?.role ?? defaultRole
         
         // Guardar en horario global
@@ -340,13 +346,32 @@ struct ShiftChangeView: View {
         ]
         ref.child("plants/\(plantId)/shift_requests/\(myReq.id)").updateChildValues(updates)
     }
+    
+    func acceptRequest(_ req: ShiftChangeRequest) {
+        guard req.targetUserId == currentUserId else { return }
+        let updates: [String: Any] = [
+            "status": RequestStatus.awaitingSupervisor.rawValue
+        ]
+        ref.child("plants/\(plantId)/shift_requests/\(req.id)").updateChildValues(updates)
+    }
+    
+    func rejectRequest(_ req: ShiftChangeRequest) {
+        guard req.targetUserId == currentUserId else { return }
+        let updates: [String: Any] = [
+            "status": RequestStatus.rejected.rawValue
+        ]
+        ref.child("plants/\(plantId)/shift_requests/\(req.id)").updateChildValues(updates)
+    }
 }
 
 // MARK: - 1. PESTAÑA GESTIÓN
 
 struct ManagementTab: View {
     let currentUserId: String
+    let currentUserDisplayName: String
     let requests: [ShiftChangeRequest]
+    let onAccept: (ShiftChangeRequest) -> Void
+    let onReject: (ShiftChangeRequest) -> Void
     
     private let dateFormatter: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f
@@ -361,7 +386,16 @@ struct ManagementTab: View {
             // SECCIÓN ACTIVOS
             if !activeRequests.isEmpty {
                 Section(header: Text("En curso / Próximos").foregroundColor(.white)) {
-                    ForEach(activeRequests) { req in RequestRow(req: req, isHistory: false) }
+                    ForEach(activeRequests) { req in
+                        let actionable = isActionable(req)
+                        RequestRow(
+                            req: req,
+                            isHistory: false,
+                            showActionButtons: actionable,
+                            onAccept: actionable ? { onAccept(req) } : nil,
+                            onReject: actionable ? { onReject(req) } : nil
+                        )
+                    }
                 }
             } else if activeRequests.isEmpty && historyRequests.isEmpty {
                 Text("No hay solicitudes activas").foregroundColor(.gray).listRowBackground(Color.clear)
@@ -371,7 +405,15 @@ struct ManagementTab: View {
             if !historyRequests.isEmpty {
                 ForEach(groupedHistory.keys.sorted(by: >), id: \.self) { monthKey in
                     Section(header: Text(monthKey).foregroundColor(.gray)) {
-                        ForEach(groupedHistory[monthKey]!) { req in RequestRow(req: req, isHistory: true) }
+                        ForEach(groupedHistory[monthKey]!) { req in
+                            RequestRow(
+                                req: req,
+                                isHistory: true,
+                                showActionButtons: false,
+                                onAccept: nil,
+                                onReject: nil
+                            )
+                        }
                     }
                 }
             }
@@ -403,11 +445,26 @@ struct ManagementTab: View {
             return "Desconocido"
         }
     }
+    
+    private func isActionable(_ req: ShiftChangeRequest) -> Bool {
+        guard req.status == .pendingPartner else { return false }
+        if req.targetUserId == currentUserId { return true }
+        let trimmedDisplayName = currentUserDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedDisplayName.isEmpty,
+           let target = req.targetUserName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           target.caseInsensitiveCompare(trimmedDisplayName) == .orderedSame {
+            return true
+        }
+        return false
+    }
 }
 
 struct RequestRow: View {
     let req: ShiftChangeRequest
     let isHistory: Bool
+    let showActionButtons: Bool
+    let onAccept: (() -> Void)?
+    let onReject: (() -> Void)?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -425,6 +482,39 @@ struct RequestRow: View {
             if !isHistory, let targetName = req.targetUserName {
                 Text("Con: \(targetName)").font(.caption).foregroundColor(.gray)
             }
+            if showActionButtons {
+                
+                if let onAccept = onAccept, let onReject = onReject {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Tú decides esta solicitud")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                        
+                        HStack {
+                            Button(action: onReject) {
+                                Text("Rechazar")
+                                    .font(.subheadline.bold())
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .padding(.vertical, 8)
+                            .background(Color.red.opacity(0.2))
+                            .foregroundColor(.red)
+                            .cornerRadius(8)
+                            
+                            Button(action: onAccept) {
+                                Text("Aceptar")
+                                    .font(.subheadline.bold())
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .padding(.vertical, 8)
+                            .background(Color.green.opacity(0.3))
+                            .foregroundColor(.green)
+                            .cornerRadius(8)
+                        }
+                    }
+                    .padding(.top, 6)
+                }
+            }
         }
         .padding(.vertical, 4)
         .listRowBackground(Color.white.opacity(0.05))
@@ -434,7 +524,8 @@ struct RequestRow: View {
         switch status {
         case .draft: return "Borrador"
         case .searching: return "Buscando cambio"
-        case .pendingPartner: return "Esperando confirmación del compañero"
+        case .pendingPartner:
+            return showActionButtons ? "Pendiente de tu aprobación" : "Esperando confirmación del compañero"
         case .awaitingSupervisor: return "Esperando confirmación de supervisor"
         case .approved: return "Aceptado"
         case .rejected: return "Rechazado"

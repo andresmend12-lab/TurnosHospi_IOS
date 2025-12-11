@@ -157,11 +157,7 @@ struct MainMenuView: View {
             if let user = authManager.user, authManager.currentUserName.isEmpty {
                 authManager.fetchUserData(uid: user.uid)
             }
-            if let uid = authManager.user?.uid {
-                notificationManager.setCurrentUser(id: uid)
-            } else {
-                notificationManager.setCurrentUser(id: nil)
-            }
+            refreshNotificationContext()
             assignmentsInitialized = false
             lastKnownAssignments = [:]
             resetCurrentMonthToFirstDay(of: selectedDate)
@@ -183,21 +179,24 @@ struct MainMenuView: View {
             } else {
                 loadData()
             }
+            refreshNotificationContext()
         }
         .onChange(of: plantManager.monthlyAssignments) { _ in
             detectShiftNotifications()
         }
         .onChange(of: authManager.user?.uid ?? "") { newValue in
             if newValue.isEmpty {
-                notificationManager.setCurrentUser(id: nil)
                 assignmentsInitialized = false
                 lastKnownAssignments = [:]
             } else {
-                notificationManager.setCurrentUser(id: newValue)
                 assignmentsInitialized = false
                 lastKnownAssignments = [:]
                 detectShiftNotifications()
             }
+            refreshNotificationContext()
+        }
+        .onChange(of: authManager.userRole) { _ in
+            refreshNotificationContext()
         }
     }
     
@@ -239,11 +238,11 @@ struct MainMenuView: View {
             let readableDate = readableDateString(from: key)
             
             if let newValue = newValue, oldValue == nil {
-                notificationManager.addNotification(message: "Se te asignó el turno \(newValue) para el \(readableDate).")
+                notificationManager.addScheduleNotification(message: "Se te asignó el turno \(newValue) para el \(readableDate).")
             } else if let oldValue = oldValue, newValue == nil {
-                notificationManager.addNotification(message: "Se eliminó tu turno \(oldValue) del \(readableDate).")
+                notificationManager.addScheduleNotification(message: "Se eliminó tu turno \(oldValue) del \(readableDate).")
             } else if let oldValue = oldValue, let newValue = newValue {
-                notificationManager.addNotification(message: "Tu turno del \(readableDate) cambió de \(oldValue) a \(newValue).")
+                notificationManager.addScheduleNotification(message: "Tu turno del \(readableDate) cambió de \(oldValue) a \(newValue).")
             }
         }
         lastKnownAssignments = currentMap
@@ -275,6 +274,13 @@ struct MainMenuView: View {
         output.locale = Locale(identifier: "es_ES")
         output.dateFormat = "EEEE d 'de' MMMM"
         return output.string(from: date).capitalized
+    }
+    
+    private func refreshNotificationContext() {
+        let userId = authManager.user?.uid
+        let plantId = authManager.userPlantId.isEmpty ? nil : authManager.userPlantId
+        let isSupervisor = authManager.userRole == "Supervisor"
+        notificationManager.updateContext(userId: userId, plantId: plantId, isSupervisor: isSupervisor)
     }
     
     private var headerView: some View {

@@ -322,6 +322,12 @@ struct PlantDashboardView: View {
             }
             
             .onAppear {
+                notificationManager.updateContext(
+                    userId: authManager.user?.uid,
+                    plantId: authManager.userPlantId.isEmpty ? nil : authManager.userPlantId,
+                    isSupervisor: authManager.userRole == "Supervisor"
+                )
+                
                 if !authManager.userPlantId.isEmpty {
                     let plantId = authManager.userPlantId
                     plantManager.fetchCurrentPlant(plantId: plantId)

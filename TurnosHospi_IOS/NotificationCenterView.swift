@@ -7,44 +7,34 @@ struct NotificationCenterView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.07, green: 0.08, blue: 0.15),
-                        Color(red: 0.03, green: 0.03, blue: 0.07)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+                AngularGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.11, green: 0.13, blue: 0.22),
+                        Color(red: 0.05, green: 0.07, blue: 0.12),
+                        Color(red: 0.08, green: 0.06, blue: 0.15)
+                    ]),
+                    center: .center
                 )
                 .ignoresSafeArea()
                 
-                List {
-                    if notificationManager.unreadCount == 0 {
-                        VStack(spacing: 12) {
-                            Image(systemName: "bell.slash.fill")
-                                .font(.system(size: 48))
-                                .foregroundColor(.white.opacity(0.6))
-                            Text("No tienes notificaciones")
-                                .foregroundColor(.white.opacity(0.6))
-                                .font(.headline)
-                            Text("Cuando ocurra algo importante lo verás aquí.")
-                                .foregroundColor(.white.opacity(0.4))
-                                .font(.caption)
+                ScrollView {
+                    VStack(spacing: 18) {
+                        headerStats
+                        
+                        if notificationManager.unreadCount == 0 {
+                            EmptyStateView()
+                                .padding(.top, 60)
+                        } else {
+                            LazyVStack(spacing: 16) {
+                                ForEach(notificationManager.notifications) { item in
+                                    NotificationRow(item: item)
+                                }
+                            }
                         }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 40)
-                        .listRowBackground(Color.clear)
-                    } else {
-                        ForEach(notificationManager.notifications) { item in
-                            NotificationRow(item: item)
-                                .listRowInsets(EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 0))
-                                .listRowBackground(Color.clear)
-                        }
-                        .onDelete(perform: notificationManager.removeNotifications)
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .padding(.horizontal)
             }
             .navigationTitle("Centro de notificaciones")
             .toolbar {
@@ -62,6 +52,35 @@ struct NotificationCenterView: View {
             .toolbarBackground(Color.black.opacity(0.3), for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
+    }
+    
+    private var headerStats: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Tus avisos")
+                    .font(.headline)
+                    .foregroundColor(.white.opacity(0.8))
+                Text(notificationManager.unreadCount == 0 ? "Nada pendiente" : "\(notificationManager.unreadCount) pendientes")
+                    .font(.title.bold())
+                    .foregroundStyle(LinearGradient(colors: [.white, .white.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            }
+            Spacer()
+            Image(systemName: "sparkles")
+                .font(.title2)
+                .foregroundStyle(LinearGradient(colors: [.purple, .blue], startPoint: .top, endPoint: .bottom))
+                .padding(12)
+                .background(Color.white.opacity(0.1))
+                .clipShape(Circle())
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                )
+        )
     }
 }
 
@@ -84,6 +103,32 @@ struct NotificationRow: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 18)
                         .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                )
+        )
+        .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+    }
+}
+
+private struct EmptyStateView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "bell.slash.fill")
+                .font(.system(size: 64))
+                .foregroundColor(.white.opacity(0.6))
+            Text("No tienes notificaciones")
+                .font(.title3.bold())
+                .foregroundColor(.white.opacity(0.8))
+            Text("Cuando ocurra algo importante lo verás aquí.")
+                .font(.footnote)
+                .foregroundColor(.white.opacity(0.5))
+        }
+        .padding(40)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.white.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
                 )
         )
     }
