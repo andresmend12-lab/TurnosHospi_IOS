@@ -6,7 +6,7 @@ class AuthManager: ObservableObject {
     
     // 1. Singleton para acceso global (necesario para el AppDelegate)
     static let shared = AuthManager()
-    
+     
     @Published var user: User?
     @Published var currentUserName: String = ""
     @Published var currentUserLastName: String = ""
