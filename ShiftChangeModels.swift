@@ -51,10 +51,9 @@ struct ShiftChangeRequest: Identifiable, Codable {
     var targetShiftDate: String?
     var targetShiftName: String?
     var timestamp: TimeInterval = Date().timeIntervalSince1970
-    var supervisorIds: [String] = []
     
     // Inicializador por defecto para facilitar la creación
-     init(id: String = UUID().uuidString,
+    init(id: String = UUID().uuidString,
          type: RequestType = .swap,
          status: RequestStatus = .searching,
          mode: RequestMode = .flexible,
@@ -68,8 +67,7 @@ struct ShiftChangeRequest: Identifiable, Codable {
          targetUserId: String? = nil,
          targetUserName: String? = nil,
          targetShiftDate: String? = nil,
-         targetShiftName: String? = nil,
-         supervisorIds: [String] = []) {
+         targetShiftName: String? = nil) {
         
         self.id = id
         self.type = type
@@ -86,7 +84,6 @@ struct ShiftChangeRequest: Identifiable, Codable {
         self.targetUserName = targetUserName
         self.targetShiftDate = targetShiftDate
         self.targetShiftName = targetShiftName
-        self.supervisorIds = supervisorIds
     }
 }
 

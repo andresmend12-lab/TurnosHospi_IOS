@@ -3,13 +3,9 @@ import FirebaseDatabase
 import FirebaseAuth
 
 struct DirectChatListView: View {
-    @Binding var pendingRoute: ChatRoute?
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     @StateObject var plantManager = PlantManager()
-    init(pendingRoute: Binding<ChatRoute?> = .constant(nil)) {
-        _pendingRoute = pendingRoute
-    }
     
     // Datos
     @State private var chats: [DirectChat] = []
@@ -18,6 +14,7 @@ struct DirectChatListView: View {
     // Estados para Nuevo Chat
     @State private var showNewChatSheet = false
     @State private var activeChatRoute: ChatRoute?
+    @State private var navigateToChat = false
     
     @State private var userChatsRef: DatabaseReference?
     @State private var chatsObserverHandle: DatabaseHandle?
@@ -28,11 +25,16 @@ struct DirectChatListView: View {
     var currentPlantId: String { authManager.userPlantId }
     
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
             Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea()
             
             VStack(spacing: 0) {
+                NavigationLink(
+                    destination: ChatDestination(route: activeChatRoute),
+                    isActive: $navigateToChat
+                ) { EmptyView() }
+                .hidden()
+                
                 // MARK: - Header
                 HStack {
                     Button(action: { dismiss() }) {
@@ -113,14 +115,8 @@ struct DirectChatListView: View {
             }
         }
         .navigationBarHidden(true)
-        .onAppear {
-            attachChatsListenerIfNeeded()
-            consumePendingRoute()
-        }
+        .onAppear { attachChatsListenerIfNeeded() }
         .onDisappear { detachChatsListener() }
-        .onChange(of: pendingRoute) { _ in
-            consumePendingRoute()
-        }
         .sheet(isPresented: $showNewChatSheet) {
             NewChatSelectionView(
                 plantManager: plantManager,
@@ -140,11 +136,7 @@ struct DirectChatListView: View {
             )
             .presentationDetents([.medium, .large])
         }
-        }
-        .navigationDestination(item: $activeChatRoute) { route in
-            ChatDestination(route: route)
-        }
-        .navigationBarHidden(true)
+    }
     
     // MARK: - Lógica Firebase
     private func attachChatsListenerIfNeeded() {
@@ -222,14 +214,6 @@ struct DirectChatListView: View {
         }
         chatsObserverHandle = nil
         userChatsRef = nil
-    }
-
-    private func consumePendingRoute() {
-        guard let route = pendingRoute else { return }
-        activeChatRoute = route
-        DispatchQueue.main.async {
-            pendingRoute = nil
-        }
     }
 }
 

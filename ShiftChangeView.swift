@@ -29,10 +29,6 @@ struct ShiftChangeView: View {
     
     // UI Dialogs
     @State private var selectedShiftForRequest: MyShiftDisplay?
-
-    // Plant staff caches
-    @State private var plantStaffMap: [String: PlantStaff] = [:]
-    @State private var staffIdToUserId: [String: String] = [:]
     
     // Firebase References
     private let ref = Database.database().reference()
@@ -116,16 +112,8 @@ struct ShiftChangeView: View {
                                 currentUserId: currentUserId,
                                 currentUserDisplayName: plantManager.myPlantName ?? authManager.currentUserName,
                                 requests: allRequests,
-                                isSupervisor: authManager.userRole.lowercased().contains("supervisor"),
-                                supervisorRequests: allRequests.filter { $0.status == .awaitingSupervisor },
                                 onAccept: acceptRequest,
-                                onReject: rejectRequest,
-                                onApproveBySupervisor: { req in
-                                    approveSwapBySupervisor(request: req)
-                                },
-                                onRejectBySupervisor: { req in
-                                    rejectAsSupervisor(request: req)
-                                }
+                                onReject: rejectRequest
                             )
                         case 2:
                             // SUGERENCIAS (TARJETAS MEJORADAS)
@@ -174,38 +162,6 @@ struct ShiftChangeView: View {
             plantManager.fetchCurrentPlant(plantId: plantId)
             plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
             loadRequests()
-            loadStaffMappings()
-        }
-    }
-    
-    private func loadStaffMappings() {
-        guard !plantId.isEmpty else { return }
-        let staffRef = ref.child("plants/\(plantId)/personal_de_planta")
-        staffRef.observeSingleEvent(of: .value) { snapshot in
-            var map: [String: PlantStaff] = [:]
-            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
-                guard let dict = child.value as? [String: Any] else { continue }
-                let staff = PlantStaff(
-                    id: dict["id"] as? String ?? child.key,
-                    name: dict["name"] as? String ?? "Personal",
-                    role: dict["role"] as? String ?? "",
-                    email: dict["email"] as? String ?? "",
-                    profileType: dict["profileType"] as? String ?? ""
-                )
-                map[staff.id] = staff
-            }
-            self.plantStaffMap = map
-        }
-        
-        let userPlantsRef = ref.child("plants/\(plantId)/userPlants")
-        userPlantsRef.observeSingleEvent(of: .value) { snapshot in
-            var mapping: [String: String] = [:]
-            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
-                if let staffId = child.childSnapshot(forPath: "staffId").value as? String {
-                    mapping[staffId] = child.key
-                }
-            }
-            self.staffIdToUserId = mapping
         }
     }
     
@@ -376,10 +332,7 @@ struct ShiftChangeView: View {
             requesterShiftDate: rDate,
             requesterShiftName: rShift,
             targetUserId: tId,
-            targetUserName: tName,
-            targetShiftDate: dict["targetShiftDate"] as? String,
-            targetShiftName: dict["targetShiftName"] as? String,
-            supervisorIds: dict["supervisorIds"] as? [String] ?? []
+            targetUserName: tName
         )
     }
     
@@ -396,16 +349,8 @@ struct ShiftChangeView: View {
     
     func acceptRequest(_ req: ShiftChangeRequest) {
         guard req.targetUserId == currentUserId else { return }
-        var supervisorIds: [String] = []
-        for (staffId, data) in plantStaffMap {
-            if data.role.lowercased().contains("supervisor"),
-               let supUid = staffIdToUserId[staffId] {
-                supervisorIds.append(supUid)
-            }
-        }
         let updates: [String: Any] = [
-            "status": RequestStatus.awaitingSupervisor.rawValue,
-            "supervisorIds": supervisorIds
+            "status": RequestStatus.awaitingSupervisor.rawValue
         ]
         ref.child("plants/\(plantId)/shift_requests/\(req.id)").updateChildValues(updates)
     }
@@ -417,136 +362,6 @@ struct ShiftChangeView: View {
         ]
         ref.child("plants/\(plantId)/shift_requests/\(req.id)").updateChildValues(updates)
     }
-    
-    private func rejectAsSupervisor(request: ShiftChangeRequest) {
-        ref.child("plants/\(plantId)/shift_requests/\(request.id)/status")
-            .setValue(RequestStatus.rejected.rawValue)
-    }
-    
-    private func approveSwapBySupervisor(request: ShiftChangeRequest) {
-        if request.type == .coverage {
-            approveCoverage(request: request)
-            return
-        }
-        let targetUserName = request.targetUserName ?? ""
-        let targetShiftDate = request.targetShiftDate ?? ""
-        let targetShiftName = request.targetShiftName ?? ""
-        if targetUserName.isEmpty || targetShiftDate.isEmpty || targetShiftName.isEmpty {
-            return
-        }
-        
-        let requesterDayRef = ref.child("plants/\(plantId)/turnos/turnos-\(request.requesterShiftDate)")
-        let targetDayRef = ref.child("plants/\(plantId)/turnos/turnos-\(targetShiftDate)")
-        
-        requesterDayRef.observeSingleEvent(of: .value) { snapshotA in
-            targetDayRef.observeSingleEvent(of: .value) { snapshotB in
-                guard snapshotA.exists(), snapshotB.exists() else { return }
-                guard let slotA = self.findSlotInfo(in: snapshotA, shiftName: request.requesterShiftName, userName: request.requesterName),
-                      let slotB = self.findSlotInfo(in: snapshotB, shiftName: targetShiftName, userName: targetUserName) else { return }
-                
-                var updates: [String: Any] = [:]
-                
-                if slotA.isHalfDay && !slotB.isHalfDay {
-                    let baseA = "plants/\(self.plantId)/turnos/turnos-\(request.requesterShiftDate)/\(slotA.slotBasePath)"
-                    updates["\(baseA)/primary"] = targetUserName
-                    updates["\(baseA)/secondary"] = ""
-                    updates["\(baseA)/halfDay"] = false
-                    updates["plants/\(self.plantId)/turnos/turnos-\(targetShiftDate)/\(slotB.fullPath)"] = request.requesterName
-                } else if !slotA.isHalfDay && slotB.isHalfDay {
-                    let baseB = "plants/\(self.plantId)/turnos/turnos-\(targetShiftDate)/\(slotB.slotBasePath)"
-                    updates["\(baseB)/primary"] = request.requesterName
-                    updates["\(baseB)/secondary"] = ""
-                    updates["\(baseB)/halfDay"] = false
-                    updates["plants/\(self.plantId)/turnos/turnos-\(request.requesterShiftDate)/\(slotA.fullPath)"] = targetUserName
-                    updates["plants/\(self.plantId)/turnos/turnos-\(targetShiftDate)/\(slotB.fullPath)"] = request.requesterName
-                } else {
-                    updates["plants/\(self.plantId)/turnos/turnos-\(request.requesterShiftDate)/\(slotA.fullPath)"] = targetUserName
-                    updates["plants/\(self.plantId)/turnos/turnos-\(targetShiftDate)/\(slotB.fullPath)"] = request.requesterName
-                }
-                
-                updates["plants/\(self.plantId)/shift_requests/\(request.id)/status"] = RequestStatus.approved.rawValue
-                self.ref.updateChildValues(updates)
-            }
-        }
-    }
-    
-    private func approveCoverage(request: ShiftChangeRequest) {
-        guard let covererName = request.targetUserName else { return }
-        let turnosRef = ref.child("plants/\(plantId)/turnos/turnos-\(request.requesterShiftDate)")
-        turnosRef.observeSingleEvent(of: .value) { snapshot in
-            guard let shiftSnapshot = self.findShiftSnapshot(in: snapshot, shiftName: request.requesterShiftName),
-                  let slot = self.findSlotInfo(inShiftSnapshot: shiftSnapshot, userName: request.requesterName) else { return }
-            
-            let transactionId = UUID().uuidString
-            var updates: [String: Any] = [:]
-            updates["plants/\(self.plantId)/turnos/turnos-\(request.requesterShiftDate)/\(slot.fullPath)"] = covererName
-            updates["plants/\(self.plantId)/shift_requests/\(request.id)/status"] = RequestStatus.approved.rawValue
-            
-            if let covererId = request.targetUserId {
-                let transaction: [String: Any] = [
-                    "id": transactionId,
-                    "covererId": covererId,
-                    "covererName": covererName,
-                    "requesterId": request.requesterId,
-                    "requesterName": request.requesterName,
-                    "date": request.requesterShiftDate,
-                    "shiftName": request.requesterShiftName,
-                    "timestamp": Date().timeIntervalSince1970 * 1000
-                ]
-                updates["plants/\(self.plantId)/transactions/\(transactionId)"] = transaction
-            }
-            
-            self.ref.updateChildValues(updates)
-        }
-    }
-
-    private func findSlotInfo(in snapshot: DataSnapshot, shiftName: String, userName: String) -> ShiftSlotInfo? {
-        guard let shiftSnapshot = findShiftSnapshot(in: snapshot, shiftName: shiftName) else { return nil }
-        return findSlotInfo(inShiftSnapshot: shiftSnapshot, userName: userName)
-    }
-    
-    private func findShiftSnapshot(in snapshot: DataSnapshot, shiftName: String) -> DataSnapshot? {
-        let normalized = shiftName.replacingOccurrences(of: "Media ", with: "", options: .caseInsensitive)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
-            let key = child.key
-            if key.caseInsensitiveCompare(normalized) == .orderedSame {
-                return child
-            }
-        }
-        return nil
-    }
-    
-    private func findSlotInfo(inShiftSnapshot shiftSnapshot: DataSnapshot, userName: String) -> ShiftSlotInfo? {
-        let targetName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let groups = ["nurses", "auxiliaries"]
-        for group in groups {
-            let groupSnapshot = shiftSnapshot.childSnapshot(forPath: group)
-            for slot in groupSnapshot.children.allObjects as? [DataSnapshot] ?? [] {
-                let primary = (slot.childSnapshot(forPath: "primary").value as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-                let secondary = (slot.childSnapshot(forPath: "secondary").value as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-                let halfDay = slot.childSnapshot(forPath: "halfDay").value as? Bool ?? false
-                if primary.caseInsensitiveCompare(targetName) == .orderedSame {
-                    return ShiftSlotInfo(
-                        shiftKey: shiftSnapshot.key ?? "",
-                        group: group,
-                        slotKey: slot.key ?? "0",
-                        field: "primary",
-                        isHalfDay: halfDay
-                    )
-                } else if secondary.caseInsensitiveCompare(targetName) == .orderedSame {
-                    return ShiftSlotInfo(
-                        shiftKey: shiftSnapshot.key ?? "",
-                        group: group,
-                        slotKey: slot.key ?? "0",
-                        field: "secondary",
-                        isHalfDay: halfDay
-                    )
-                }
-            }
-        }
-        return nil
-    }
 }
 
 // MARK: - 1. PESTAÑA GESTIÓN
@@ -555,12 +370,8 @@ struct ManagementTab: View {
     let currentUserId: String
     let currentUserDisplayName: String
     let requests: [ShiftChangeRequest]
-    let isSupervisor: Bool
-    let supervisorRequests: [ShiftChangeRequest]
     let onAccept: (ShiftChangeRequest) -> Void
     let onReject: (ShiftChangeRequest) -> Void
-    let onApproveBySupervisor: (ShiftChangeRequest) -> Void
-    let onRejectBySupervisor: (ShiftChangeRequest) -> Void
     
     private let dateFormatter: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f
@@ -572,22 +383,6 @@ struct ManagementTab: View {
     
     var body: some View {
         List {
-            if isSupervisor && !supervisorRequests.isEmpty {
-                Section(header: Text("Pendientes de supervisor").foregroundColor(.white)) {
-                    ForEach(supervisorRequests) { req in
-                        RequestRow(
-                            req: req,
-                            isHistory: false,
-                            showActionButtons: false,
-                            onAccept: nil,
-                            onReject: nil,
-                            showSupervisorActions: true,
-                            onSupervisorApprove: { onApproveBySupervisor(req) },
-                            onSupervisorReject: { onRejectBySupervisor(req) }
-                        )
-                    }
-                }
-            }
             // SECCIÓN ACTIVOS
             if !activeRequests.isEmpty {
                 Section(header: Text("En curso / Próximos").foregroundColor(.white)) {
@@ -598,10 +393,7 @@ struct ManagementTab: View {
                             isHistory: false,
                             showActionButtons: actionable,
                             onAccept: actionable ? { onAccept(req) } : nil,
-                            onReject: actionable ? { onReject(req) } : nil,
-                            showSupervisorActions: false,
-                            onSupervisorApprove: nil,
-                            onSupervisorReject: nil
+                            onReject: actionable ? { onReject(req) } : nil
                         )
                     }
                 }
@@ -619,10 +411,7 @@ struct ManagementTab: View {
                                 isHistory: true,
                                 showActionButtons: false,
                                 onAccept: nil,
-                                onReject: nil,
-                                showSupervisorActions: false,
-                                onSupervisorApprove: nil,
-                                onSupervisorReject: nil
+                                onReject: nil
                             )
                         }
                     }
@@ -670,31 +459,12 @@ struct ManagementTab: View {
     }
 }
 
-private struct ShiftSlotInfo {
-    let shiftKey: String
-    let group: String
-    let slotKey: String
-    let field: String
-    let isHalfDay: Bool
-    
-    var fullPath: String {
-        "\(shiftKey)/\(group)/\(slotKey)/\(field)"
-    }
-    
-    var slotBasePath: String {
-        "\(shiftKey)/\(group)/\(slotKey)"
-    }
-}
-
 struct RequestRow: View {
     let req: ShiftChangeRequest
     let isHistory: Bool
     let showActionButtons: Bool
     let onAccept: (() -> Void)?
     let onReject: (() -> Void)?
-    let showSupervisorActions: Bool
-    let onSupervisorApprove: (() -> Void)?
-    let onSupervisorReject: (() -> Void)?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -744,38 +514,6 @@ struct RequestRow: View {
                     }
                     .padding(.top, 6)
                 }
-            }
-            
-            if showSupervisorActions,
-               let approve = onSupervisorApprove,
-               let reject = onSupervisorReject {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Revisión de supervisor")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
-                    HStack {
-                        Button(action: reject) {
-                            Text("Rechazar")
-                                .font(.subheadline.bold())
-                                .frame(maxWidth: .infinity)
-                        }
-                        .padding(.vertical, 8)
-                        .background(Color.red.opacity(0.2))
-                        .foregroundColor(.red)
-                        .cornerRadius(8)
-                        
-                        Button(action: approve) {
-                            Text("Aprobar")
-                                .font(.subheadline.bold())
-                                .frame(maxWidth: .infinity)
-                        }
-                        .padding(.vertical, 8)
-                        .background(Color.green.opacity(0.3))
-                        .foregroundColor(.green)
-                        .cornerRadius(8)
-                    }
-                }
-                .padding(.top, 6)
             }
         }
         .padding(.vertical, 4)

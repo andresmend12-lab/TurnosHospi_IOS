@@ -32,10 +32,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         DispatchQueue.main.async {
             application.registerForRemoteNotifications()
         }
-
-        if let payload = launchOptions?[.remoteNotification] as? [AnyHashable: Any] {
-            AuthManager.shared.handleRemoteNotificationPayload(payload)
-        }
         
         return true
     }
@@ -77,7 +73,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         
         // Aquí puedes procesar datos adicionales de la notificación
         print("Usuario tocó la notificación: \(userInfo)")
-        AuthManager.shared.handleRemoteNotificationPayload(userInfo)
         
         completionHandler()
     }

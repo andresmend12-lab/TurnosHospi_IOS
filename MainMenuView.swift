@@ -13,7 +13,6 @@ struct MainMenuView: View {
     // Estado para abrir chats
     @State private var showDirectChats = false
     @State private var showNotificationCenter = false
-    @State private var pendingChatRoute: ChatRoute?
     @State private var lastKnownAssignments: [String: String] = [:]
     @State private var assignmentsInitialized = false
     
@@ -140,7 +139,7 @@ struct MainMenuView: View {
             }
             // 1. Navegación a la lista de chats
             .navigationDestination(isPresented: $showDirectChats) {
-                DirectChatListView(pendingRoute: $pendingChatRoute)
+                DirectChatListView()
             }
             // 2. NUEVO: Manejador global para rutas de chat (ESTO ARREGLA EL PROBLEMA)
             .navigationDestination(for: ChatRoute.self) { route in
@@ -198,11 +197,6 @@ struct MainMenuView: View {
         }
         .onChange(of: authManager.userRole) { _ in
             refreshNotificationContext()
-        }
-        .onChange(of: authManager.pendingNavigation) { _ in
-            if let payload = authManager.consumePendingNavigation() {
-                handleDeepLink(payload)
-            }
         }
     }
     
@@ -287,28 +281,6 @@ struct MainMenuView: View {
         let plantId = authManager.userPlantId.isEmpty ? nil : authManager.userPlantId
         let isSupervisor = authManager.userRole == "Supervisor"
         notificationManager.updateContext(userId: userId, plantId: plantId, isSupervisor: isSupervisor)
-    }
-    
-    private func handleDeepLink(_ payload: [String: String]) {
-        guard let screen = payload["screen"] else { return }
-        switch screen {
-        case "DirectChat":
-            guard let chatId = payload["chatId"] ?? payload["argument"],
-                  !chatId.isEmpty else { break }
-            let otherId = payload["otherUserId"] ?? payload["argument"] ?? ""
-            guard !otherId.isEmpty else { break }
-            let otherName = payload["otherUserName"] ?? "Compañero"
-            pendingChatRoute = ChatRoute(chatId: chatId, otherUserId: otherId, otherUserName: otherName)
-            showDirectChats = true
-        case "NotificationCenter":
-            showNotificationCenter = true
-        case "GroupChat":
-            showNotificationCenter = true
-        case "ShiftChangeScreen", "ShiftMarketplaceScreen":
-            showNotificationCenter = true
-        default:
-            showNotificationCenter = true
-        }
     }
     
     private var headerView: some View {

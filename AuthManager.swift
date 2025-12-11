@@ -14,7 +14,6 @@ class AuthManager: ObservableObject {
     @Published var userPlantId: String = ""
     @Published var totalUnreadChats: Int = 0
     @Published var unreadChatsById: [String: Int] = [:]
-    @Published var pendingNavigation: [String: String]? = nil
     
     private let ref = Database.database().reference()
     private var unreadChatsRef: DatabaseReference?
@@ -178,7 +177,6 @@ class AuthManager: ObservableObject {
         self.userPlantId = ""
         self.totalUnreadChats = 0
         self.unreadChatsById = [:]
-        self.pendingNavigation = nil
     }
     
     private func startListeningUnreadChats(uid: String) {
@@ -216,24 +214,5 @@ class AuthManager: ObservableObject {
             self.totalUnreadChats = 0
             self.unreadChatsById = [:]
         }
-    }
-
-    // MARK: - Deep Link Handling
-    func handleRemoteNotificationPayload(_ payload: [AnyHashable: Any]) {
-        var map: [String: String] = [:]
-        for (key, value) in payload {
-            if let keyString = key as? String {
-                map[keyString] = "\(value)"
-            }
-        }
-        DispatchQueue.main.async {
-            self.pendingNavigation = map
-        }
-    }
-    
-    func consumePendingNavigation() -> [String: String]? {
-        let nav = pendingNavigation
-        pendingNavigation = nil
-        return nav
     }
 }

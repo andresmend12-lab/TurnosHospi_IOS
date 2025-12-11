@@ -21,27 +21,13 @@ struct NotificationCenterView: View {
                     VStack(spacing: 18) {
                         headerStats
                         
-                        if notificationManager.notifications.isEmpty {
+                        if notificationManager.unreadCount == 0 {
                             EmptyStateView()
                                 .padding(.top, 60)
                         } else {
                             LazyVStack(spacing: 16) {
                                 ForEach(notificationManager.notifications) { item in
-                                    Button {
-                                        if !item.read {
-                                            notificationManager.markAsRead(item)
-                                        }
-                                    } label: {
-                                        NotificationRow(item: item)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .contextMenu {
-                                        Button(role: .destructive) {
-                                            notificationManager.delete(item)
-                                        } label: {
-                                            Label("Eliminar", systemImage: "trash")
-                                        }
-                                    }
+                                    NotificationRow(item: item)
                                 }
                             }
                         }
@@ -60,7 +46,7 @@ struct NotificationCenterView: View {
                     Button("Vaciar") {
                         notificationManager.clearAll()
                     }
-                    .disabled(notificationManager.notifications.isEmpty)
+                    .disabled(notificationManager.unreadCount == 0)
                 }
             }
             .toolbarBackground(Color.black.opacity(0.3), for: .navigationBar)
@@ -103,20 +89,9 @@ struct NotificationRow: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(item.title)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                Spacer()
-                if !item.read {
-                    Circle()
-                        .fill(Color.blue)
-                        .frame(width: 10, height: 10)
-                }
-            }
             Text(item.message)
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.85))
+                .font(.body.weight(.semibold))
+                .foregroundColor(.white)
             Text(item.timestamp, style: .time)
                 .font(.caption)
                 .foregroundColor(.white.opacity(0.6))
@@ -124,7 +99,7 @@ struct NotificationRow: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(item.read ? Color.white.opacity(0.05) : Color.white.opacity(0.12))
+                .fill(Color.white.opacity(0.08))
                 .overlay(
                     RoundedRectangle(cornerRadius: 18)
                         .stroke(Color.white.opacity(0.15), lineWidth: 1)

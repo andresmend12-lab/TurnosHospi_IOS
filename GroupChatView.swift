@@ -175,20 +175,43 @@ struct GroupChatView: View {
             "timestamp": timestamp
         ]
         
+        // 1. Guardar mensaje
         chatRef.child(msgId).setValue(msgData)
-        notifyPlantMembersAboutMessage(senderName: name, message: "Nuevo mensaje: \(textToSend)")
+        
+        // 2. Notificación (Replicando lógica Android)
+        let notificationMsg = "Nuevo mensaje de \(name)..."
+        sendNotification(
+            fanoutId: "GROUP_CHAT_FANOUT_ID",
+            type: "CHAT_GROUP",
+            message: notificationMsg,
+            screen: "GroupChat",
+            plantId: plantId
+        )
+        
+        // Limpiar
         textInput = ""
     }
     
-    private func notifyPlantMembersAboutMessage(senderName: String, message: String) {
-        NotificationAPI.shared.broadcastToPlant(
-            plantId: plantId,
-            excluding: currentUserId,
-            title: senderName,
-            message: message,
-            targetScreen: "GroupChat",
-            argument: plantId
-        )
+    // MARK: - Lógica de Notificación (Simulación Android)
+    func sendNotification(fanoutId: String, type: String, message: String, screen: String, plantId: String) {
+        // En Android llamabas a 'onSaveNotification'. En iOS, si no tienes una Cloud Function escuchando 'chat',
+        // puedes escribir un registro de notificación aquí.
+        
+        // Ejemplo: Escribir en una cola de notificaciones si tu backend lo soporta
+        /*
+        let notifRef = ref.child("notifications_queue").childByAutoId()
+        let notifData: [String: Any] = [
+            "plantId": plantId,
+            "senderId": currentUserId,
+            "type": type,
+            "message": message,
+            "targetScreen": screen,
+            "timestamp": ServerValue.timestamp()
+        ]
+        notifRef.setValue(notifData)
+        */
+        
+        print("Notificación enviada (Lógica pendiente de backend): \(message)")
     }
     
     // Helper autoscroll
