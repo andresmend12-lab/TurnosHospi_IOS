@@ -88,12 +88,14 @@ struct MainMenuView: View {
                                 Spacer()
                                 Button(action: { showDirectChats = true }) {
                                     ZStack(alignment: .topTrailing) {
-                                        Image(systemName: "bubble.left.and.bubble.right.fill")
-                                            .font(.title2)
-                                            .foregroundColor(.white)
-                                            .padding(18)
-                                            .background(Color(red: 0.2, green: 0.4, blue: 1.0))
-                                            .clipShape(Circle())
+                                        Circle()
+                                            .fill(Color(red: 0.2, green: 0.4, blue: 1.0))
+                                            .frame(width: 56, height: 56)
+                                            .overlay(
+                                                Image(systemName: "bubble.left.and.bubble.right.fill")
+                                                    .font(.title2)
+                                                    .foregroundColor(.white)
+                                            )
                                         
                                         if authManager.totalUnreadChats > 0 {
                                             Text(authManager.totalUnreadChats > 99 ? "99+" : "\(authManager.totalUnreadChats)")
@@ -103,7 +105,7 @@ struct MainMenuView: View {
                                                 .padding(.vertical, 2)
                                                 .background(Color.red)
                                                 .clipShape(Capsule())
-                                                .offset(x: 12, y: -10)
+                                                .offset(x: -6, y: -6)
                                         }
                                     }
                                     .shadow(color: .black.opacity(0.4), radius: 5, x: 0, y: 4)
