@@ -9,31 +9,37 @@ struct ChatUser: Identifiable, Codable, Hashable {
 }
 
 // MARK: - Ruta de Navegación (ESTABLE)
-// Usamos esto para navegar. Como no tiene 'lastMessage' ni 'timestamp',
-// no cambia cuando llegan mensajes nuevos, evitando que se cierre el chat.
+// Usamos esto para NavigationStack. No incluye lastMessage ni timestamp
+// para que no cambie al llegar mensajes nuevos.
 struct ChatRoute: Hashable {
     let chatId: String
     let otherUserId: String
     let otherUserName: String
 }
 
-// MARK: - Modelo de Chat (DATOS)
-// Quitamos el Hashable manual para que Swift compare todos los campos automáticamente.
-// Esto permite que la fila de la lista se refresque al cambiar el mensaje.
+// MARK: - Modelo de Chat (DATOS + UI AUXILIAR)
 struct DirectChat: Identifiable, Codable, Hashable {
     let id: String
     let participants: [String]
     let lastMessage: String
     let timestamp: TimeInterval
     
-    // Datos auxiliares UI
+    // Datos auxiliares solo para la UI (NO se guardan en Firebase)
     var otherUserName: String = ""
     var otherUserRole: String = ""
     var otherUserId: String = ""
     
-    // Helper ID único
+    // Helper ID único: uid1_uid2 (ordenados)
     static func getChatId(user1: String, user2: String) -> String {
         return [user1, user2].sorted().joined(separator: "_")
+    }
+    
+    // Solo persistimos los campos "de datos"
+    enum CodingKeys: String, CodingKey {
+        case id
+        case participants
+        case lastMessage
+        case timestamp
     }
 }
 
@@ -42,10 +48,11 @@ struct DirectMessage: Identifiable, Codable, Equatable, Hashable {
     let id: String
     let senderId: String
     let text: String
-    let timestamp: TimeInterval
+    let timestamp: TimeInterval   // esperado en milisegundos desde Epoch
     let read: Bool
     
     var timeString: String {
+        // timestamp viene en ms → dividimos entre 1000
         let date = Date(timeIntervalSince1970: timestamp / 1000)
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"

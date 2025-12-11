@@ -7,7 +7,6 @@ import FirebaseAuth
 /// - PlantManager
 /// - DirectChat (Identifiable)
 /// - ChatUser
-/// - ChatRoute (Hashable, para navegación con NavigationStack)
 struct DirectChatListView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
@@ -29,16 +28,16 @@ struct DirectChatListView: View {
     
     // Usuario actual
     var currentUserId: String {
-        return authManager.user?.uid ?? ""
+        authManager.user?.uid ?? ""
     }
     
     // Planta actual
     var currentPlantId: String {
-        return authManager.userPlantId
+        authManager.userPlantId
     }
     
     var body: some View {
-        // No usamos NavigationStack aquí: heredamos el NavigationStack de la vista padre
+        // No usamos NavigationStack aquí: heredamos el NavigationStack del padre
         ZStack {
             Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea()
             
@@ -84,13 +83,14 @@ struct DirectChatListView: View {
                     ScrollView {
                         VStack(spacing: 0) {
                             ForEach(chats) { chat in
-                                NavigationLink(
-                                    value: ChatRoute(
+                                // Navegación clásica → siempre funciona dentro de un NavigationStack
+                                NavigationLink {
+                                    DirectChatView(
                                         chatId: chat.id,
                                         otherUserId: chat.otherUserId,
                                         otherUserName: chat.otherUserName
                                     )
-                                ) {
+                                } label: {
                                     ChatRow(chat: chat)
                                 }
                                 Divider()
@@ -127,18 +127,7 @@ struct DirectChatListView: View {
             }
         }
         
-        // MARK: - Destinos de navegación
-        
-        // 1. Navegación desde la lista de chats (via ChatRoute)
-        .navigationDestination(for: ChatRoute.self) { route in
-            DirectChatView(
-                chatId: route.chatId,
-                otherUserId: route.otherUserId,
-                otherUserName: route.otherUserName
-            )
-        }
-        
-        // 2. Navegación programática para nuevo chat
+        // MARK: - Navegación programática solo para nuevo chat
         .navigationDestination(isPresented: $navigateToNewChat) {
             if let userId = selectedOtherUser?.id,
                let userName = selectedOtherUser?.name,
@@ -149,7 +138,6 @@ struct DirectChatListView: View {
                     otherUserName: userName
                 )
             } else {
-                // En caso de fallo de estado, evitamos crashear
                 Text("Error al abrir el chat.")
                     .foregroundColor(.white)
             }
@@ -160,14 +148,12 @@ struct DirectChatListView: View {
         .onAppear {
             fetchChatsDirectlyFromPlant()
         }
-        // Si cambia el usuario (por ejemplo al loguearse), recargamos
         .onChange(of: authManager.user?.uid) { newUid in
             if let uid = newUid, !uid.isEmpty {
                 fetchChatsDirectlyFromPlant()
             }
         }
         .onDisappear {
-            // Al salir de la vista, liberamos los listeners de Firebase
             if !currentPlantId.isEmpty {
                 ref.child("plants")
                     .child(currentPlantId)
@@ -175,7 +161,7 @@ struct DirectChatListView: View {
                     .removeAllObservers()
             }
         }
-        .navigationBarHidden(true) // Usamos nuestro header custom
+        .navigationBarHidden(true)
         
         // MARK: - Sheet de selección de usuario para nuevo chat
         .sheet(isPresented: $showNewChatSheet) {
@@ -188,7 +174,6 @@ struct DirectChatListView: View {
                     selectedOtherUser = user
                     showNewChatSheet = false
                     
-                    // Pequeño retardo para no pelearse con la animación del sheet
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         navigateToNewChat = true
                     }
@@ -201,7 +186,6 @@ struct DirectChatListView: View {
     // MARK: - Lógica de carga de chats
     
     func fetchChatsDirectlyFromPlant() {
-        // Si aún no tenemos usuario o planta, esperamos
         guard !currentUserId.isEmpty, !currentPlantId.isEmpty else {
             return
         }
@@ -219,23 +203,52 @@ struct DirectChatListView: View {
             
             for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
                 let chatId = child.key
+                let parts = chatId.components(separatedBy: "_")
                 
-                // Solo nos interesan los chats donde participa el usuario actual
-                guard chatId.contains(currentUserId) else { continue }
+                // Solo chats donde participa el usuario actual
+                guard parts.contains(currentUserId) else { continue }
                 
                 if let dict = child.value as? [String: Any] {
                     group.enter()
                     
+                    // 1) lastMessage
                     var lastMsg = dict["lastMessage"] as? String ?? ""
-                    var timestamp = dict["lastTimestamp"] as? TimeInterval ?? 0
                     
-                    // Fallback si no hay lastMessage: miramos el nodo messages
+                    // 2) lastTimestamp
+                    var timestamp: TimeInterval = 0
+                    if let rawTs = dict["lastTimestamp"] {
+                        if let t = rawTs as? TimeInterval {
+                            timestamp = t
+                        } else if let t = rawTs as? Double {
+                            timestamp = t
+                        } else if let t = rawTs as? Int {
+                            timestamp = TimeInterval(t)
+                        } else if let n = rawTs as? NSNumber {
+                            timestamp = n.doubleValue
+                        }
+                    }
+                    
+                    // Fallback si no hay lastMessage: miramos messages
                     if lastMsg.isEmpty,
                        let messagesDict = dict["messages"] as? [String: [String: Any]] {
                         
                         let sortedMessages = messagesDict.values.compactMap { msgData -> (String, TimeInterval)? in
-                            guard let text = msgData["text"] as? String,
-                                  let time = msgData["timestamp"] as? TimeInterval else { return nil }
+                            guard let text = msgData["text"] as? String else { return nil }
+                            
+                            let rawTs = msgData["timestamp"]
+                            let time: TimeInterval
+                            if let t = rawTs as? TimeInterval {
+                                time = t
+                            } else if let t = rawTs as? Double {
+                                time = t
+                            } else if let t = rawTs as? Int {
+                                time = TimeInterval(t)
+                            } else if let n = rawTs as? NSNumber {
+                                time = n.doubleValue
+                            } else {
+                                return nil
+                            }
+                            
                             return (text, time)
                         }
                         .sorted { $0.1 < $1.1 }
@@ -250,8 +263,7 @@ struct DirectChatListView: View {
                         lastMsg = "Chat iniciado"
                     }
                     
-                    // Obtenemos el otro participante a partir del chatId
-                    let parts = chatId.components(separatedBy: "_")
+                    // Otro participante
                     let otherId: String
                     if parts.count == 2 {
                         otherId = (parts[0] == currentUserId) ? parts[1] : parts[0]
@@ -261,7 +273,7 @@ struct DirectChatListView: View {
                             .replacingOccurrences(of: "_", with: "")
                     }
                     
-                    // Cargamos datos del otro usuario
+                    // Datos del otro usuario
                     self.ref.child("users").child(otherId).observeSingleEvent(of: .value) { userSnap in
                         let userVal = userSnap.value as? [String: Any]
                         let firstName = userVal?["firstName"] as? String ?? "Usuario"
@@ -287,7 +299,6 @@ struct DirectChatListView: View {
             }
             
             group.notify(queue: .main) {
-                // Ordenamos por timestamp descendente (último mensaje primero)
                 self.chats = loadedChats.sorted { $0.timestamp > $1.timestamp }
                 self.isLoading = false
             }
@@ -302,7 +313,6 @@ struct ChatRow: View {
     
     var body: some View {
         HStack(spacing: 15) {
-            // Avatar circular con inicial
             ZStack {
                 Circle()
                     .fill(Color.gray.opacity(0.3))
@@ -323,9 +333,6 @@ struct ChatRow: View {
                     Spacer()
                     
                     if chat.timestamp > 0 {
-                        // IMPORTANTE:
-                        // Si guardas el timestamp en milisegundos, divide entre 1000.
-                        // Si lo guardas en segundos, elimina la división.
                         Text(
                             Date(timeIntervalSince1970: chat.timestamp / 1000)
                                 .formatted(date: .omitted, time: .shortened)
@@ -344,6 +351,6 @@ struct ChatRow: View {
         }
         .padding()
         .background(Color(red: 0.05, green: 0.05, blue: 0.1))
-        .contentShape(Rectangle()) // Toda la fila es pulsable
+        .contentShape(Rectangle())
     }
 }

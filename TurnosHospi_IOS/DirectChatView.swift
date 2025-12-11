@@ -2,9 +2,10 @@ import SwiftUI
 import FirebaseDatabase
 
 struct DirectChatView: View {
-    var chatId: String // Ahora siempre debe venir un ID generado (uid1_uid2)
-    var otherUserId: String
-    var otherUserName: String
+    // ID del chat: siempre en formato uid1_uid2 (ordenado alfabéticamente)
+    let chatId: String
+    let otherUserId: String
+    let otherUserName: String
     
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
@@ -15,44 +16,62 @@ struct DirectChatView: View {
     private let ref = Database.database().reference()
     
     var currentPlantId: String {
-        return authManager.userPlantId
+        authManager.userPlantId
+    }
+    
+    var currentUserId: String? {
+        authManager.user?.uid
     }
     
     var body: some View {
         ZStack {
-            Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea()
+            Color(red: 0.05, green: 0.05, blue: 0.1)
+                .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Header
+                // MARK: - Header
                 HStack {
                     Button(action: { dismiss() }) {
-                        Image(systemName: "arrow.left").font(.title2).foregroundColor(.white)
+                        Image(systemName: "arrow.left")
+                            .font(.title2)
+                            .foregroundColor(.white)
                     }
                     Spacer()
-                    Text(otherUserName).font(.headline).foregroundColor(.white)
+                    Text(otherUserName)
+                        .font(.headline)
+                        .foregroundColor(.white)
                     Spacer()
-                    Image(systemName: "arrow.left").font(.title2).opacity(0)
+                    // Icono invisible para centrar
+                    Image(systemName: "arrow.left")
+                        .font(.title2)
+                        .opacity(0)
                 }
                 .padding()
                 .background(Color.black.opacity(0.3))
                 
-                // Mensajes
+                // MARK: - Lista de mensajes
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 8) {
                             ForEach(messages) { msg in
-                                // AQUÍ SE USA DIRECTMESSAGEBUBBLE
-                                DirectMessageBubble(message: msg, isMe: msg.senderId == authManager.user?.uid)
-                                    .id(msg.id)
+                                DirectMessageBubble(
+                                    message: msg,
+                                    isMe: msg.senderId == currentUserId
+                                )
+                                .id(msg.id)
                             }
                         }
                         .padding()
                     }
-                    .onChange(of: messages) { _ in scrollToBottom(proxy) }
-                    .onAppear { scrollToBottom(proxy) }
+                    .onChange(of: messages) { _ in
+                        scrollToBottom(proxy)
+                    }
+                    .onAppear {
+                        scrollToBottom(proxy)
+                    }
                 }
                 
-                // Input
+                // MARK: - Input
                 HStack(spacing: 10) {
                     TextField("Escribe...", text: $textInput)
                         .padding(10)
@@ -63,7 +82,11 @@ struct DirectChatView: View {
                     Button(action: sendMessage) {
                         Image(systemName: "paperplane.fill")
                             .font(.title2)
-                            .foregroundColor(textInput.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .blue)
+                            .foregroundColor(
+                                textInput.trimmingCharacters(in: .whitespaces).isEmpty
+                                ? .gray
+                                : .blue
+                            )
                     }
                     .disabled(textInput.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
@@ -75,52 +98,108 @@ struct DirectChatView: View {
         .onAppear {
             listenToMessages()
         }
+        .onDisappear {
+            removeMessagesObserver()
+        }
     }
     
-    // MARK: - Firebase Logic
+    // MARK: - Firebase: escucha de mensajes
     
     func listenToMessages() {
         guard !currentPlantId.isEmpty else { return }
         
-        // Ruta: plants/{plantId}/direct_chats/{chatId}/messages
-        let msgRef = ref.child("plants").child(currentPlantId).child("direct_chats").child(chatId).child("messages")
+        let msgRef = ref
+            .child("plants")
+            .child(currentPlantId)
+            .child("direct_chats")
+            .child(chatId)
+            .child("messages")
         
-        msgRef.queryLimited(toLast: 50).observe(.childAdded) { snapshot in
-            if let dict = snapshot.value as? [String: Any] {
+        // Ordenamos por timestamp y limitamos a los últimos 50
+        msgRef
+            .queryOrdered(byChild: "timestamp")
+            .queryLimited(toLast: 50)
+            .observe(.childAdded) { snapshot in
+                guard let dict = snapshot.value as? [String: Any] else { return }
+                
+                let senderId = dict["senderId"] as? String ?? ""
+                let text = dict["text"] as? String ?? ""
+                let read = dict["read"] as? Bool ?? false
+                
+                // Manejo robusto de timestamp (Double/Int/NSNumber)
+                let rawTimestamp = dict["timestamp"]
+                let ts: TimeInterval
+                if let t = rawTimestamp as? TimeInterval {
+                    ts = t
+                } else if let t = rawTimestamp as? Double {
+                    ts = t
+                } else if let t = rawTimestamp as? Int {
+                    ts = TimeInterval(t)
+                } else if let n = rawTimestamp as? NSNumber {
+                    ts = n.doubleValue
+                } else {
+                    ts = 0
+                }
+                
                 let msg = DirectMessage(
                     id: snapshot.key,
-                    senderId: dict["senderId"] as? String ?? "",
-                    text: dict["text"] as? String ?? "",
-                    timestamp: dict["timestamp"] as? TimeInterval ?? 0,
-                    read: dict["read"] as? Bool ?? false
+                    senderId: senderId,
+                    text: text,
+                    timestamp: ts,
+                    read: read
                 )
+                
                 DispatchQueue.main.async {
                     self.messages.append(msg)
+                    self.messages.sort { $0.timestamp < $1.timestamp }
                 }
             }
-        }
     }
     
-    func sendMessage() {
-        guard let myId = authManager.user?.uid,
-              !textInput.trimmingCharacters(in: .whitespaces).isEmpty,
-              !currentPlantId.isEmpty else { return }
+    func removeMessagesObserver() {
+        guard !currentPlantId.isEmpty else { return }
         
-        let textToSend = textInput
+        let msgRef = ref
+            .child("plants")
+            .child(currentPlantId)
+            .child("direct_chats")
+            .child(chatId)
+            .child("messages")
+        
+        msgRef.removeAllObservers()
+    }
+    
+    // MARK: - Envío de mensajes
+    
+    func sendMessage() {
+        guard
+            let myId = currentUserId,
+            !textInput.trimmingCharacters(in: .whitespaces).isEmpty,
+            !currentPlantId.isEmpty
+        else { return }
+        
+        let textToSend = textInput.trimmingCharacters(in: .whitespacesAndNewlines)
         textInput = "" // Limpiar UI inmediatamente
         
-        // 1. Guardar mensaje en: plants/{plantId}/direct_chats/{chatId}/messages
-        let chatRootRef = ref.child("plants").child(currentPlantId).child("direct_chats").child(chatId)
+        let chatRootRef = ref
+            .child("plants")
+            .child(currentPlantId)
+            .child("direct_chats")
+            .child(chatId)
+        
         let msgRef = chatRootRef.child("messages").childByAutoId()
         
+        let msgId = msgRef.key ?? UUID().uuidString
+        
         let msgData: [String: Any] = [
-            "id": msgRef.key ?? UUID().uuidString,
+            "id": msgId,
             "senderId": myId,
             "text": textToSend,
-            "timestamp": ServerValue.timestamp(),
+            "timestamp": ServerValue.timestamp(), // ms desde Epoch
             "read": false
         ]
         
+        // 1. Guardar mensaje
         msgRef.setValue(msgData)
         
         // 2. Actualizar último mensaje (para la lista)
@@ -129,20 +208,25 @@ struct DirectChatView: View {
             "lastTimestamp": ServerValue.timestamp()
         ])
         
-        // 3. Registrar chat en el índice de ambos usuarios (para que aparezca en la lista)
-        // Ruta: user_chats/{uid}/{chatId} = true
+        // 3. Registrar chat en el índice de usuarios
+        // user_chats/{uid}/{chatId} = true
         ref.child("user_chats").child(myId).child(chatId).setValue(true)
         ref.child("user_chats").child(otherUserId).child(chatId).setValue(true)
     }
     
+    // MARK: - Scroll
+    
     func scrollToBottom(_ proxy: ScrollViewProxy) {
         if let last = messages.last {
-            withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+            withAnimation {
+                proxy.scrollTo(last.id, anchor: .bottom)
+            }
         }
     }
 }
 
-// MARK: - COMPONENTE BURBUJA (AÑADIDO AQUÍ PARA SOLUCIONAR EL ERROR)
+// MARK: - Burbuja de mensaje
+
 struct DirectMessageBubble: View {
     let message: DirectMessage
     let isMe: Bool
@@ -151,10 +235,17 @@ struct DirectMessageBubble: View {
         HStack {
             if isMe { Spacer() }
             
-            VStack(alignment: isMe ? .trailing : .leading, spacing: 2) {
+            VStack(
+                alignment: isMe ? .trailing : .leading,
+                spacing: 2
+            ) {
                 Text(message.text)
                     .padding(10)
-                    .background(isMe ? Color(red: 0.2, green: 0.4, blue: 1.0) : Color.white.opacity(0.1))
+                    .background(
+                        isMe
+                        ? Color(red: 0.2, green: 0.4, blue: 1.0)
+                        : Color.white.opacity(0.1)
+                    )
                     .foregroundColor(.white)
                     .cornerRadius(12)
                 
