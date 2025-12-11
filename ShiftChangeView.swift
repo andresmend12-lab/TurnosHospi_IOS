@@ -986,6 +986,7 @@ struct MyShiftsCalendarTab: View {
     
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var vacationManager: VacationManager
     
     private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]
     private var calendar: Calendar {
@@ -1029,10 +1030,14 @@ struct MyShiftsCalendarTab: View {
                                             
                                             let worker = getMyShiftWorker(for: date)
                                             let type = worker != nil ? mapStringToShiftType(worker!.shiftName ?? "", role: worker!.role) : nil
+                                            let isVacationDay = vacationManager.isVacation(date)
                                             
                                             // CORRECCIÓN: Calculamos el color en una variable 'let' usando una clausura.
                                             // Esto evita que el ViewBuilder confunda la lógica con Vistas.
                                             let displayColor: Color = {
+                                                if isVacationDay {
+                                                    return Color.red
+                                                }
                                                 if let t = type {
                                                     return themeManager.color(for: t)
                                                 } else if isSaliente(date: date) {
@@ -1048,6 +1053,15 @@ struct MyShiftsCalendarTab: View {
                             ZStack {
                                 displayColor.opacity(isSelected ? 1.0 : 0.8)
                                 Text("\(day)").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                                if isVacationDay {
+                                    VStack {
+                                        Spacer()
+                                        Text("VAC")
+                                            .font(.system(size: 8, weight: .bold))
+                                            .foregroundColor(.white)
+                                            .padding(.bottom, 4)
+                                    }
+                                }
                             }
                             .frame(height: 36)
                             .cornerRadius(8)
@@ -1060,28 +1074,42 @@ struct MyShiftsCalendarTab: View {
                 
                 // Detalle del día seleccionado
                 if let worker = getMyShiftWorker(for: selectedDate), let sName = worker.shiftName {
+                    let isVacationSelected = vacationManager.isVacation(selectedDate)
                     HStack {
                         VStack(alignment: .leading) {
                             Text("Turno seleccionado:").font(.caption).foregroundColor(.gray)
                             Text(sName).font(.headline).foregroundColor(.white)
                         }
                         Spacer()
-                        Button("Solicitar Cambio") {
-                            let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
-                            onSelect(MyShiftDisplay(
-                                dateString: f.string(from: selectedDate),
-                                shiftName: sName,
-                                fullDate: selectedDate,
-                                fullDateString: f.string(from: selectedDate)
-                            ))
+                        if isVacationSelected {
+                            Label("Vacaciones", systemImage: "sun.max.fill")
+                                .font(.caption.bold())
+                                .foregroundColor(.red.opacity(0.9))
+                        } else {
+                            Button("Solicitar Cambio") {
+                                let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
+                                onSelect(MyShiftDisplay(
+                                    dateString: f.string(from: selectedDate),
+                                    shiftName: sName,
+                                    fullDate: selectedDate,
+                                    fullDateString: f.string(from: selectedDate)
+                                ))
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color(red: 0.2, green: 0.4, blue: 1.0))
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color(red: 0.2, green: 0.4, blue: 1.0))
                     }
                     .padding()
                     .background(Color.white.opacity(0.1))
                     .cornerRadius(12)
                     .padding(.top, 10)
+                    
+                    if isVacationSelected {
+                        Text("Los días de vacaciones están bloqueados y no permiten solicitar cambios de turno.")
+                            .font(.caption)
+                            .foregroundColor(.red.opacity(0.8))
+                            .padding(.top, 4)
+                    }
                 } else {
                     Text("Día libre o sin turno asignado.").font(.caption).foregroundColor(.gray).padding(.top, 20)
                 }

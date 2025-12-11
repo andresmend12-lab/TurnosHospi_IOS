@@ -53,6 +53,8 @@
 		97FB93912EE212C400F5490F /* CreatePlantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93902EE212C400F5490F /* CreatePlantView.swift */; };
 		97FB93932EE2182600F5490F /* StaffListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93922EE2182600F5490F /* StaffListView.swift */; };
 		97FB93972EE2187700F5490F /* AddEditStaffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93962EE2187700F5490F /* AddEditStaffView.swift */; };
+		97FC10012FF0D00100ABCDEF /* VacationDaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC10002FF0D00100ABCDEF /* VacationDaysView.swift */; };
+		97FC10032FF0D00100ABCDEF /* VacationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC10022FF0D00100ABCDEF /* VacationManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -120,6 +122,8 @@
 		97FB93902EE212C400F5490F /* CreatePlantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePlantView.swift; sourceTree = "<group>"; };
 		97FB93922EE2182600F5490F /* StaffListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaffListView.swift; sourceTree = "<group>"; };
 		97FB93962EE2187700F5490F /* AddEditStaffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditStaffView.swift; sourceTree = "<group>"; };
+		97FC10002FF0D00100ABCDEF /* VacationDaysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VacationDaysView.swift; sourceTree = "<group>"; };
+		97FC10022FF0D00100ABCDEF /* VacationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VacationManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -211,6 +215,8 @@
 				97FB937A2EE1E19700F5490F /* SignUpView.swift */,
 				97FB93922EE2182600F5490F /* StaffListView.swift */,
 				979C55022EE3306500F21427 /* StatisticsView.swift */,
+				97FC10002FF0D00100ABCDEF /* VacationDaysView.swift */,
+				97FC10022FF0D00100ABCDEF /* VacationManager.swift */,
 				979C54FC2EE3077300F21427 /* ThemeManager.swift */,
 				97E962CD2EE18976006E7707 /* TurnosHospi_IOS.entitlements */,
 				97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */,
@@ -392,6 +398,7 @@
 				97FB93832EE1F29F00F5490F /* JoinPlantView.swift in Sources */,
 				97FB936A2EE1D55700F5490F /* LoginView.swift in Sources */,
 				979C54FF2EE3078D00F21427 /* SettingsView.swift in Sources */,
+				97FC10012FF0D00100ABCDEF /* VacationDaysView.swift in Sources */,
 				97FB93812EE1F27C00F5490F /* PlantManager.swift in Sources */,
 				97C4F0022F2A5A6A00ABCDEF /* NotificationCenterManager.swift in Sources */,
 				97E5A1112F3C1F250021BEEF /* NotificationAPI.swift in Sources */,
@@ -416,6 +423,7 @@
 				97FB937B2EE1E19700F5490F /* SignUpView.swift in Sources */,
 				979C55032EE3306500F21427 /* StatisticsView.swift in Sources */,
 				97AB1A542EE75FED00F34304 /* DirectChatModels.swift in Sources */,
+				97FC10032FF0D00100ABCDEF /* VacationManager.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
 				97FB937F2EE1F26100F5490F /* PlantModels.swift in Sources */,
 				976F1F432EE4909A0036A9E0 /* ShiftChangeView.swift in Sources */,
