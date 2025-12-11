@@ -1,14 +1,58 @@
 import SwiftUI
 import FirebaseCore
 import FirebaseMessaging
+import UserNotifications
 
-// 1. Mantenemos el AppDelegate para notificaciones u otras configuraciones futuras,
-// pero QUITAMOS la configuración de Firebase de aquí.
-class AppDelegate: NSObject, UIApplicationDelegate {
+// 1. AppDelegate para manejar el ciclo de vida de las notificaciones
+class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNotificationCenterDelegate {
+    
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        // FirebaseApp.configure() -> SE HA MOVIDO AL INIT DE LA APP
+        
+        // Configurar Firebase
+        FirebaseApp.configure()
+        
+        // Configurar delegados de mensajería y notificaciones
+        Messaging.messaging().delegate = self
+        UNUserNotificationCenter.current().delegate = self
+        
+        // Solicitar permisos al usuario (Alerta, Globo, Sonido)
+        let authOptions: UNAuthorizationOptions = [.alert, .badge, .sound]
+        UNUserNotificationCenter.current().requestAuthorization(
+            options: authOptions,
+            completionHandler: { granted, error in
+                if let error = error {
+                    print("Error solicitando permisos de notificación: \(error)")
+                }
+                print("Permiso de notificaciones: \(granted)")
+            }
+        )
+        
+        // Registrarse para notificaciones remotas en APNs
+        application.registerForRemoteNotifications()
+        
         return true
+    }
+    
+    // MARK: - MessagingDelegate (Recibir Token FCM)
+    
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        // Este método se llama cada vez que el token se genera o actualiza
+        print("FCM Token recibido: \(fcmToken ?? "Nulo")")
+        
+        if let token = fcmToken {
+            // Guardar token y subirlo a Firebase si hay usuario logueado
+            AuthManager.shared.updateFcmToken(token)
+        }
+    }
+    
+    // MARK: - UNUserNotificationCenterDelegate (Notificaciones en primer plano)
+    
+    // Esto permite que las notificaciones se muestren (banner/sonido) incluso con la app abierta
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([[.banner, .badge, .sound]])
     }
 }
 
@@ -16,20 +60,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 struct TurnosHospi_IOSApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     
-    // 2. Quitamos la inicialización directa (= AuthManager())
-    @StateObject var authManager: AuthManager
-    
-    // ThemeManager no depende de Firebase, puede quedarse igual
-    @StateObject var themeManager = ThemeManager()
-    
-    // 3. Usamos el init para garantizar el orden de ejecución
-    init() {
-        // A) Configurar Firebase antes que nada
-        FirebaseApp.configure()
-        
-        // B) Inicializar AuthManager ahora que Firebase ya está listo
-        _authManager = StateObject(wrappedValue: AuthManager())
-    }
+    // Usamos la instancia compartida (Singleton) para que AppDelegate pueda acceder a ella
+    @StateObject var authManager = AuthManager.shared
+    @StateObject var themeManager = ThemeManager.shared
     
     var body: some Scene {
         WindowGroup {

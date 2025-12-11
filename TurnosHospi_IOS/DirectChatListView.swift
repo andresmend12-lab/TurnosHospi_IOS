@@ -37,7 +37,7 @@ struct DirectChatListView: View {
     }
     
     var body: some View {
-        // No usamos NavigationStack aquí: heredamos el NavigationStack del padre
+        // No usamos NavigationStack aquí: heredamos el NavigationStack del padre (MainMenuView)
         ZStack {
             Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea()
             
@@ -83,16 +83,16 @@ struct DirectChatListView: View {
                     ScrollView {
                         VStack(spacing: 0) {
                             ForEach(chats) { chat in
-                                // Navegación clásica → siempre funciona dentro de un NavigationStack
-                                NavigationLink {
-                                    DirectChatView(
-                                        chatId: chat.id,
-                                        otherUserId: chat.otherUserId,
-                                        otherUserName: chat.otherUserName
-                                    )
-                                } label: {
+                                // --- CORRECCIÓN 1: Usar navegación por valor ---
+                                NavigationLink(value: ChatRoute(
+                                    chatId: chat.id,
+                                    otherUserId: chat.otherUserId,
+                                    otherUserName: chat.otherUserName
+                                )) {
                                     ChatRow(chat: chat)
                                 }
+                                .buttonStyle(.plain) // --- CORRECCIÓN 3: Estilo plano para mejorar el tap ---
+                                
                                 Divider()
                                     .background(Color.white.opacity(0.1))
                             }
@@ -127,7 +127,19 @@ struct DirectChatListView: View {
             }
         }
         
-        // MARK: - Navegación programática solo para nuevo chat
+        // MARK: - MANEJADORES DE NAVEGACIÓN
+        
+        // 1. Manejador para la lista (Navegación por Valor usando ChatRoute)
+        // --- CORRECCIÓN 2: Definir el destino para el tipo ChatRoute ---
+        .navigationDestination(for: ChatRoute.self) { route in
+            DirectChatView(
+                chatId: route.chatId,
+                otherUserId: route.otherUserId,
+                otherUserName: route.otherUserName
+            )
+        }
+        
+        // 2. Manejador para nuevo chat (Programático)
         .navigationDestination(isPresented: $navigateToNewChat) {
             if let userId = selectedOtherUser?.id,
                let userName = selectedOtherUser?.name,
@@ -144,7 +156,6 @@ struct DirectChatListView: View {
         }
         
         // MARK: - Ciclo de vida y actualizaciones
-        
         .onAppear {
             fetchChatsDirectlyFromPlant()
         }
@@ -174,6 +185,7 @@ struct DirectChatListView: View {
                     selectedOtherUser = user
                     showNewChatSheet = false
                     
+                    // Pequeño delay para asegurar que el sheet se cierra antes de navegar
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         navigateToNewChat = true
                     }
@@ -351,6 +363,6 @@ struct ChatRow: View {
         }
         .padding()
         .background(Color(red: 0.05, green: 0.05, blue: 0.1))
-        .contentShape(Rectangle())
+        .contentShape(Rectangle()) // Asegura que toda la fila detecte el tap
     }
 }

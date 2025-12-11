@@ -190,12 +190,13 @@ struct DirectChatView: View {
         let msgRef = chatRootRef.child("messages").childByAutoId()
         
         let msgId = msgRef.key ?? UUID().uuidString
+        let timestamp = ServerValue.timestamp()
         
         let msgData: [String: Any] = [
             "id": msgId,
             "senderId": myId,
             "text": textToSend,
-            "timestamp": ServerValue.timestamp(), // ms desde Epoch
+            "timestamp": timestamp, // ms desde Epoch
             "read": false
         ]
         
@@ -205,13 +206,49 @@ struct DirectChatView: View {
         // 2. Actualizar último mensaje (para la lista)
         chatRootRef.updateChildValues([
             "lastMessage": textToSend,
-            "lastTimestamp": ServerValue.timestamp()
+            "lastTimestamp": timestamp
         ])
         
         // 3. Registrar chat en el índice de usuarios
         // user_chats/{uid}/{chatId} = true
         ref.child("user_chats").child(myId).child(chatId).setValue(true)
         ref.child("user_chats").child(otherUserId).child(chatId).setValue(true)
+        
+        // 4. NUEVO: Enviar Notificación al otro usuario (Escribir en la cola)
+        let myName = authManager.currentUserName
+        let notificationMsg = "Mensaje de \(myName): \(textToSend)"
+        
+        sendDirectNotification(
+            targetUserId: otherUserId, // IMPORTANTE: ID del destinatario
+            message: notificationMsg,
+            chatId: chatId
+        )
+    }
+    
+    // MARK: - Helper Notificación Directa
+    func sendDirectNotification(targetUserId: String, message: String, chatId: String) {
+        // Escribimos en 'notifications_queue' para que el Cloud Function lo procese
+        let notifRef = ref.child("notifications_queue").childByAutoId()
+        
+        let notifData: [String: Any] = [
+            "targetUserId": targetUserId, // El backend usará esto para buscar el fcmToken del usuario
+            "senderId": currentUserId ?? "",
+            "senderName": authManager.currentUserName,
+            "type": "CHAT_DIRECT",
+            "message": message,
+            "targetScreen": "DirectChat",
+            "chatId": chatId, // Para abrir el chat correcto al tocar la notificación
+            "plantId": currentPlantId,
+            "timestamp": ServerValue.timestamp()
+        ]
+        
+        notifRef.setValue(notifData) { error, _ in
+            if error == nil {
+                print("Notificación encolada correctamente para \(targetUserId)")
+            } else {
+                print("Error encolando notificación: \(error?.localizedDescription ?? "Desconocido")")
+            }
+        }
     }
     
     // MARK: - Scroll
