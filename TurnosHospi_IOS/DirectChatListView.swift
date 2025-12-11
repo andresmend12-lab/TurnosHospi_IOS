@@ -30,121 +30,117 @@ struct DirectChatListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-            Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // MARK: - Header
-                HStack {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "arrow.left")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                    }
-                    Spacer()
-                    Text("Mensajes Directos")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    Spacer()
-                    Image(systemName: "arrow.left").font(.title2).opacity(0)
-                }
-                .padding()
-                .background(Color.black.opacity(0.3))
+                Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea()
                 
-                // MARK: - Lista
-                if isLoading {
-                    Spacer()
-                    ProgressView("Cargando chats...").tint(.white).foregroundColor(.white)
-                    Spacer()
-                } else if chats.isEmpty {
-                    VStack(spacing: 15) {
+                VStack(spacing: 0) {
+                    // MARK: - Header
+                    HStack {
+                        Button(action: { dismiss() }) {
+                            Image(systemName: "arrow.left")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                        }
                         Spacer()
-                        Image(systemName: "bubble.left.and.bubble.right")
-                            .font(.system(size: 50))
-                            .foregroundColor(.gray.opacity(0.5))
-                        Text("No tienes conversaciones activas.")
-                            .foregroundColor(.gray)
+                        Text("Mensajes Directos")
+                            .font(.headline)
+                            .foregroundColor(.white)
                         Spacer()
+                        Image(systemName: "arrow.left").font(.title2).opacity(0)
                     }
-                } else {
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            ForEach(chats) { chat in
-                                Button {
+                    .padding()
+                    .background(Color.black.opacity(0.3))
+                    
+                    // MARK: - Lista
+                    if isLoading {
+                        Spacer()
+                        ProgressView("Cargando chats...").tint(.white).foregroundColor(.white)
+                        Spacer()
+                    } else if chats.isEmpty {
+                        VStack(spacing: 15) {
+                            Spacer()
+                            Image(systemName: "bubble.left.and.bubble.right")
+                                .font(.system(size: 50))
+                                .foregroundColor(.gray.opacity(0.5))
+                            Text("No tienes conversaciones activas.")
+                                .foregroundColor(.gray)
+                            Spacer()
+                        }
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                ForEach(chats) { chat in
+                                    Button {
                                     activeChatRoute = ChatRoute(
-                                        chatId: chat.id,
-                                        otherUserId: chat.otherUserId,
-                                        otherUserName: chat.otherUserName
-                                    )
-                                    navigateToChat = true
-                                } label: {
-                                    ChatRow(chat: chat)
+                                            chatId: chat.id,
+                                            otherUserId: chat.otherUserId,
+                                            otherUserName: chat.otherUserName
+                                        )
+                                    } label: {
+                                        ChatRow(chat: chat)
+                                    }
+                                    .buttonStyle(.plain)
+                                    
+                                    Divider().background(Color.white.opacity(0.1))
                                 }
-                                .buttonStyle(.plain)
-
-                                Divider().background(Color.white.opacity(0.1))
                             }
                         }
                     }
                 }
-            }
-            
-            // Botón flotante (+)
-            VStack {
-                Spacer()
-                HStack {
-                    Button(action: {
-                        if plantManager.plantUsers.isEmpty && !currentPlantId.isEmpty {
-                            plantManager.fetchCurrentPlant(plantId: currentPlantId)
-                        }
-                        showNewChatSheet = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.title)
-                            .foregroundColor(.white)
-                            .frame(width: 60, height: 60)
-                            .background(Color(red: 0.33, green: 0.78, blue: 0.93)) // Cyan Hospi
-                            .clipShape(Circle())
-                            .shadow(radius: 5)
-                    }
-                    .padding(.leading, 20)
-                    .padding(.bottom, 30)
+                
+                // Botón flotante (+)
+                VStack {
                     Spacer()
-                }
-            }
-        }
-        .navigationBarHidden(true)
-        .onAppear {
-            attachChatsListenerIfNeeded()
-            consumePendingRoute()
-        }
-        .onDisappear { detachChatsListener() }
-        .onChange(of: pendingRoute) { _ in
-            consumePendingRoute()
-        }
-        .sheet(isPresented: $showNewChatSheet) {
-            NewChatSelectionView(
-                plantManager: plantManager,
-                currentUserId: currentUserId,
-                onUserSelected: { user in
-                    let newChatId = DirectChat.getChatId(user1: currentUserId, user2: user.id)
-                    let route = ChatRoute(chatId: newChatId, otherUserId: user.id, otherUserName: user.name)
-
-                    showNewChatSheet = false
-
-                    // Esperamos a que el sheet termine de cerrarse antes de navegar
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        activeChatRoute = route
-                        navigateToChat = true
+                    HStack {
+                        Button(action: {
+                            if plantManager.plantUsers.isEmpty && !currentPlantId.isEmpty {
+                                plantManager.fetchCurrentPlant(plantId: currentPlantId)
+                            }
+                            showNewChatSheet = true
+                        }) {
+                            Image(systemName: "plus")
+                                .font(.title)
+                                .foregroundColor(.white)
+                                .frame(width: 60, height: 60)
+                                .background(Color(red: 0.33, green: 0.78, blue: 0.93))
+                                .clipShape(Circle())
+                                .shadow(radius: 5)
+                        }
+                        .padding(.leading, 20)
+                        .padding(.bottom, 30)
+                        Spacer()
                     }
                 }
-            )
-            .presentationDetents([.medium, .large])
+            }
+            .navigationBarHidden(true)
+            .onAppear {
+                attachChatsListenerIfNeeded()
+                consumePendingRoute()
+            }
+            .onDisappear { detachChatsListener() }
+            .onChange(of: pendingRoute) { _ in
+                consumePendingRoute()
+            }
+            .sheet(isPresented: $showNewChatSheet) {
+                NewChatSelectionView(
+                    plantManager: plantManager,
+                    currentUserId: currentUserId,
+                    onUserSelected: { user in
+                        let newChatId = DirectChat.getChatId(user1: currentUserId, user2: user.id)
+                        let route = ChatRoute(chatId: newChatId, otherUserId: user.id, otherUserName: user.name)
+                        
+                        showNewChatSheet = false
+                        
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            activeChatRoute = route
+                        }
+                    }
+                )
+                .presentationDetents([.medium, .large])
+            }
+            .navigationDestination(item: $activeChatRoute) { route in
+                ChatDestination(route: route)
+            }
         }
-        }
-        .navigationDestination(item: $activeChatRoute) { route in
-            ChatDestination(route: route)
-        }
-        .navigationBarHidden(true)
     
     // MARK: - Lógica Firebase
     private func attachChatsListenerIfNeeded() {
