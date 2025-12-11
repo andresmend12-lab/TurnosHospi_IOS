@@ -14,6 +14,7 @@ struct DirectChatListView: View {
     // Estados para Nuevo Chat
     @State private var showNewChatSheet = false
     @State private var activeChatRoute: ChatRoute?
+    @State private var navigateToChat = false
     
     private let ref = Database.database().reference()
     
@@ -25,6 +26,12 @@ struct DirectChatListView: View {
             Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea()
             
             VStack(spacing: 0) {
+                NavigationLink(
+                    destination: ChatDestination(route: activeChatRoute),
+                    isActive: $navigateToChat
+                ) { EmptyView() }
+                .hidden()
+                
                 // MARK: - Header
                 HStack {
                     Button(action: { dismiss() }) {
@@ -67,6 +74,7 @@ struct DirectChatListView: View {
                                         otherUserId: chat.otherUserId,
                                         otherUserName: chat.otherUserName
                                     )
+                                    navigateToChat = true
                                 } label: {
                                     ChatRow(chat: chat)
                                 }
@@ -118,18 +126,11 @@ struct DirectChatListView: View {
                     // Esperamos a que el sheet termine de cerrarse antes de navegar
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                         activeChatRoute = route
+                        navigateToChat = true
                     }
                 }
             )
             .presentationDetents([.medium, .large])
-        }
-
-        .navigationDestination(item: $activeChatRoute) { route in
-            DirectChatView(
-                chatId: route.chatId,
-                otherUserId: route.otherUserId,
-                otherUserName: route.otherUserName
-            )
         }
     }
     
@@ -194,6 +195,22 @@ struct DirectChatListView: View {
                 self.chats = loadedChats.sorted { $0.timestamp > $1.timestamp }
                 self.isLoading = false
             }
+        }
+    }
+}
+
+private struct ChatDestination: View {
+    let route: ChatRoute?
+    
+    var body: some View {
+        if let route = route {
+            DirectChatView(
+                chatId: route.chatId,
+                otherUserId: route.otherUserId,
+                otherUserName: route.otherUserName
+            )
+        } else {
+            EmptyView()
         }
     }
 }
