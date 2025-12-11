@@ -12,6 +12,7 @@
 		976F1F452EE492D40036A9E0 /* ShiftRulesEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976F1F442EE492D40036A9E0 /* ShiftRulesEngine.swift */; };
 		976F1F472EE492F90036A9E0 /* ShiftMarketplaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976F1F462EE492F90036A9E0 /* ShiftMarketplaceView.swift */; };
 		976F1F4B2EE494DF0036A9E0 /* ShiftChangeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976F1F4A2EE494DF0036A9E0 /* ShiftChangeModels.swift */; };
+		977BCEDE2EEB4E8400C40AE0 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 977BCEDD2EEB4E8400C40AE0 /* GoogleService-Info.plist */; };
 		97822B6B2EEA3D39008450EC /* NewChatSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97822B6A2EEA3D39008450EC /* NewChatSelectionView.swift */; };
 		979C54FD2EE3077300F21427 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C54FC2EE3077300F21427 /* ThemeManager.swift */; };
 		979C54FF2EE3078D00F21427 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C54FE2EE3078D00F21427 /* SettingsView.swift */; };
@@ -32,7 +33,6 @@
 		97E962E42EE18977006E7707 /* TurnosHospi_IOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962E32EE18977006E7707 /* TurnosHospi_IOSUITests.swift */; };
 		97E962E62EE18977006E7707 /* TurnosHospi_IOSUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962E52EE18977006E7707 /* TurnosHospi_IOSUITestsLaunchTests.swift */; };
 		97F8A5002F5E1BB100ABCDEF /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 97F8A5032F5E1BB100ABCDEF /* InfoPlist.strings */; };
-		97FB93682EE1D46800F5490F /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 97FB93672EE1D46800F5490F /* GoogleService-Info.plist */; };
 		97FB936A2EE1D55700F5490F /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93692EE1D55700F5490F /* LoginView.swift */; };
 		97FB936C2EE1D6FE00F5490F /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB936B2EE1D6FE00F5490F /* AuthManager.swift */; };
 		97FB936E2EE1DAF300F5490F /* MainMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB936D2EE1DAF300F5490F /* MainMenuView.swift */; };
@@ -80,6 +80,7 @@
 		976F1F442EE492D40036A9E0 /* ShiftRulesEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftRulesEngine.swift; sourceTree = "<group>"; };
 		976F1F462EE492F90036A9E0 /* ShiftMarketplaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftMarketplaceView.swift; sourceTree = "<group>"; };
 		976F1F4A2EE494DF0036A9E0 /* ShiftChangeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftChangeModels.swift; sourceTree = "<group>"; };
+		977BCEDD2EEB4E8400C40AE0 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "../../../../Downloads/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		97822B6A2EEA3D39008450EC /* NewChatSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewChatSelectionView.swift; sourceTree = "<group>"; };
 		979C54FC2EE3077300F21427 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		979C54FE2EE3078D00F21427 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -105,7 +106,6 @@
 		97E962E52EE18977006E7707 /* TurnosHospi_IOSUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		97F8A5012F5E1BB100ABCDEF /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Base; path = Base.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		97F8A5022F5E1BB100ABCDEF /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		97FB93672EE1D46800F5490F /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "../../../../Downloads/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		97FB93692EE1D55700F5490F /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		97FB936B2EE1D6FE00F5490F /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		97FB936D2EE1DAF300F5490F /* MainMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainMenuView.swift; sourceTree = "<group>"; };
@@ -178,6 +178,7 @@
 		97E962C62EE18973006E7707 /* TurnosHospi_IOS */ = {
 			isa = PBXGroup;
 			children = (
+				977BCEDD2EEB4E8400C40AE0 /* GoogleService-Info.plist */,
 				97FB93962EE2187700F5490F /* AddEditStaffView.swift */,
 				97E962CB2EE18976006E7707 /* Assets.xcassets */,
 				97F8A5032F5E1BB100ABCDEF /* InfoPlist.strings */,
@@ -190,7 +191,6 @@
 				97AB1A572EE7601D00F34304 /* DirectChatView.swift */,
 				97FB93842EE1F69400F5490F /* EditProfilesView.swift */,
 				97FB93882EE2049200F5490F /* Extensions.swift */,
-				97FB93672EE1D46800F5490F /* GoogleService-Info.plist */,
 				97AB1A512EE75A1800F34304 /* GroupChatView.swift */,
 				979C55002EE320A000F21427 /* ImportShiftsView.swift */,
 				97FB93822EE1F29F00F5490F /* JoinPlantView.swift */,
@@ -364,9 +364,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				97E962D02EE18976006E7707 /* Preview Assets.xcassets in Resources */,
+				977BCEDE2EEB4E8400C40AE0 /* GoogleService-Info.plist in Resources */,
 				97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */,
 				97F8A5002F5E1BB100ABCDEF /* InfoPlist.strings in Resources */,
-				97FB93682EE1D46800F5490F /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
