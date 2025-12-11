@@ -226,8 +226,8 @@ struct ShiftChangeView: View {
                 }
                 
                 // Preparar validación con ShiftRulesEngine
-                let myReqDate = formatter.date(from: myRequest.requesterShiftDate) ?? Date()
-                let myReqShift = myRequest.requesterShiftName
+               // let myReqDate = formatter.date(from: myRequest.requesterShiftDate) ?? Date()
+               // let myReqShift = myRequest.requesterShiftName
                 let mySchedule = tempSchedules[self.currentUserId] ?? [:]
                 
                 // Filtrar candidatos

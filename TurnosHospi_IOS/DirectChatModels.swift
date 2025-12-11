@@ -9,37 +9,37 @@ struct ChatUser: Identifiable, Codable, Hashable {
 }
 
 // MARK: - Ruta de Navegación (ESTABLE)
-// Usamos esto para NavigationStack. No incluye lastMessage ni timestamp
-// para que no cambie al llegar mensajes nuevos.
 struct ChatRoute: Hashable {
     let chatId: String
     let otherUserId: String
     let otherUserName: String
-}
-
-// MARK: - Modelo de Chat (DATOS + UI AUXILIAR)
-struct DirectChat: Identifiable, Codable, Hashable {
-    let id: String
-    let participants: [String]
-    let lastMessage: String
-    let timestamp: TimeInterval
     
-    // Datos auxiliares solo para la UI (NO se guardan en Firebase)
-    var otherUserName: String = ""
-    var otherUserRole: String = ""
-    var otherUserId: String = ""
-    
-    // Helper ID único: uid1_uid2 (ordenados)
-    static func getChatId(user1: String, user2: String) -> String {
-        return [user1, user2].sorted().joined(separator: "_")
+    // IMPORTANTE: Definimos la igualdad solo por ID.
+    // Esto evita que la pantalla se cierre si el nombre se actualiza un segundo después.
+    static func == (lhs: ChatRoute, rhs: ChatRoute) -> Bool {
+        return lhs.chatId == rhs.chatId
     }
     
-    // Solo persistimos los campos "de datos"
-    enum CodingKeys: String, CodingKey {
-        case id
-        case participants
-        case lastMessage
-        case timestamp
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(chatId)
+    }
+}
+
+// MARK: - Modelo de Chat (Resumen para la lista)
+struct DirectChat: Identifiable, Codable, Hashable {
+    let id: String
+    // Datos calculados dinámicamente
+    var lastMessage: String
+    var timestamp: TimeInterval
+    
+    // Datos del otro usuario
+    var otherUserName: String
+    var otherUserRole: String
+    var otherUserId: String
+    
+    // Helper ID único: Orden alfabético estricto (Igual que en Android)
+    static func getChatId(user1: String, user2: String) -> String {
+        return user1 < user2 ? "\(user1)_\(user2)" : "\(user2)_\(user1)"
     }
 }
 
@@ -48,14 +48,16 @@ struct DirectMessage: Identifiable, Codable, Equatable, Hashable {
     let id: String
     let senderId: String
     let text: String
-    let timestamp: TimeInterval   // esperado en milisegundos desde Epoch
+    let timestamp: TimeInterval
     let read: Bool
     
     var timeString: String {
-        // timestamp viene en ms → dividimos entre 1000
+        // Android guarda milisegundos, iOS TimeInterval es segundos.
+        // Convertimos dividiendo por 1000.
         let date = Date(timeIntervalSince1970: timestamp / 1000)
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
+        formatter.locale = Locale(identifier: "es_ES")
         return formatter.string(from: date)
     }
 }

@@ -489,7 +489,7 @@ struct ShiftMarketplaceView: View {
                 "date": req.requesterShiftDate,
                 "shiftName": req.requesterShiftName,
                 "timestamp": ServerValue.timestamp()
-            ]
+            ] as [String: Any]  // <--- IMPORTANTE: AÑADIR ESTO
             
             ref.updateChildValues(updates)
         }

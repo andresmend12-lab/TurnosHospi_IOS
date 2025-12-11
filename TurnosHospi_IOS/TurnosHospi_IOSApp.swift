@@ -29,7 +29,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         )
         
         // Registrarse para notificaciones remotas en APNs
-        application.registerForRemoteNotifications()
+        DispatchQueue.main.async {
+            application.registerForRemoteNotifications()
+        }
         
         return true
     }
@@ -41,8 +43,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         print("FCM Token recibido: \(fcmToken ?? "Nulo")")
         
         if let token = fcmToken {
-            // Guardar token y subirlo a Firebase si hay usuario logueado
-            AuthManager.shared.updateFcmToken(token)
+            // IMPORTANTE: Asegurar que la actualización del token ocurra en el hilo principal
+            DispatchQueue.main.async {
+                AuthManager.shared.updateFcmToken(token)
+            }
         }
     }
     
@@ -52,7 +56,25 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler([[.banner, .badge, .sound]])
+        // iOS 14+ usa [.banner, .badge, .sound]
+        // iOS 13 y anteriores usan [.alert, .badge, .sound]
+        if #available(iOS 14.0, *) {
+            completionHandler([.banner, .badge, .sound])
+        } else {
+            completionHandler([.alert, .badge, .sound])
+        }
+    }
+    
+    // Manejar cuando el usuario toca la notificación
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        let userInfo = response.notification.request.content.userInfo
+        
+        // Aquí puedes procesar datos adicionales de la notificación
+        print("Usuario tocó la notificación: \(userInfo)")
+        
+        completionHandler()
     }
 }
 
