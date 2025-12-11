@@ -528,17 +528,17 @@ struct ShiftChangeView: View {
                 let halfDay = slot.childSnapshot(forPath: "halfDay").value as? Bool ?? false
                 if primary.caseInsensitiveCompare(targetName) == .orderedSame {
                     return ShiftSlotInfo(
-                        shiftKey: shiftSnapshot.key,
+                        shiftKey: shiftSnapshot.key ?? "",
                         group: group,
-                        slotKey: slot.key,
+                        slotKey: slot.key ?? "0",
                         field: "primary",
                         isHalfDay: halfDay
                     )
                 } else if secondary.caseInsensitiveCompare(targetName) == .orderedSame {
                     return ShiftSlotInfo(
-                        shiftKey: shiftSnapshot.key,
+                        shiftKey: shiftSnapshot.key ?? "",
                         group: group,
-                        slotKey: slot.key,
+                        slotKey: slot.key ?? "0",
                         field: "secondary",
                         isHalfDay: halfDay
                     )

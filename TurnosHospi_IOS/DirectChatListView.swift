@@ -141,6 +141,7 @@ struct DirectChatListView: View {
                 ChatDestination(route: route)
             }
         }
+    }
     
     // MARK: - Lógica Firebase
     private func attachChatsListenerIfNeeded() {
