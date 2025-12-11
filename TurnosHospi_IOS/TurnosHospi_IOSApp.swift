@@ -85,12 +85,14 @@ struct TurnosHospi_IOSApp: App {
     // Usamos la instancia compartida (Singleton) para que AppDelegate pueda acceder a ella
     @StateObject var authManager = AuthManager.shared
     @StateObject var themeManager = ThemeManager.shared
+    @StateObject var notificationManager = NotificationCenterManager()
     
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(authManager)
                 .environmentObject(themeManager)
+                .environmentObject(notificationManager)
         }
     }
 }

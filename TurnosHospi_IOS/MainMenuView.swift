@@ -3,6 +3,7 @@ import SwiftUI
 struct MainMenuView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var notificationManager: NotificationCenterManager
     @StateObject var plantManager = PlantManager()
     
     @State private var showMenu = false
@@ -11,6 +12,9 @@ struct MainMenuView: View {
     
     // Estado para abrir chats
     @State private var showDirectChats = false
+    @State private var showNotificationCenter = false
+    @State private var lastKnownAssignments: [String: String] = [:]
+    @State private var assignmentsInitialized = false
     
     private let weekDays = ["L", "M", "X", "J", "V", "S", "D"]
     
@@ -146,10 +150,20 @@ struct MainMenuView: View {
                 )
             }
         }
+        .sheet(isPresented: $showNotificationCenter) {
+            NotificationCenterView()
+        }
         .onAppear {
             if let user = authManager.user, authManager.currentUserName.isEmpty {
                 authManager.fetchUserData(uid: user.uid)
             }
+            if let uid = authManager.user?.uid {
+                notificationManager.setCurrentUser(id: uid)
+            } else {
+                notificationManager.setCurrentUser(id: nil)
+            }
+            assignmentsInitialized = false
+            lastKnownAssignments = [:]
             resetCurrentMonthToFirstDay(of: selectedDate)
             loadData()
         }
@@ -162,7 +176,29 @@ struct MainMenuView: View {
                 plantManager.fetchDailyStaff(plantId: authManager.userPlantId, date: newDate)
             }
         }
-        .onChange(of: authManager.userPlantId) { _ in loadData() }
+        .onChange(of: authManager.userPlantId) { newValue in
+            if newValue.isEmpty {
+                assignmentsInitialized = false
+                lastKnownAssignments = [:]
+            } else {
+                loadData()
+            }
+        }
+        .onChange(of: plantManager.monthlyAssignments) { _ in
+            detectShiftNotifications()
+        }
+        .onChange(of: authManager.user?.uid ?? "") { newValue in
+            if newValue.isEmpty {
+                notificationManager.setCurrentUser(id: nil)
+                assignmentsInitialized = false
+                lastKnownAssignments = [:]
+            } else {
+                notificationManager.setCurrentUser(id: newValue)
+                assignmentsInitialized = false
+                lastKnownAssignments = [:]
+                detectShiftNotifications()
+            }
+        }
     }
     
     func resetCurrentMonthToFirstDay(of date: Date) {
@@ -180,8 +216,69 @@ struct MainMenuView: View {
         plantManager.fetchDailyStaff(plantId: pid, date: selectedDate)
     }
     
+    private func detectShiftNotifications() {
+        guard !authManager.userPlantId.isEmpty else {
+            assignmentsInitialized = false
+            lastKnownAssignments = [:]
+            return
+        }
+        let currentMap = currentMyAssignmentsMap()
+        guard !currentMap.isEmpty else { return }
+        
+        if !assignmentsInitialized {
+            lastKnownAssignments = currentMap
+            assignmentsInitialized = true
+            return
+        }
+        
+        let keys = Set(lastKnownAssignments.keys).union(currentMap.keys)
+        for key in keys {
+            let oldValue = lastKnownAssignments[key]
+            let newValue = currentMap[key]
+            if oldValue == newValue { continue }
+            let readableDate = readableDateString(from: key)
+            
+            if let newValue = newValue, oldValue == nil {
+                notificationManager.addNotification(message: "Se te asignó el turno \(newValue) para el \(readableDate).")
+            } else if let oldValue = oldValue, newValue == nil {
+                notificationManager.addNotification(message: "Se eliminó tu turno \(oldValue) del \(readableDate).")
+            } else if let oldValue = oldValue, let newValue = newValue {
+                notificationManager.addNotification(message: "Tu turno del \(readableDate) cambió de \(oldValue) a \(newValue).")
+            }
+        }
+        lastKnownAssignments = currentMap
+    }
+    
+    private func currentMyAssignmentsMap() -> [String: String] {
+        var map: [String: String] = [:]
+        let myName = plantManager.myPlantName ?? authManager.currentUserName
+        guard !myName.isEmpty else { return map }
+        
+        let keyFormatter = DateFormatter()
+        keyFormatter.dateFormat = "yyyy-MM-dd"
+        
+        for (date, workers) in plantManager.monthlyAssignments {
+            if let worker = workers.first(where: { $0.name == myName }) {
+                let shift = worker.shiftName?.isEmpty == false ? worker.shiftName! : "Turno asignado"
+                map[keyFormatter.string(from: date)] = shift
+            }
+        }
+        return map
+    }
+    
+    private func readableDateString(from key: String) -> String {
+        let input = DateFormatter()
+        input.dateFormat = "yyyy-MM-dd"
+        input.locale = Locale(identifier: "es_ES")
+        guard let date = input.date(from: key) else { return key }
+        let output = DateFormatter()
+        output.locale = Locale(identifier: "es_ES")
+        output.dateFormat = "EEEE d 'de' MMMM"
+        return output.string(from: date).capitalized
+    }
+    
     private var headerView: some View {
-        HStack {
+        HStack(spacing: 14) {
             Button(action: {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                     showMenu.toggle()
@@ -194,15 +291,40 @@ struct MainMenuView: View {
                     .background(Color.white.opacity(0.1))
                     .clipShape(Circle())
             }
+            
             Spacer()
-            VStack(alignment: .trailing) {
-                Text(authManager.userPlantId.isEmpty ? "Bienvenido" : "Bienvenido")
+            
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("Bienvenido")
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.6))
                 Text(authManager.currentUserName.isEmpty ? "Usuario" : authManager.currentUserName)
                     .font(.headline)
                     .bold()
                     .foregroundColor(.white)
+            }
+            
+            Button(action: { showNotificationCenter = true }) {
+                ZStack(alignment: .topTrailing) {
+                    Circle()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Image(systemName: "bell.fill")
+                                .foregroundColor(.white)
+                        )
+                    
+                    if notificationManager.unreadCount > 0 {
+                        Text(notificationManager.unreadCount > 99 ? "99+" : "\(notificationManager.unreadCount)")
+                            .font(.caption2.bold())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.red)
+                            .clipShape(Capsule())
+                            .offset(x: 6, y: -6)
+                    }
+                }
             }
         }
         .padding(.horizontal)

@@ -21,6 +21,8 @@
 		97AB1A542EE75FED00F34304 /* DirectChatModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97AB1A532EE75FED00F34304 /* DirectChatModels.swift */; };
 		97AB1A582EE7601D00F34304 /* DirectChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97AB1A572EE7601D00F34304 /* DirectChatView.swift */; };
 		97AB1A5A2EE7604200F34304 /* DirectChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97AB1A592EE7604200F34304 /* DirectChatListView.swift */; };
+		97C4F0022F2A5A6A00ABCDEF /* NotificationCenterManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97C4F0012F2A5A6A00ABCDEF /* NotificationCenterManager.swift */; };
+		97C4F0042F2A5A6A00ABCDEF /* NotificationCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97C4F0032F2A5A6A00ABCDEF /* NotificationCenterView.swift */; };
 		97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */; };
 		97E962CA2EE18973006E7707 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E962C92EE18973006E7707 /* ContentView.swift */; };
 		97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97E962CB2EE18976006E7707 /* Assets.xcassets */; };
@@ -83,6 +85,8 @@
 		97AB1A532EE75FED00F34304 /* DirectChatModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectChatModels.swift; sourceTree = "<group>"; };
 		97AB1A572EE7601D00F34304 /* DirectChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectChatView.swift; sourceTree = "<group>"; };
 		97AB1A592EE7604200F34304 /* DirectChatListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectChatListView.swift; sourceTree = "<group>"; };
+		97C4F0012F2A5A6A00ABCDEF /* NotificationCenterManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterManager.swift; sourceTree = "<group>"; };
+		97C4F0032F2A5A6A00ABCDEF /* NotificationCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterView.swift; sourceTree = "<group>"; };
 		97E962C42EE18973006E7707 /* TurnosHospi_IOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TurnosHospi_IOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97E962C72EE18973006E7707 /* TurnosHospi_IOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnosHospi_IOSApp.swift; sourceTree = "<group>"; };
 		97E962C92EE18973006E7707 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -183,6 +187,8 @@
 				97FB93692EE1D55700F5490F /* LoginView.swift */,
 				97FB936D2EE1DAF300F5490F /* MainMenuView.swift */,
 				976F1F3E2EE46A0C0036A9E0 /* OfflineCalendarView.swift */,
+				97C4F0032F2A5A6A00ABCDEF /* NotificationCenterView.swift */,
+				97C4F0012F2A5A6A00ABCDEF /* NotificationCenterManager.swift */,
 				97FB93862EE1FC7B00F5490F /* PlantDashboardView.swift */,
 				97FB93802EE1F27C00F5490F /* PlantManager.swift */,
 				97FB937E2EE1F26100F5490F /* PlantModels.swift */,
@@ -371,12 +377,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				97FB936E2EE1DAF300F5490F /* MainMenuView.swift in Sources */,
+				97C4F0042F2A5A6A00ABCDEF /* NotificationCenterView.swift in Sources */,
 				97FB937D2EE1EF6B00F5490F /* SideMenuView.swift in Sources */,
 				97FB938D2EE20B7600F5490F /* ShiftManager.swift in Sources */,
 				97FB93832EE1F29F00F5490F /* JoinPlantView.swift in Sources */,
 				97FB936A2EE1D55700F5490F /* LoginView.swift in Sources */,
 				979C54FF2EE3078D00F21427 /* SettingsView.swift in Sources */,
 				97FB93812EE1F27C00F5490F /* PlantManager.swift in Sources */,
+				97C4F0022F2A5A6A00ABCDEF /* NotificationCenterManager.swift in Sources */,
 				976F1F452EE492D40036A9E0 /* ShiftRulesEngine.swift in Sources */,
 				976F1F4B2EE494DF0036A9E0 /* ShiftChangeModels.swift in Sources */,
 				97FB93932EE2182600F5490F /* StaffListView.swift in Sources */,

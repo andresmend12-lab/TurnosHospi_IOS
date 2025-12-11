@@ -20,6 +20,7 @@ struct ShiftAssignmentState: Equatable {
 struct PlantDashboardView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var notificationManager: NotificationCenterManager
     
     @StateObject var shiftManager = ShiftManager()
     @StateObject var plantManager = PlantManager()
@@ -30,6 +31,7 @@ struct PlantDashboardView: View {
     @State private var currentMonth = Date()
     @State private var showImportShiftsSheet = false
     @State private var showStatisticsSheet = false
+    @State private var showNotificationCenter = false
     
     // --- NUEVO: Estado para mostrar chat directo ---
     @State private var showDirectChats = false
@@ -66,7 +68,7 @@ struct PlantDashboardView: View {
                     VStack(spacing: 0) {
                         
                         // HEADER
-                        HStack {
+                        HStack(spacing: 14) {
                             Button(action: {
                                 withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                                     isMenuOpen.toggle()
@@ -79,6 +81,29 @@ struct PlantDashboardView: View {
                                     .contentShape(Rectangle())
                             }
                             .zIndex(100)
+                            
+                            Button(action: { showNotificationCenter = true }) {
+                                ZStack(alignment: .topTrailing) {
+                                    Circle()
+                                        .fill(Color.white.opacity(0.15))
+                                        .frame(width: 44, height: 44)
+                                        .overlay(
+                                            Image(systemName: "bell.fill")
+                                                .foregroundColor(.white)
+                                        )
+                                    
+                                    if notificationManager.unreadCount > 0 {
+                                        Text(notificationManager.unreadCount > 99 ? "99+" : "\(notificationManager.unreadCount)")
+                                            .font(.caption2.bold())
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 5)
+                                            .padding(.vertical, 1)
+                                            .background(Color.red)
+                                            .clipShape(Capsule())
+                                            .offset(x: 6, y: -6)
+                                    }
+                                }
+                            }
                             
                             Spacer()
                             
@@ -280,6 +305,9 @@ struct PlantDashboardView: View {
             // --- Navegación a DirectChatListView ---
             .navigationDestination(isPresented: $showDirectChats) {
                 DirectChatListView()
+            }
+            .sheet(isPresented: $showNotificationCenter) {
+                NotificationCenterView()
             }
             .sheet(isPresented: $showImportShiftsSheet) {
                 ImportShiftsView()

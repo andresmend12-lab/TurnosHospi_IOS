@@ -5,6 +5,11 @@ import FirebaseAuth
 class PlantManager: ObservableObject {
     private let ref = Database.database().reference()
     
+    private var dailyAssignmentsRef: DatabaseReference?
+    private var dailyAssignmentsHandle: DatabaseHandle?
+    private var monthlyAssignmentsRef: DatabaseReference?
+    private var monthlyAssignmentsHandle: DatabaseHandle?
+    
     @Published var foundPlant: HospitalPlant?
     @Published var errorMessage: String?
     @Published var isLoading: Bool = false
@@ -230,25 +235,32 @@ class PlantManager: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd"
         let dateString = formatter.string(from: date)
         
-        ref.child("plants").child(plantId).child("turnos").child("turnos-\(dateString)")
-            .observe(.value) { snapshot in
-                var newDailyAssignments: [String: [PlantShiftWorker]] = [:]
-                
-                if let shiftsDict = snapshot.value as? [String: Any] {
-                    for (shiftName, value) in shiftsDict {
-                        if let shiftData = value as? [String: Any] {
-                            let workers = self.parseWorkersForShift(shiftName: shiftName, shiftData: shiftData)
-                            if !workers.isEmpty {
-                                newDailyAssignments[shiftName] = workers
-                            }
+        if let handle = dailyAssignmentsHandle {
+            dailyAssignmentsRef?.removeObserver(withHandle: handle)
+            dailyAssignmentsHandle = nil
+        }
+        
+        let nodeRef = ref.child("plants").child(plantId).child("turnos").child("turnos-\(dateString)")
+        dailyAssignmentsRef = nodeRef
+        
+        dailyAssignmentsHandle = nodeRef.observe(.value) { snapshot in
+            var newDailyAssignments: [String: [PlantShiftWorker]] = [:]
+            
+            if let shiftsDict = snapshot.value as? [String: Any] {
+                for (shiftName, value) in shiftsDict {
+                    if let shiftData = value as? [String: Any] {
+                        let workers = self.parseWorkersForShift(shiftName: shiftName, shiftData: shiftData)
+                        if !workers.isEmpty {
+                            newDailyAssignments[shiftName] = workers
                         }
                     }
                 }
-                
-                DispatchQueue.main.async {
-                    self.dailyAssignments = newDailyAssignments
-                }
             }
+            
+            DispatchQueue.main.async {
+                self.dailyAssignments = newDailyAssignments
+            }
+        }
     }
     
     // MARK: - Fetch GLOBAL (Sin filtrar por mes)
@@ -257,51 +269,57 @@ class PlantManager: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         
-        ref.child("plants").child(plantId).child("turnos")
-            .observeSingleEvent(of: .value) { snapshot in
+        if let handle = monthlyAssignmentsHandle {
+            monthlyAssignmentsRef?.removeObserver(withHandle: handle)
+            monthlyAssignmentsHandle = nil
+        }
+        
+        let nodeRef = ref.child("plants").child(plantId).child("turnos")
+        monthlyAssignmentsRef = nodeRef
+        
+        monthlyAssignmentsHandle = nodeRef.observe(.value) { snapshot in
+            var allAssignments: [Date: [PlantShiftWorker]] = [:]
+            
+            guard let allDatesDict = snapshot.value as? [String: Any] else {
+                DispatchQueue.main.async { self.monthlyAssignments = [:] }
+                return
+            }
+            
+            for (nodeName, value) in allDatesDict {
+                guard nodeName.hasPrefix("turnos-") else { continue }
+                let dateString = String(nodeName.dropFirst("turnos-".count))
                 
-                var allAssignments: [Date: [PlantShiftWorker]] = [:]
+                guard let date = formatter.date(from: dateString) else { continue }
                 
-                guard let allDatesDict = snapshot.value as? [String: Any] else {
-                    DispatchQueue.main.async { self.monthlyAssignments = [:] }
-                    return
-                }
+                guard let shiftsDict = value as? [String: Any] else { continue }
                 
-                for (nodeName, value) in allDatesDict {
-                    guard nodeName.hasPrefix("turnos-") else { continue }
-                    let dateString = String(nodeName.dropFirst("turnos-".count))
-                    
-                    guard let date = formatter.date(from: dateString) else { continue }
-                    
-                    guard let shiftsDict = value as? [String: Any] else { continue }
-                    
-                    var workersForDay: [PlantShiftWorker] = []
-                    
-                    for (shiftName, shiftValue) in shiftsDict {
-                        if let shiftData = shiftValue as? [String: Any] {
-                            workersForDay.append(contentsOf: self.parseWorkersForShift(
-                                shiftName: shiftName,
-                                shiftData: shiftData
-                            ))
-                        }
-                    }
-                    
-                    if !workersForDay.isEmpty {
-                        var unique: [String: PlantShiftWorker] = [:]
-                        for w in workersForDay {
-                            let key = "\(w.name)_\(w.shiftName ?? "")"
-                            unique[key] = w
-                        }
-                        
-                        let startOfDay = calendar.startOfDay(for: date)
-                        allAssignments[startOfDay] = Array(unique.values)
+                var workersForDay: [PlantShiftWorker] = []
+                
+                for (shiftName, shiftValue) in shiftsDict {
+                    if let shiftData = shiftValue as? [String: Any] {
+                        workersForDay.append(contentsOf: self.parseWorkersForShift(
+                            shiftName: shiftName,
+                            shiftData: shiftData
+                        ))
                     }
                 }
                 
-                DispatchQueue.main.async {
-                    self.monthlyAssignments = allAssignments
+                if !workersForDay.isEmpty {
+                    var unique: [String: PlantShiftWorker] = [:]
+                    for w in workersForDay {
+                        let key = "\(w.name)_\(w.shiftName ?? "")"
+                        unique[key] = w
+                    }
+                    
+                    let startOfDay = calendar.startOfDay(for: date)
+                    allAssignments[startOfDay] = Array(unique.values)
                 }
             }
+            
+            DispatchQueue.main.async {
+                self.monthlyAssignments = allAssignments
+            }
+        }
     }
     
     // MARK: - IMPORTACIÓN CSV MATRICIAL
