@@ -37,6 +37,10 @@ struct ShiftChangeView: View {
     // Firebase References
     private let ref = Database.database().reference()
     
+    private var isSupervisor: Bool {
+        authManager.userRole.lowercased().contains("supervisor")
+    }
+    
     var currentUserId: String {
         return authManager.user?.uid ?? ""
     }
@@ -61,7 +65,7 @@ struct ShiftChangeView: View {
                     }
                     .padding()
                     
-                    if selectedRequestForSuggestions == nil {
+                    if selectedRequestForSuggestions == nil && !isSupervisor {
                         // Selector de Pestañas (Estilo claro sobre fondo oscuro)
                         Picker("", selection: $selectedTab) {
                             Text("Mis Turnos").tag(0)
@@ -98,25 +102,12 @@ struct ShiftChangeView: View {
                             )
                         }
                     } else {
-                        switch selectedTab {
-                        case 0:
-                            // CALENDARIO VISUAL (Ahora con Saliente y Libre)
-                            MyShiftsCalendarTab(
-                                currentMonth: $currentMonth,
-                                selectedDate: $selectedDate,
-                                plantManager: plantManager,
-                                onSelect: { shift in
-                                    // Al asignar esto, se abre el sheet .sheet(item: $selectedShiftForRequest)
-                                    selectedShiftForRequest = shift
-                                }
-                            )
-                        case 1:
-                            // GESTIÓN (Con historial y estados)
+                        if isSupervisor {
                             ManagementTab(
                                 currentUserId: currentUserId,
                                 currentUserDisplayName: plantManager.myPlantName ?? authManager.currentUserName,
                                 requests: allRequests,
-                                isSupervisor: authManager.userRole.lowercased().contains("supervisor"),
+                                isSupervisor: true,
                                 supervisorRequests: allRequests.filter { $0.status == .awaitingSupervisor },
                                 onAccept: acceptRequest,
                                 onReject: rejectRequest,
@@ -127,18 +118,49 @@ struct ShiftChangeView: View {
                                     rejectAsSupervisor(request: req)
                                 }
                             )
-                        case 2:
-                            // SUGERENCIAS (TARJETAS MEJORADAS)
-                            SuggestionsTab(
-                                myRequests: allRequests.filter {
-                                    $0.requesterId == currentUserId && $0.status == .searching
-                                },
-                                onSeeCandidates: { req in
-                                    selectedRequestForSuggestions = req
-                                    loadCandidates() // Descarga masiva y filtrado
-                                }
-                            )
-                        default: EmptyView()
+                        } else {
+                            switch selectedTab {
+                            case 0:
+                                // CALENDARIO VISUAL (Ahora con Saliente y Libre)
+                                MyShiftsCalendarTab(
+                                    currentMonth: $currentMonth,
+                                    selectedDate: $selectedDate,
+                                    plantManager: plantManager,
+                                    onSelect: { shift in
+                                        // Al asignar esto, se abre el sheet .sheet(item: $selectedShiftForRequest)
+                                        selectedShiftForRequest = shift
+                                    }
+                                )
+                            case 1:
+                                // GESTIÓN (Con historial y estados)
+                                ManagementTab(
+                                    currentUserId: currentUserId,
+                                    currentUserDisplayName: plantManager.myPlantName ?? authManager.currentUserName,
+                                    requests: allRequests,
+                                    isSupervisor: false,
+                                    supervisorRequests: allRequests.filter { $0.status == .awaitingSupervisor },
+                                    onAccept: acceptRequest,
+                                    onReject: rejectRequest,
+                                    onApproveBySupervisor: { req in
+                                        approveSwapBySupervisor(request: req)
+                                    },
+                                    onRejectBySupervisor: { req in
+                                        rejectAsSupervisor(request: req)
+                                    }
+                                )
+                            case 2:
+                                // SUGERENCIAS (TARJETAS MEJORADAS)
+                                SuggestionsTab(
+                                    myRequests: allRequests.filter {
+                                        $0.requesterId == currentUserId && $0.status == .searching
+                                    },
+                                    onSeeCandidates: { req in
+                                        selectedRequestForSuggestions = req
+                                        loadCandidates() // Descarga masiva y filtrado
+                                    }
+                                )
+                            default: EmptyView()
+                            }
                         }
                     }
                 }

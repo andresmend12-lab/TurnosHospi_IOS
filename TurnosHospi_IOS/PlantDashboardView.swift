@@ -83,6 +83,17 @@ struct PlantDashboardView: View {
                             }
                             .zIndex(100)
                             
+                            Spacer()
+                            
+                            VStack(alignment: .trailing) {
+                                Text("Mi Planta")
+                                    .font(.headline.bold())
+                                    .foregroundColor(.white)
+                                Text(authManager.userRole)
+                                    .font(.caption)
+                                    .foregroundColor(Color(red: 0.7, green: 0.5, blue: 1.0))
+                            }
+                            
                             Button(action: { showNotificationCenter = true }) {
                                 ZStack(alignment: .topTrailing) {
                                     Circle()
@@ -104,17 +115,6 @@ struct PlantDashboardView: View {
                                             .offset(x: 6, y: -6)
                                     }
                                 }
-                            }
-                            
-                            Spacer()
-                            
-                            VStack(alignment: .trailing) {
-                                Text("Mi Planta")
-                                    .font(.headline.bold())
-                                    .foregroundColor(.white)
-                                Text(authManager.userRole)
-                                    .font(.caption)
-                                    .foregroundColor(Color(red: 0.7, green: 0.5, blue: 1.0))
                             }
                         }
                         .padding(.horizontal)
