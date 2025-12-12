@@ -41,19 +41,20 @@ struct ImportShiftsView: View {
             Color(red: 0.1, green: 0.1, blue: 0.18).ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Header
-                HStack {
+                HStack(spacing: 14) {
                     Button(action: { dismiss() }) {
-                        Image(systemName: "arrow.left")
-                            .font(.title2)
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.white)
+                            .padding(10)
+                            .background(Color.white.opacity(0.1))
+                            .clipShape(Circle())
                     }
                     Spacer()
                     Text("Importar Turnos")
                         .font(.headline)
                         .foregroundColor(.white)
                     Spacer()
-                    Image(systemName: "arrow.left").font(.title2).opacity(0)
                 }
                 .padding()
                 .background(Color.black.opacity(0.3))

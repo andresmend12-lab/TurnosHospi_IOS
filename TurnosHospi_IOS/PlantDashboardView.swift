@@ -18,6 +18,7 @@ struct ShiftAssignmentState: Equatable {
 // MARK: - PLANT DASHBOARD VIEW
 
 struct PlantDashboardView: View {
+    var onClose: (() -> Void)? = nil
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var notificationManager: NotificationCenterManager
@@ -37,6 +38,16 @@ struct PlantDashboardView: View {
     // --- NUEVO: Estado para mostrar chat directo ---
     @State private var showDirectChats = false
     
+    // Debounce para cambios de día (evita múltiples fetch simultáneos)
+    @State private var dateSelectionWorkItem: DispatchWorkItem?
+    
+    // Estados para eliminación de planta
+    @State private var showPlantDeleteWarning = false
+    @State private var showPlantDeleteSheet = false
+    @State private var deleteConfirmationText = ""
+    @State private var plantDeleteStatusMessage: String?
+    @State private var isDeletingPlant = false
+    
     // Estado de edición para supervisor
     @State private var supervisorAssignments: [String: ShiftAssignmentState] = [:]
     @State private var isLoadingSupervisorAssignments = false
@@ -47,6 +58,12 @@ struct PlantDashboardView: View {
     // Helper para obtener el staffScope de forma segura
     var staffScope: String {
         plantManager.currentPlant?.staffScope ?? "nurses_only"
+    }
+    
+    private var deletePhrase: String {
+        let name = plantManager.currentPlant?.name ?? ""
+        if name.isEmpty { return "borrar mi planta" }
+        return "borrar \(name.lowercased())"
     }
     
     // Calendario robusto (Español / Lunes)
@@ -157,22 +174,7 @@ struct PlantDashboardView: View {
                                                 vacationDays: vacationManager.vacationDays
                                             )
                                             .onChange(of: selectedDate) { newDate in
-                                                // Recarga mes si cambia
-                                                if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
-                                                    resetCurrentMonthToFirstDay(of: newDate)
-                                                    if !plantId.isEmpty {
-                                                        plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
-                                                    }
-                                                }
-                                                
-                                                // Recarga día
-                                                if !plantId.isEmpty {
-                                                    plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
-                                                }
-                                                
-                                                if authManager.userRole == "Supervisor" {
-                                                    loadSupervisorAssignments()
-                                                }
+                                                scheduleDateHandling(for: newDate)
                                             }
                                             
                                             // CONTENIDO BAJO EL CALENDARIO
@@ -223,6 +225,22 @@ struct PlantDashboardView: View {
                                     
                                 case "Bolsa de Turnos":
                                     ShiftMarketplaceView(plantId: plantId)
+                                    
+                                case "Configuración de la planta":
+                                    if let plant = plantManager.currentPlant {
+                                        PlantConfigurationView(
+                                            plant: plant,
+                                            deletePhrase: deletePhrase,
+                                            deleteStatusMessage: plantDeleteStatusMessage,
+                                            onDeleteTap: { showPlantDeleteWarning = true }
+                                        )
+                                        .padding(.horizontal)
+                                        .padding(.top, 20)
+                                    } else {
+                                        ProgressView("Cargando configuración...")
+                                            .tint(.white)
+                                            .padding(.top, 60)
+                                    }
                                     
                                 default:
                                     ScrollView {
@@ -297,7 +315,10 @@ struct PlantDashboardView: View {
                     PlantMenuDrawer(
                         isMenuOpen: $isMenuOpen,
                         selectedOption: $selectedOption,
-                        onLogout: { dismiss() },
+                        onLogout: {
+                            withAnimation { isMenuOpen = false }
+                            exitToMainMenu()
+                        },
                         onImportShifts: { showImportShiftsSheet = true },
                         onOpenStatistics: { showStatisticsSheet = true }
                     )
@@ -325,6 +346,41 @@ struct PlantDashboardView: View {
                     )
                 }
             }
+            .alert("¿Eliminar planta?", isPresented: $showPlantDeleteWarning) {
+                Button("Cancelar", role: .cancel) {}
+                Button("Continuar", role: .destructive) {
+                    deleteConfirmationText = ""
+                    plantDeleteStatusMessage = nil
+                    showPlantDeleteSheet = true
+                }
+            } message: {
+                Text("Esta acción eliminará definitivamente la planta, su personal y los turnos asociados.")
+            }
+            .sheet(isPresented: $showPlantDeleteSheet) {
+                if let plant = plantManager.currentPlant {
+                    PlantDeleteConfirmationSheet(
+                        plantName: plant.name,
+                        requiredPhrase: deletePhrase,
+                        typedText: $deleteConfirmationText,
+                        statusMessage: plantDeleteStatusMessage,
+                        isDeleting: isDeletingPlant,
+                        onCancel: {
+                            showPlantDeleteSheet = false
+                            deleteConfirmationText = ""
+                            plantDeleteStatusMessage = nil
+                        },
+                        onConfirm: {
+                            performPlantDeletion(plant: plant)
+                        }
+                    )
+                    .presentationDetents([.medium, .large])
+                    .presentationBackground(Color(red: 0.05, green: 0.05, blue: 0.1))
+                } else {
+                    Text("No se encontró la planta.")
+                        .foregroundColor(.white)
+                        .padding()
+                }
+            }
             
             .onAppear {
                 notificationManager.updateContext(
@@ -345,7 +401,7 @@ struct PlantDashboardView: View {
                 }
                 
                 if authManager.userRole == "Supervisor" {
-                    loadSupervisorAssignments()
+                    loadSupervisorAssignments(for: selectedDate)
                 }
                 
                 updateVacationContext()
@@ -356,6 +412,89 @@ struct PlantDashboardView: View {
             .onChange(of: authManager.user?.uid ?? "") { _ in
                 updateVacationContext()
             }
+            .onDisappear {
+                dateSelectionWorkItem?.cancel()
+            }
+        }
+    }
+    
+    private func scheduleDateHandling(for date: Date) {
+        dateSelectionWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [date] in
+            handleDateSelection(date)
+        }
+        dateSelectionWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: workItem)
+    }
+    
+    private func handleDateSelection(_ newDate: Date) {
+        let plantId = authManager.userPlantId
+        guard !plantId.isEmpty else { return }
+        
+        if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
+            let components = calendar.dateComponents([.year, .month], from: newDate)
+            if let firstOfMonth = calendar.date(from: components) {
+                currentMonth = firstOfMonth
+                plantManager.fetchMonthlyAssignments(plantId: plantId, month: firstOfMonth)
+            }
+        }
+        
+        plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
+        
+        if authManager.userRole == "Supervisor" {
+            loadSupervisorAssignments(for: newDate)
+        }
+    }
+    
+    private func performPlantDeletion(plant: HospitalPlant) {
+        guard !plant.id.isEmpty else { return }
+        isDeletingPlant = true
+        plantDeleteStatusMessage = nil
+        
+        let dbRef = Database.database().reference()
+        let plantRef = dbRef.child("plants").child(plant.id)
+        
+        plantRef.child("userPlants").observeSingleEvent(of: .value) { snapshot in
+            var userIds: [String] = []
+            for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                userIds.append(child.key)
+            }
+            
+            let dispatchGroup = DispatchGroup()
+            for uid in userIds {
+                dispatchGroup.enter()
+                dbRef.child("users").child(uid).updateChildValues([
+                    "plantId": "",
+                    "role": "Personal"
+                ]) { _, _ in
+                    dispatchGroup.leave()
+                }
+            }
+            
+            dispatchGroup.notify(queue: .main) {
+                plantRef.removeValue { error, _ in
+                    if let error = error {
+                        self.isDeletingPlant = false
+                        self.plantDeleteStatusMessage = "Error al eliminar: \(error.localizedDescription)"
+                    } else {
+                        self.isDeletingPlant = false
+                        self.plantDeleteStatusMessage = nil
+                        self.showPlantDeleteSheet = false
+                        self.authManager.userPlantId = ""
+                        self.authManager.userRole = "Personal"
+                        self.plantManager.currentPlant = nil
+                        self.exitToMainMenu()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func exitToMainMenu() {
+        if let onClose = onClose {
+            onClose()
+        } else {
+            dismiss()
         }
     }
     
@@ -377,7 +516,7 @@ struct PlantDashboardView: View {
     
     // MARK: - Lógica Supervisor
     
-    private func loadSupervisorAssignments() {
+    private func loadSupervisorAssignments(for date: Date? = nil) {
         guard authManager.userRole == "Supervisor",
               let plant = plantManager.currentPlant else {
             return
@@ -385,7 +524,8 @@ struct PlantDashboardView: View {
         
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        let dateKey = formatter.string(from: selectedDate)
+        let targetDate = date ?? selectedDate
+        let dateKey = formatter.string(from: targetDate)
         
         isLoadingSupervisorAssignments = true
         isSupervisorAssignmentsLoaded = false
@@ -1008,6 +1148,135 @@ struct StaffPickerField: View {
                 .background(Color.white.opacity(0.1))
                 .cornerRadius(8)
             }
+        }
+    }
+}
+
+struct PlantConfigurationView: View {
+    let plant: HospitalPlant
+    let deletePhrase: String
+    let deleteStatusMessage: String?
+    let onDeleteTap: () -> Void
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Información de la planta")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text("Nombre: \(plant.name)")
+                        .foregroundColor(.white.opacity(0.8))
+                    Text("Hospital: \(plant.hospitalName)")
+                        .foregroundColor(.white.opacity(0.8))
+                    if let scope = plant.staffScope {
+                        Text("Cobertura: \(scope == "nurses_and_aux" ? "Enfermería y auxiliares" : "Solo enfermería")")
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(16)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Zona de peligro")
+                        .font(.headline)
+                        .foregroundColor(.red)
+                    Text("Eliminar la planta borrará definitivamente a todo el personal, turnos y chats asociados. Esta acción no se puede deshacer.")
+                        .foregroundColor(.white)
+                        .font(.subheadline)
+                    if let status = deleteStatusMessage {
+                        Text(status)
+                            .foregroundColor(status.lowercased().contains("error") ? .red : .green)
+                            .font(.caption)
+                            .padding(8)
+                            .background(Color.white.opacity(0.05))
+                            .cornerRadius(8)
+                    }
+                    Button(action: onDeleteTap) {
+                        Text("Eliminar planta")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.red)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                    }
+                }
+                .padding()
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(16)
+            }
+            .padding(.vertical, 20)
+        }
+    }
+}
+
+struct PlantDeleteConfirmationSheet: View {
+    let plantName: String
+    let requiredPhrase: String
+    @Binding var typedText: String
+    let statusMessage: String?
+    let isDeleting: Bool
+    let onCancel: () -> Void
+    let onConfirm: () -> Void
+    
+    private var isValid: Bool {
+        typedText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == requiredPhrase.lowercased()
+    }
+    
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Confirmar eliminación")
+                    .font(.title2.bold())
+                    .foregroundColor(.white)
+                
+                Text("Para confirmar que deseas eliminar \"\(plantName)\", escribe la siguiente frase:")
+                    .foregroundColor(.white)
+                
+                Text("\"\(requiredPhrase)\"")
+                    .font(.headline)
+                    .foregroundColor(.red)
+                
+                TextField("Escribe la frase exacta", text: $typedText)
+                    .textInputAutocapitalization(.never)
+                    .disableAutocorrection(true)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Color.white.opacity(0.1))
+                    .cornerRadius(10)
+                
+                if let status = statusMessage {
+                    Text(status)
+                        .foregroundColor(status.lowercased().contains("error") ? .red : .green)
+                        .font(.footnote)
+                }
+                
+                Spacer()
+                
+                Button(action: onConfirm) {
+                    if isDeleting {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("Eliminar definitivamente")
+                            .bold()
+                    }
+                }
+                .disabled(!isValid || isDeleting)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(isValid ? Color.red : Color.gray)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+                
+                Button("Cancelar", action: onCancel)
+                    .foregroundColor(.white)
+                    .padding(.top, 4)
+            }
+            .padding()
+            .background(Color(red: 0.05, green: 0.05, blue: 0.1).ignoresSafeArea())
         }
     }
 }

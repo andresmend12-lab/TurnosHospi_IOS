@@ -91,7 +91,12 @@ struct SideMenuView: View {
         }
         // Modales
         .sheet(isPresented: $showJoinPlantSheet) { JoinPlantView() }
-        .fullScreenCover(isPresented: $showPlantDashboard) { PlantDashboardView() }
+        .fullScreenCover(isPresented: $showPlantDashboard) {
+            PlantDashboardView(onClose: {
+                showPlantDashboard = false
+                withAnimation { isShowing = false }
+            })
+        }
         .sheet(isPresented: $showEditProfileSheet) { EditProfileView() }
         .sheet(isPresented: $showCreatePlantSheet) { CreatePlantView() }
         .sheet(isPresented: $showSettingsSheet) { SettingsView() }

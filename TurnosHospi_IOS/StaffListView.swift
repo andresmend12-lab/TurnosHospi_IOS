@@ -10,6 +10,8 @@ struct StaffListView: View {
     @State private var showingAddSheet = false // <--- Estado para mostrar el modal de añadir
     @State private var selectedStaff: PlantStaff? // Para editar
     @State private var isLoading = true
+    @State private var isDeleting = false
+    @State private var staffToDelete: PlantStaff?
     
     var body: some View {
         ZStack {
@@ -35,6 +37,11 @@ struct StaffListView: View {
                 if isLoading {
                     ProgressView().tint(.white).padding(.top, 50)
                     Spacer()
+                } else if isDeleting {
+                    ProgressView("Eliminando personal...")
+                        .tint(.white)
+                        .padding(.top, 50)
+                    Spacer()
                 } else if staffList.isEmpty {
                     VStack(spacing: 20) {
                         Image(systemName: "person.3.fill")
@@ -50,10 +57,11 @@ struct StaffListView: View {
                     ScrollView {
                         LazyVStack(spacing: 15) {
                             ForEach(staffList) { person in
-                                StaffRowCard(person: person) {
-                                    // Al tocar la tarjeta, abrimos para editar
-                                    selectedStaff = person
-                                }
+                                StaffRowCard(
+                                    person: person,
+                                    onEdit: { selectedStaff = person },
+                                    onDelete: { staffToDelete = person }
+                                )
                             }
                         }
                         .padding()
@@ -71,6 +79,16 @@ struct StaffListView: View {
         // Hoja para EDITAR existente
         .sheet(item: $selectedStaff) { person in
             AddEditStaffView(plantId: plantId, staffScope: staffScope, staffToEdit: person)
+        }
+        .alert(item: $staffToDelete) { staff in
+            Alert(
+                title: Text("Eliminar a \(staff.name)?"),
+                message: Text("Esta acción quitará al miembro del personal de la planta y desvinculará su acceso."),
+                primaryButton: .destructive(Text("Eliminar")) {
+                    deleteStaff(staff)
+                },
+                secondaryButton: .cancel()
+            )
         }
     }
     
@@ -103,46 +121,97 @@ struct StaffListView: View {
             self.isLoading = false
         }
     }
+    
+    private func deleteStaff(_ staff: PlantStaff) {
+        guard !plantId.isEmpty else { return }
+        isDeleting = true
+        
+        let plantRef = Database.database().reference().child("plants").child(plantId)
+        let staffRef = plantRef.child("personal_de_planta").child(staff.id)
+        
+        staffRef.removeValue { error, _ in
+            if let error = error {
+                print("Error al eliminar personal: \(error.localizedDescription)")
+                DispatchQueue.main.async { self.isDeleting = false }
+                return
+            }
+            
+            let userPlantsRef = plantRef.child("userPlants")
+            userPlantsRef.observeSingleEvent(of: .value) { snapshot in
+                var removals = 0
+                for child in snapshot.children.allObjects as? [DataSnapshot] ?? [] {
+                    if let data = child.value as? [String: Any],
+                       let staffId = data["staffId"] as? String,
+                       staffId == staff.id {
+                        removals += 1
+                        userPlantsRef.child(child.key).removeValue { _, _ in
+                            removals -= 1
+                            if removals == 0 {
+                                DispatchQueue.main.async { self.isDeleting = false }
+                            }
+                        }
+                    }
+                }
+                
+                if removals == 0 {
+                    DispatchQueue.main.async { self.isDeleting = false }
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Componente de Fila (Tarjeta)
 struct StaffRowCard: View {
     let person: PlantStaff
-    let action: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
     
     var body: some View {
-        Button(action: action) {
-            HStack {
-                // Icono según rol
-                ZStack {
-                    Circle()
-                        .fill(person.role == "Supervisor" ? Color.neonViolet : Color.electricBlue)
-                        .frame(width: 45, height: 45)
-                        .opacity(0.2)
-                    
-                    Image(systemName: person.role == "Supervisor" ? "star.fill" : "person.fill")
-                        .foregroundColor(person.role == "Supervisor" ? .neonViolet : .electricBlue)
-                }
+        HStack {
+            // Icono según rol
+            ZStack {
+                Circle()
+                    .fill(person.role == "Supervisor" ? Color.neonViolet : Color.electricBlue)
+                    .frame(width: 45, height: 45)
+                    .opacity(0.2)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(person.name)
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    Text(person.role)
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "pencil.circle")
-                    .font(.title2)
+                Image(systemName: person.role == "Supervisor" ? "star.fill" : "person.fill")
+                    .foregroundColor(person.role == "Supervisor" ? .neonViolet : .electricBlue)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(person.name)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Text(person.role)
+                    .font(.caption)
                     .foregroundColor(.gray)
             }
-            .padding()
-            .background(Color.white.opacity(0.05))
-            .cornerRadius(15)
-            .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.white.opacity(0.1), lineWidth: 1))
+            
+            Spacer()
+            
+            HStack(spacing: 12) {
+                Button(action: onEdit) {
+                    Image(systemName: "pencil.circle")
+                        .font(.title2)
+                        .foregroundColor(.gray)
+                }
+                .buttonStyle(.plain)
+                
+                Button(action: onDelete) {
+                    Image(systemName: "trash.circle")
+                        .font(.title2)
+                        .foregroundColor(.red.opacity(0.8))
+                }
+                .buttonStyle(.plain)
+            }
         }
+        .padding()
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(15)
+        .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.white.opacity(0.1), lineWidth: 1))
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onEdit)
     }
 }
