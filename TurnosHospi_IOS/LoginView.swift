@@ -51,7 +51,7 @@ struct LoginView: View {
                             .foregroundStyle(LinearGradient(colors: [.electricBlue, .neonViolet], startPoint: .topLeading, endPoint: .bottomTrailing))
                             .padding(.bottom, 10)
                             
-                        Text("TurnosHospi")
+                        Text("Gestor de Turnos")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundColor(.white)

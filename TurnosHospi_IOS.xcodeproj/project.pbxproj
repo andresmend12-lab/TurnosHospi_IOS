@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		97472A652EEC393500E74358 /* unnamed.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 97472A642EEC393300E74358 /* unnamed.jpg */; };
 		976F1F3F2EE46A0C0036A9E0 /* OfflineCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976F1F3E2EE46A0C0036A9E0 /* OfflineCalendarView.swift */; };
 		976F1F432EE4909A0036A9E0 /* ShiftChangeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976F1F422EE4909A0036A9E0 /* ShiftChangeView.swift */; };
 		976F1F452EE492D40036A9E0 /* ShiftRulesEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976F1F442EE492D40036A9E0 /* ShiftRulesEngine.swift */; };
@@ -75,6 +76,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		97472A642EEC393300E74358 /* unnamed.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = unnamed.jpg; path = ../../../../Downloads/unnamed.jpg; sourceTree = "<group>"; };
 		976F1F3E2EE46A0C0036A9E0 /* OfflineCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendarView.swift; sourceTree = "<group>"; };
 		976F1F422EE4909A0036A9E0 /* ShiftChangeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftChangeView.swift; sourceTree = "<group>"; };
 		976F1F442EE492D40036A9E0 /* ShiftRulesEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftRulesEngine.swift; sourceTree = "<group>"; };
@@ -178,6 +180,7 @@
 		97E962C62EE18973006E7707 /* TurnosHospi_IOS */ = {
 			isa = PBXGroup;
 			children = (
+				97472A642EEC393300E74358 /* unnamed.jpg */,
 				977BCEDD2EEB4E8400C40AE0 /* GoogleService-Info.plist */,
 				97FB93962EE2187700F5490F /* AddEditStaffView.swift */,
 				97E962CB2EE18976006E7707 /* Assets.xcassets */,
@@ -366,6 +369,7 @@
 				97E962D02EE18976006E7707 /* Preview Assets.xcassets in Resources */,
 				977BCEDE2EEB4E8400C40AE0 /* GoogleService-Info.plist in Resources */,
 				97E962CC2EE18976006E7707 /* Assets.xcassets in Resources */,
+				97472A652EEC393500E74358 /* unnamed.jpg in Resources */,
 				97F8A5002F5E1BB100ABCDEF /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
