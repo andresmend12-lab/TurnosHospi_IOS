@@ -43,7 +43,7 @@ struct JoinPlantView: View {
             }
         }
         // --- AQUÍ ESTÁ LA SOLUCIÓN ---
-        .onChange(of: plantManager.joinSuccess) { success in
+        .onChange(of: plantManager.joinSuccess) { _, success in
             if success {
                 // 1. Actualizamos el AuthManager AL INSTANTE
                 if let plant = plantManager.foundPlant {

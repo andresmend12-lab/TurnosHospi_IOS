@@ -18,6 +18,8 @@ struct MonthlyStats {
 
 struct StatisticsView: View {
     @Environment(\.dismiss) var dismiss
+    var showsStandaloneHeader: Bool = true
+    var onClose: (() -> Void)? = nil
     @EnvironmentObject var authManager: AuthManager
     @StateObject var plantManager = PlantManager()
     
@@ -48,23 +50,31 @@ struct StatisticsView: View {
             Color(red: 0.1, green: 0.1, blue: 0.18).ignoresSafeArea()
             
             VStack(spacing: 0) {
-                HStack(spacing: 14) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "line.3.horizontal")
-                            .font(.system(size: 24, weight: .bold))
+                if showsStandaloneHeader {
+                    HStack(spacing: 14) {
+                        Button(action: {
+                            if let onClose = onClose {
+                                onClose()
+                            } else {
+                                dismiss()
+                            }
+                        }) {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(10)
+                                .background(Color.white.opacity(0.1))
+                                .clipShape(Circle())
+                        }
+                        Spacer()
+                        Text("Estadísticas")
+                            .font(.headline)
                             .foregroundColor(.white)
-                            .padding(10)
-                            .background(Color.white.opacity(0.1))
-                            .clipShape(Circle())
+                        Spacer()
                     }
-                    Spacer()
-                    Text("Estadísticas")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    Spacer()
+                    .padding()
+                    .background(Color.black.opacity(0.3))
                 }
-                .padding()
-                .background(Color.black.opacity(0.3))
                 
                 ScrollView {
                     VStack(spacing: 20) {
@@ -120,7 +130,7 @@ struct StatisticsView: View {
                 calculateStatistics()
             }
         }
-        .onChange(of: currentMonth) { _ in
+        .onChange(of: currentMonth) { _, _ in
             calculateStatistics()
         }
     }

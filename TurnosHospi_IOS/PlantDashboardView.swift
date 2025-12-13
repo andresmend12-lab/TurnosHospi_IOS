@@ -31,8 +31,6 @@ struct PlantDashboardView: View {
     @State private var selectedOption: String = "Calendario"
     @State private var selectedDate = Date()
     @State private var currentMonth = Date()
-    @State private var showImportShiftsSheet = false
-    @State private var showStatisticsSheet = false
     @State private var showNotificationCenter = false
     
     // --- NUEVO: Estado para mostrar chat directo ---
@@ -173,7 +171,7 @@ struct PlantDashboardView: View {
                                                 monthlyAssignments: plantManager.monthlyAssignments,
                                                 vacationDays: vacationManager.vacationDays
                                             )
-                                            .onChange(of: selectedDate) { newDate in
+                                            .onChange(of: selectedDate) { _, newDate in
                                                 scheduleDateHandling(for: newDate)
                                             }
                                             
@@ -225,6 +223,16 @@ struct PlantDashboardView: View {
                                     
                                 case "Bolsa de Turnos":
                                     ShiftMarketplaceView(plantId: plantId)
+                                    
+                                case "Importar turnos":
+                                    ImportShiftsView(showsStandaloneHeader: false)
+                                    
+                                case "Estadísticas":
+                                    StatisticsView(
+                                        showsStandaloneHeader: false,
+                                        plantId: plantId,
+                                        isSupervisor: authManager.userRole == "Supervisor"
+                                    )
                                     
                                 case "Configuración de la planta":
                                     if let plant = plantManager.currentPlant {
@@ -318,9 +326,7 @@ struct PlantDashboardView: View {
                         onLogout: {
                             withAnimation { isMenuOpen = false }
                             exitToMainMenu()
-                        },
-                        onImportShifts: { showImportShiftsSheet = true },
-                        onOpenStatistics: { showStatisticsSheet = true }
+                        }
                     )
                     .transition(.move(edge: .leading))
                     .zIndex(2)
@@ -334,17 +340,6 @@ struct PlantDashboardView: View {
             }
             .sheet(isPresented: $showNotificationCenter) {
                 NotificationCenterView()
-            }
-            .sheet(isPresented: $showImportShiftsSheet) {
-                ImportShiftsView()
-            }
-            .sheet(isPresented: $showStatisticsSheet) {
-                if !authManager.userPlantId.isEmpty {
-                    StatisticsView(
-                        plantId: authManager.userPlantId,
-                        isSupervisor: authManager.userRole == "Supervisor"
-                    )
-                }
             }
             .alert("¿Eliminar planta?", isPresented: $showPlantDeleteWarning) {
                 Button("Cancelar", role: .cancel) {}
@@ -406,10 +401,10 @@ struct PlantDashboardView: View {
                 
                 updateVacationContext()
             }
-            .onChange(of: authManager.userPlantId) { _ in
+            .onChange(of: authManager.userPlantId) { _, _ in
                 updateVacationContext()
             }
-            .onChange(of: authManager.user?.uid ?? "") { _ in
+            .onChange(of: authManager.user?.uid ?? "") { _, _ in
                 updateVacationContext()
             }
             .onDisappear {
@@ -578,6 +573,19 @@ struct PlantDashboardView: View {
                         }
                     }
                     
+                    let required = plant.staffRequirements?[shiftName] ?? 0
+                    let desiredNurseCount = max(1, required)
+                    if nurseSlots.count < desiredNurseCount {
+                        nurseSlots.append(contentsOf: Array(repeating: SlotAssignment(), count: desiredNurseCount - nurseSlots.count))
+                    }
+                    
+                    let desiredAuxCount = plant.staffScope == "nurses_and_aux" ? max(1, required) : 0
+                    if desiredAuxCount == 0 {
+                        auxSlots = []
+                    } else if auxSlots.count < desiredAuxCount {
+                        auxSlots.append(contentsOf: Array(repeating: SlotAssignment(), count: desiredAuxCount - auxSlots.count))
+                    }
+                    
                     result[shiftName] = ShiftAssignmentState(
                         nurseSlots: nurseSlots,
                         auxSlots: auxSlots
@@ -590,11 +598,10 @@ struct PlantDashboardView: View {
                 for shiftName in shiftTimes.keys {
                     if result[shiftName] == nil {
                         let required = plant.staffRequirements?[shiftName] ?? 0
-                        let nurseSlots = Array(repeating: SlotAssignment(), count: max(1, required))
-                        let auxSlots: [SlotAssignment] =
-                            plant.staffScope == "nurses_and_aux"
-                            ? Array(repeating: SlotAssignment(), count: required)
-                            : []
+                        let nurseCount = max(1, required)
+                        let auxCount = plant.staffScope == "nurses_and_aux" ? max(1, required) : 0
+                        let nurseSlots = Array(repeating: SlotAssignment(), count: nurseCount)
+                        let auxSlots = auxCount > 0 ? Array(repeating: SlotAssignment(), count: auxCount) : []
                         result[shiftName] = ShiftAssignmentState(
                             nurseSlots: nurseSlots,
                             auxSlots: auxSlots
@@ -1423,8 +1430,6 @@ struct PlantMenuDrawer: View {
     @Binding var isMenuOpen: Bool
     @Binding var selectedOption: String
     var onLogout: () -> Void
-    var onImportShifts: (() -> Void)? = nil
-    var onOpenStatistics: (() -> Void)? = nil // Callback para estadísticas
 
     let menuBackground = Color(red: 26/255, green: 26/255, blue: 46/255)
 
@@ -1467,11 +1472,7 @@ struct PlantMenuDrawer: View {
 
                                 PlantMenuRow(title: "Lista de personal", icon: "person.3.fill", selected: $selectedOption) { close() }
                                 PlantMenuRow(title: "Configuración de la planta", icon: "gearshape.2.fill", selected: $selectedOption) { close() }
-                                
-                                // Botón Importar Turnos
-                                Button(action: { close(); onImportShifts?() }) {
-                                    PlantMenuRowContent(title: "Importar turnos", icon: "square.and.arrow.down", isSelected: false)
-                                }.buttonStyle(.plain)
+                                PlantMenuRow(title: "Importar turnos", icon: "square.and.arrow.down", selected: $selectedOption) { close() }
 
                                 PlantMenuRow(title: "Gestión de cambios", icon: "arrow.triangle.2.circlepath", selected: $selectedOption) { close() }
                             }
@@ -1485,10 +1486,7 @@ struct PlantMenuDrawer: View {
                                     .foregroundColor(.gray)
                                     .padding(.leading, 10)
                                 
-                                // Botón Estadísticas (Supervisor)
-                                Button(action: { close(); onOpenStatistics?() }) {
-                                    PlantMenuRowContent(title: "Estadísticas", icon: "chart.bar.xaxis", isSelected: false)
-                                }.buttonStyle(.plain)
+                                PlantMenuRow(title: "Estadísticas", icon: "chart.bar.xaxis", selected: $selectedOption) { close() }
                             }
 
                         } else {
@@ -1504,10 +1502,7 @@ struct PlantMenuDrawer: View {
                             PlantMenuRow(title: "Cambio de turnos", icon: "arrow.triangle.2.circlepath", selected: $selectedOption) { close() }
                             PlantMenuRow(title: "Bolsa de Turnos", icon: "briefcase.fill", selected: $selectedOption) { close() }
                             
-                            // Botón Estadísticas (Personal)
-                            Button(action: { close(); onOpenStatistics?() }) {
-                                PlantMenuRowContent(title: "Estadísticas", icon: "chart.bar.xaxis", isSelected: false)
-                            }.buttonStyle(.plain)
+                            PlantMenuRow(title: "Estadísticas", icon: "chart.bar.xaxis", selected: $selectedOption) { close() }
                         }
                     }
                 }

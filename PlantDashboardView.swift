@@ -30,12 +30,13 @@ struct PlantDashboardView: View {
     @State private var selectedOption: String = "Calendario"
     @State private var selectedDate = Date()
     @State private var currentMonth = Date()
-    @State private var showImportShiftsSheet = false
-    @State private var showStatisticsSheet = false
     @State private var showNotificationCenter = false
     
     // --- NUEVO: Estado para mostrar chat directo ---
     @State private var showDirectChats = false
+    
+    // Debounce para cambios de día
+    @State private var dateSelectionWorkItem: DispatchWorkItem?
     
     // Estado de edición para supervisor
     @State private var supervisorAssignments: [String: ShiftAssignmentState] = [:]
@@ -156,23 +157,8 @@ struct PlantDashboardView: View {
                                                 monthlyAssignments: plantManager.monthlyAssignments,
                                                 vacationDays: vacationManager.vacationDays
                                             )
-                                            .onChange(of: selectedDate) { newDate in
-                                                // Recarga mes si cambia
-                                                if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
-                                                    resetCurrentMonthToFirstDay(of: newDate)
-                                                    if !plantId.isEmpty {
-                                                        plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
-                                                    }
-                                                }
-                                                
-                                                // Recarga día
-                                                if !plantId.isEmpty {
-                                                    plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
-                                                }
-                                                
-                                                if authManager.userRole == "Supervisor" {
-                                                    loadSupervisorAssignments()
-                                                }
+                                            .onChange(of: selectedDate) { _, newDate in
+                                                scheduleDateHandling(for: newDate)
                                             }
                                             
                                             // CONTENIDO BAJO EL CALENDARIO
@@ -345,17 +331,45 @@ struct PlantDashboardView: View {
                 }
                 
                 if authManager.userRole == "Supervisor" {
-                    loadSupervisorAssignments()
+                    loadSupervisorAssignments(for: selectedDate)
                 }
                 
                 updateVacationContext()
             }
-            .onChange(of: authManager.userPlantId) { _ in
+            .onChange(of: authManager.userPlantId) { _, _ in
                 updateVacationContext()
             }
-            .onChange(of: authManager.user?.uid ?? "") { _ in
+            .onChange(of: authManager.user?.uid ?? "") { _, _ in
                 updateVacationContext()
             }
+            .onDisappear {
+                dateSelectionWorkItem?.cancel()
+            }
+        }
+    }
+    
+    private func scheduleDateHandling(for date: Date) {
+        dateSelectionWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [date] in
+            handleDateSelection(date)
+        }
+        dateSelectionWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: workItem)
+    }
+    
+    private func handleDateSelection(_ newDate: Date) {
+        let plantId = authManager.userPlantId
+        guard !plantId.isEmpty else { return }
+        
+        if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
+            resetCurrentMonthToFirstDay(of: newDate)
+            plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
+        }
+        
+        plantManager.fetchDailyStaff(plantId: plantId, date: newDate)
+        
+        if authManager.userRole == "Supervisor" {
+            loadSupervisorAssignments(for: newDate)
         }
     }
     
@@ -377,7 +391,7 @@ struct PlantDashboardView: View {
     
     // MARK: - Lógica Supervisor
     
-    private func loadSupervisorAssignments() {
+    private func loadSupervisorAssignments(for date: Date? = nil) {
         guard authManager.userRole == "Supervisor",
               let plant = plantManager.currentPlant else {
             return
@@ -385,7 +399,8 @@ struct PlantDashboardView: View {
         
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        let dateKey = formatter.string(from: selectedDate)
+        let targetDate = date ?? selectedDate
+        let dateKey = formatter.string(from: targetDate)
         
         isLoadingSupervisorAssignments = true
         isSupervisorAssignmentsLoaded = false
@@ -438,6 +453,19 @@ struct PlantDashboardView: View {
                         }
                     }
                     
+                    let required = plant.staffRequirements?[shiftName] ?? 0
+                    let desiredNurseCount = max(1, required)
+                    if nurseSlots.count < desiredNurseCount {
+                        nurseSlots.append(contentsOf: Array(repeating: SlotAssignment(), count: desiredNurseCount - nurseSlots.count))
+                    }
+                    
+                    let desiredAuxCount = plant.staffScope == "nurses_and_aux" ? max(1, required) : 0
+                    if desiredAuxCount == 0 {
+                        auxSlots = []
+                    } else if auxSlots.count < desiredAuxCount {
+                        auxSlots.append(contentsOf: Array(repeating: SlotAssignment(), count: desiredAuxCount - auxSlots.count))
+                    }
+                    
                     result[shiftName] = ShiftAssignmentState(
                         nurseSlots: nurseSlots,
                         auxSlots: auxSlots
@@ -450,11 +478,10 @@ struct PlantDashboardView: View {
                 for shiftName in shiftTimes.keys {
                     if result[shiftName] == nil {
                         let required = plant.staffRequirements?[shiftName] ?? 0
-                        let nurseSlots = Array(repeating: SlotAssignment(), count: max(1, required))
-                        let auxSlots: [SlotAssignment] =
-                            plant.staffScope == "nurses_and_aux"
-                            ? Array(repeating: SlotAssignment(), count: required)
-                            : []
+                        let nurseCount = max(1, required)
+                        let auxCount = plant.staffScope == "nurses_and_aux" ? max(1, required) : 0
+                        let nurseSlots = Array(repeating: SlotAssignment(), count: nurseCount)
+                        let auxSlots = auxCount > 0 ? Array(repeating: SlotAssignment(), count: auxCount) : []
                         result[shiftName] = ShiftAssignmentState(
                             nurseSlots: nurseSlots,
                             auxSlots: auxSlots

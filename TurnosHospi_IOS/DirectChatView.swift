@@ -52,7 +52,7 @@ struct DirectChatView: View {
                         .padding()
                     }
                     .onAppear { scrollToBottom(proxy) }
-                    .onChange(of: messages) { _ in
+                    .onChange(of: messages) { _, _ in
                         scrollToBottom(proxy)
                         resetUnreadCount()
                     }

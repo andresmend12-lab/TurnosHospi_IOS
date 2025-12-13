@@ -164,7 +164,7 @@ struct MainMenuView: View {
             resetCurrentMonthToFirstDay(of: selectedDate)
             loadData()
         }
-        .onChange(of: selectedDate) { newDate in
+        .onChange(of: selectedDate) { _, newDate in
             if !authManager.userPlantId.isEmpty {
                 if !calendar.isDate(newDate, equalTo: currentMonth, toGranularity: .month) {
                     resetCurrentMonthToFirstDay(of: newDate)
@@ -173,7 +173,7 @@ struct MainMenuView: View {
                 plantManager.fetchDailyStaff(plantId: authManager.userPlantId, date: newDate)
             }
         }
-        .onChange(of: authManager.userPlantId) { newValue in
+        .onChange(of: authManager.userPlantId) { _, newValue in
             if newValue.isEmpty {
                 assignmentsInitialized = false
                 lastKnownAssignments = [:]
@@ -182,10 +182,10 @@ struct MainMenuView: View {
             }
             refreshNotificationContext()
         }
-        .onChange(of: plantManager.monthlyAssignments) { _ in
+        .onChange(of: plantManager.monthlyAssignments) { _, _ in
             detectShiftNotifications()
         }
-        .onChange(of: authManager.user?.uid ?? "") { newValue in
+        .onChange(of: authManager.user?.uid ?? "") { _, newValue in
             if newValue.isEmpty {
                 assignmentsInitialized = false
                 lastKnownAssignments = [:]
@@ -196,10 +196,10 @@ struct MainMenuView: View {
             }
             refreshNotificationContext()
         }
-        .onChange(of: authManager.userRole) { _ in
+        .onChange(of: authManager.userRole) { _, _ in
             refreshNotificationContext()
         }
-        .onChange(of: authManager.pendingNavigation) { _ in
+        .onChange(of: authManager.pendingNavigation) { _, _ in
             if let payload = authManager.consumePendingNavigation() {
                 handleDeepLink(payload)
             }

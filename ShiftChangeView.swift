@@ -139,7 +139,7 @@ struct ShiftChangeView: View {
             }
             loadData()
         }
-        .onChange(of: currentMonth) { newDate in
+        .onChange(of: currentMonth) { _, newDate in
             if !plantId.isEmpty {
                 plantManager.fetchMonthlyAssignments(plantId: plantId, month: newDate)
             }

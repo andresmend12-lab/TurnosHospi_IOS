@@ -1,14 +1,32 @@
 import SwiftUI
+import UIKit
+import ObjectiveC
 
-// Esto habilita el gesto de "swipe back" incluso con la barra de navegación oculta
-extension UINavigationController: UIGestureRecognizerDelegate {
-    override open func viewDidLoad() {
-        super.viewDidLoad()
-        interactivePopGestureRecognizer?.delegate = self
+// Delegate dedicado para no forzar conformidad global de UINavigationController
+private final class SwipeBackGestureDelegate: NSObject, UIGestureRecognizerDelegate {
+    weak var navigationController: UINavigationController?
+    
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        (navigationController?.viewControllers.count ?? 0) > 1
     }
+}
 
-    public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        // Solo permite el gesto si hay más de una vista en la pila
-        return viewControllers.count > 1
+private var swipeDelegateKey: UInt8 = 0
+
+extension UINavigationController {
+    private var swipeBackDelegate: SwipeBackGestureDelegate {
+        if let existing = objc_getAssociatedObject(self, &swipeDelegateKey) as? SwipeBackGestureDelegate {
+            existing.navigationController = self
+            return existing
+        }
+        let delegate = SwipeBackGestureDelegate()
+        delegate.navigationController = self
+        objc_setAssociatedObject(self, &swipeDelegateKey, delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        return delegate
+    }
+    
+    open override func viewDidLoad() {
+        super.viewDidLoad()
+        interactivePopGestureRecognizer?.delegate = swipeBackDelegate
     }
 }

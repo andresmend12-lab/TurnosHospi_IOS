@@ -119,7 +119,7 @@ struct StatisticsView: View {
                 calculateStatistics()
             }
         }
-        .onChange(of: currentMonth) { _ in
+        .onChange(of: currentMonth) { _, _ in
             calculateStatistics()
         }
     }
