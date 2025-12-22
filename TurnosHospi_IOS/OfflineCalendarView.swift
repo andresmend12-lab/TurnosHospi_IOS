@@ -216,14 +216,28 @@ struct OfflineCalendarView: View {
                 Color(hex: "0F172A").edgesIgnoringSafeArea(.all)
                 
                 VStack(spacing: 0) {
-                    // --- CALENDARIO ---
-                    CalendarGridView(viewModel: viewModel)
-                        .padding(.top)
-                        .padding(.horizontal)
-                    
-                    // --- LEYENDA DINÁMICA ---
-                    LegendView(items: viewModel.legendItems)
-                        .padding(.vertical, 10)
+                    // --- CALENDARIO + AJUSTES ---
+                    ZStack(alignment: .topTrailing) {
+                        VStack(spacing: 0) {
+                            CalendarGridView(viewModel: viewModel)
+                                .padding(.top)
+                                .padding(.horizontal)
+                            
+                            LegendView(items: viewModel.legendItems)
+                                .padding(.vertical, 10)
+                        }
+                        
+                        Button(action: { showSettings = true }) {
+                            Image(systemName: "gearshape")
+                                .foregroundColor(.black)
+                                .padding(8)
+                                .background(Color.white)
+                                .clipShape(Circle())
+                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        }
+                        .padding(.trailing, -4)
+                        .padding(.top, 0)
+                    }
                     
                     // --- PANEL INFERIOR ---
                     VStack {

@@ -340,44 +340,31 @@ struct MainMenuView: View {
                     .foregroundColor(.white)
             }
             
-            VStack(spacing: authManager.userPlantId.isEmpty ? 8 : 0) {
-                Button(action: { showNotificationCenter = true }) {
-                    ZStack(alignment: .topTrailing) {
-                        Circle()
-                            .fill(Color.white.opacity(0.15))
-                            .frame(width: 44, height: 44)
-                            .overlay(
-                                Image(systemName: "bell.fill")
-                                    .foregroundColor(.white)
-                            )
-                        
-                        if notificationManager.unreadCount > 0 {
-                            Text(notificationManager.unreadCount > 99 ? "99+" : "\(notificationManager.unreadCount)")
-                                .font(.caption2.bold())
+            Button(action: { showNotificationCenter = true }) {
+                ZStack(alignment: .topTrailing) {
+                    Circle()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Image(systemName: "bell.fill")
                                 .foregroundColor(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(Color.red)
-                                .clipShape(Capsule())
-                                .offset(x: 6, y: -6)
-                        }
-                    }
-                }
-                
-                if authManager.userPlantId.isEmpty {
-                    Button(action: { showOfflineSettings = true }) {
-                        Image(systemName: "gearshape")
-                            .foregroundColor(.black)
-                            .padding(8)
-                            .background(Color.white)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 1)
+                        )
+                    
+                    if notificationManager.unreadCount > 0 {
+                        Text(notificationManager.unreadCount > 99 ? "99+" : "\(notificationManager.unreadCount)")
+                            .font(.caption2.bold())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.red)
+                            .clipShape(Capsule())
+                            .offset(x: 6, y: -6)
                     }
                 }
             }
         }
         .padding(.horizontal)
-        .padding(.top, 50)
+        .padding(.top, 35)
     }
     
     private var calendarCard: some View {
