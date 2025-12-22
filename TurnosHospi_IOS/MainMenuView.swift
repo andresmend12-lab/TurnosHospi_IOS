@@ -9,6 +9,7 @@ struct MainMenuView: View {
     @State private var showMenu = false
     @State private var selectedDate = Date()
     @State private var currentMonth = Date()
+    @State private var showOfflineSettings = false
     
     // Estado para abrir chats
     @State private var showDirectChats = false
@@ -71,7 +72,7 @@ struct MainMenuView: View {
                         headerView
                         
                         if authManager.userPlantId.isEmpty {
-                            OfflineCalendarView()
+                            OfflineCalendarView(showSettings: $showOfflineSettings)
                                 .transition(.opacity)
                                 .clipShape(RoundedRectangle(cornerRadius: 30))
                                 .padding(.bottom, 20)
@@ -179,6 +180,7 @@ struct MainMenuView: View {
                 lastKnownAssignments = [:]
             } else {
                 loadData()
+                showOfflineSettings = false
             }
             refreshNotificationContext()
         }
@@ -338,25 +340,38 @@ struct MainMenuView: View {
                     .foregroundColor(.white)
             }
             
-            Button(action: { showNotificationCenter = true }) {
-                ZStack(alignment: .topTrailing) {
-                    Circle()
-                        .fill(Color.white.opacity(0.15))
-                        .frame(width: 44, height: 44)
-                        .overlay(
-                            Image(systemName: "bell.fill")
+            VStack(spacing: authManager.userPlantId.isEmpty ? 8 : 0) {
+                Button(action: { showNotificationCenter = true }) {
+                    ZStack(alignment: .topTrailing) {
+                        Circle()
+                            .fill(Color.white.opacity(0.15))
+                            .frame(width: 44, height: 44)
+                            .overlay(
+                                Image(systemName: "bell.fill")
+                                    .foregroundColor(.white)
+                            )
+                        
+                        if notificationManager.unreadCount > 0 {
+                            Text(notificationManager.unreadCount > 99 ? "99+" : "\(notificationManager.unreadCount)")
+                                .font(.caption2.bold())
                                 .foregroundColor(.white)
-                        )
-                    
-                    if notificationManager.unreadCount > 0 {
-                        Text(notificationManager.unreadCount > 99 ? "99+" : "\(notificationManager.unreadCount)")
-                            .font(.caption2.bold())
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color.red)
-                            .clipShape(Capsule())
-                            .offset(x: 6, y: -6)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Color.red)
+                                .clipShape(Capsule())
+                                .offset(x: 6, y: -6)
+                        }
+                    }
+                }
+                
+                if authManager.userPlantId.isEmpty {
+                    Button(action: { showOfflineSettings = true }) {
+                        Image(systemName: "gearshape")
+                            .foregroundColor(.black)
+                            .padding(8)
+                            .background(Color.white)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 1)
                     }
                 }
             }

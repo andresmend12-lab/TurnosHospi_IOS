@@ -7,6 +7,25 @@ struct UserShift: Codable, Equatable {
     let isHalfDay: Bool
 }
 
+enum ShiftPattern: String, Codable, CaseIterable, Identifiable {
+    case two
+    case three
+    
+    var id: String { rawValue }
+    
+    var title: String {
+        switch self {
+        case .two: return "2 turnos"
+        case .three: return "3 turnos"
+        }
+    }
+}
+
+struct OfflineShiftSettings: Codable {
+    var pattern: ShiftPattern
+    var allowHalfDay: Bool
+}
+
 // MARK: - ViewModel
 
 class OfflineCalendarViewModel: ObservableObject {
@@ -14,6 +33,13 @@ class OfflineCalendarViewModel: ObservableObject {
     @Published var localNotes: [String: [String]] = [:]
     @Published var selectedDate: Date = Date()
     @Published var currentMonth: Date = Date()
+    @Published var shiftTypes: [String] = []
+    @Published var shiftPattern: ShiftPattern = .three {
+        didSet { applyShiftSettingsChange() }
+    }
+    @Published var allowHalfDay: Bool = true {
+        didSet { applyShiftSettingsChange() }
+    }
     
     // Estados de UI
     @Published var isAssignmentMode: Bool = false
@@ -28,14 +54,18 @@ class OfflineCalendarViewModel: ObservableObject {
     private let userDefaults = UserDefaults.standard
     private let shiftsKey = "shifts_map"
     private let notesKey = "notes_map"
-    
-    let shiftTypes = ["Mañana", "Tarde", "Noche", "Saliente", "M. Mañana", "M. Tarde", "Vacaciones", "Libre"]
+    private let shiftSettingsKey = "shift_settings_map"
     
     init() {
-        loadData()
+        loadShiftSettings()
+        loadStoredCalendarData()
     }
     
     func loadData() {
+        loadStoredCalendarData()
+    }
+    
+    private func loadStoredCalendarData() {
         if let shiftsData = userDefaults.data(forKey: shiftsKey),
            let decodedShifts = try? JSONDecoder().decode([String: UserShift].self, from: shiftsData) {
             localShifts = decodedShifts
@@ -118,6 +148,55 @@ class OfflineCalendarViewModel: ObservableObject {
             currentMonth = newDate
         }
     }
+    
+    var legendItems: [String] {
+        shiftTypes
+    }
+    
+    private func loadShiftSettings() {
+        if let settingsData = userDefaults.data(forKey: shiftSettingsKey),
+           let decodedSettings = try? JSONDecoder().decode(OfflineShiftSettings.self, from: settingsData) {
+            shiftPattern = decodedSettings.pattern
+            allowHalfDay = decodedSettings.allowHalfDay
+        }
+        applyShiftSettingsChange(save: false)
+    }
+    
+    private func saveShiftSettings() {
+        let settings = OfflineShiftSettings(pattern: shiftPattern, allowHalfDay: allowHalfDay)
+        if let encodedSettings = try? JSONEncoder().encode(settings) {
+            userDefaults.set(encodedSettings, forKey: shiftSettingsKey)
+        }
+    }
+    
+    private func applyShiftSettingsChange(save: Bool = true) {
+        var types: [String] = []
+        
+        types.append("Mañana")
+        if shiftPattern == .three {
+            types.append("Tarde")
+        }
+        types.append("Noche")
+        
+        if allowHalfDay {
+            types.append("M. Mañana")
+            if shiftPattern == .three {
+                types.append("M. Tarde")
+            }
+        }
+        
+        types.append(contentsOf: ["Saliente", "Vacaciones", "Libre"])
+        
+        shiftTypes = types
+        
+        if !shiftTypes.contains(selectedShiftToApply) {
+            selectedShiftToApply = shiftTypes.first ?? "Libre"
+        }
+        
+        if save {
+            saveShiftSettings()
+        }
+    }
 }
 
 // MARK: - Vista Principal
@@ -125,7 +204,11 @@ class OfflineCalendarViewModel: ObservableObject {
 struct OfflineCalendarView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @StateObject private var viewModel = OfflineCalendarViewModel()
-    @Environment(\.presentationMode) var presentationMode
+    @Binding var showSettings: Bool
+    
+    init(showSettings: Binding<Bool> = .constant(false)) {
+        _showSettings = showSettings
+    }
     
     var body: some View {
         NavigationView {
@@ -138,9 +221,8 @@ struct OfflineCalendarView: View {
                         .padding(.top)
                         .padding(.horizontal)
                     
-                    // --- NUEVA LEYENDA ---
-                    // Se inserta aquí, entre el calendario y el panel inferior
-                    LegendView()
+                    // --- LEYENDA DINÁMICA ---
+                    LegendView(items: viewModel.legendItems)
                         .padding(.vertical, 10)
                     
                     // --- PANEL INFERIOR ---
@@ -187,20 +269,19 @@ struct OfflineCalendarView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .sheet(isPresented: $showSettings) {
+            OfflineCalendarSettingsView(viewModel: viewModel)
+        }
     }
 }
 
-// MARK: - LEYENDA ACTUALIZADA (2 LÍNEAS)
+// MARK: - LEYENDA
 
 struct LegendView: View {
     @EnvironmentObject var themeManager: ThemeManager
     
-    let items = [
-        "Mañana", "M. Mañana", "Tarde", "M. Tarde",
-        "Noche", "Saliente", "Libre", "Vacaciones"
-    ]
+    let items: [String]
     
-    // Definimos 4 columnas flexibles. Al haber 8 items, se crearán 2 filas automáticamente.
     let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 4)
     
     var body: some View {
@@ -213,12 +294,12 @@ struct LegendView: View {
                         .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                     
                     Text(item)
-                        .font(.system(size: 10, weight: .medium)) // Fuente ajustada para que quepan 4
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.gray)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8) // Se reduce un poco si el nombre es muy largo
+                        .minimumScaleFactor(0.8)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading) // Alineación limpia
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(.horizontal, 16)
@@ -329,7 +410,6 @@ struct DayCell: View {
                 bgColor = Color.gray.opacity(0.3)
             }
         } else {
-            // Lógica Saliente automático
             if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: date),
                let prevShift = viewModel.localShifts[viewModel.dateKey(for: yesterday)],
                prevShift.shiftName.lowercased().contains("noche") {
@@ -503,11 +583,8 @@ struct NotesControlPanel: View {
                     
                     ForEach(Array(notes.enumerated()), id: \.offset) { index, note in
                         if viewModel.editingNoteIndex == index {
-                            // Edición
                             HStack {
-                                TextField("", text: $viewModel.editingNoteText)
-                                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                                    .colorScheme(.light)
+                                NoteTextField(text: $viewModel.editingNoteText, placeholder: "Editar nota")
                                 
                                 Button(action: { viewModel.updateNote(at: index) }) {
                                     Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
@@ -517,7 +594,6 @@ struct NotesControlPanel: View {
                                 }
                             }
                         } else {
-                            // Visualización
                             HStack {
                                 Text(note)
                                     .foregroundColor(.white)
@@ -542,13 +618,9 @@ struct NotesControlPanel: View {
             }
             .frame(maxHeight: 250)
             
-            // Añadir Nueva Nota
             if viewModel.isAddingNote {
                 HStack {
-                    TextField("Escribe aquí...", text: $viewModel.newNoteText)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .colorScheme(.light)
-                    
+                    NoteTextField(text: $viewModel.newNoteText, placeholder: "Escribe aquí...")
                     Button(action: { viewModel.addNote() }) {
                         Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
                     }
@@ -571,11 +643,63 @@ struct NotesControlPanel: View {
     }
 }
 
+private struct NoteTextField: View {
+    @Binding var text: String
+    var placeholder: String
+    
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .textInputAutocapitalization(.sentences)
+            .disableAutocorrection(false)
+            .padding(10)
+            .background(Color.white)
+            .cornerRadius(8)
+            .foregroundColor(.black)
+    }
+}
+
+struct OfflineCalendarSettingsView: View {
+    @ObservedObject var viewModel: OfflineCalendarViewModel
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(header: Text("Turnos diarios")) {
+                    Picker("Cantidad de turnos", selection: $viewModel.shiftPattern) {
+                        ForEach(ShiftPattern.allCases) { pattern in
+                            Text(pattern.title).tag(pattern)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    
+                    Text("Define si manejas dos turnos (día/noche) o tres turnos (mañana/tarde/noche).")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+                
+                Section(header: Text("Medias jornadas")) {
+                    Toggle("Permitir medias jornadas", isOn: $viewModel.allowHalfDay)
+                    Text("Al activarlo podrás asignar M. Mañana o M. Tarde según corresponda.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .navigationTitle("Configuración")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Listo") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Extensiones Útiles
 
 extension View {
     func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape( RoundedCorner(radius: radius, corners: corners) )
+        clipShape(RoundedCorner(radius: radius, corners: corners))
     }
 }
 
@@ -588,4 +712,3 @@ struct RoundedCorner: Shape {
         return Path(path.cgPath)
     }
 }
-
