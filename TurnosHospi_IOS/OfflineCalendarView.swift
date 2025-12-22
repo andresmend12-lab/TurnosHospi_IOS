@@ -220,11 +220,11 @@ struct OfflineCalendarView: View {
                     ZStack(alignment: .topTrailing) {
                         VStack(spacing: 0) {
                             CalendarGridView(viewModel: viewModel)
-                                .padding(.top)
+                                .padding(.top, -6)
                                 .padding(.horizontal)
                             
                             LegendView(items: viewModel.legendItems)
-                                .padding(.vertical, 10)
+                                .padding(.vertical, 6)
                         }
                         
                         Button(action: { showSettings = true }) {
@@ -235,8 +235,8 @@ struct OfflineCalendarView: View {
                                 .clipShape(Circle())
                                 .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                         }
-                        .padding(.trailing, -4)
-                        .padding(.top, 0)
+                        .padding(.trailing, 48)
+                        .padding(.top, -10)
                     }
                     
                     // --- PANEL INFERIOR ---
@@ -252,6 +252,7 @@ struct OfflineCalendarView: View {
                     .cornerRadius(16, corners: [.topLeft, .topRight])
                     .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: -4)
                 }
+                .padding(.top, -10)
                 
                 // Botón Flotante (FAB)
                 if !viewModel.isAssignmentMode {

@@ -364,7 +364,7 @@ struct MainMenuView: View {
             }
         }
         .padding(.horizontal)
-        .padding(.top, 35)
+        .padding(.top, 20)
     }
     
     private var calendarCard: some View {
