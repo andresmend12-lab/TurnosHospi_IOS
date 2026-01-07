@@ -1,0 +1,58 @@
+# ===========================================
+# .gitignore para proyecto iOS - TurnosHospi
+# ===========================================
+
+# -------------------------------------------
+# Archivos de Xcode
+# -------------------------------------------
+# Datos de usuario específicos del desarrollador
+xcuserdata/
+
+# Workspace (excepto el archivo de contenido principal)
+*.xcworkspace/*
+!*.xcworkspace/contents.xcworkspacedata
+
+# Datos derivados y builds
+DerivedData/
+build/
+
+# Archivos de configuración de usuario legacy
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# -------------------------------------------
+# Archivos de sistema
+# -------------------------------------------
+# macOS
+.DS_Store
+
+# Archivos temporales de editores
+*.swp
+*~
+
+# -------------------------------------------
+# Firebase Config (SENSIBLE)
+# -------------------------------------------
+# Contiene claves de API - NO debe subirse al repositorio
+GoogleService-Info.plist
+
+# -------------------------------------------
+# CocoaPods / Swift Package Manager
+# -------------------------------------------
+# Dependencias de CocoaPods
+Pods/
+
+# Build de Swift Package Manager
+.build/
+
+# -------------------------------------------
+# Archivos de distribución y debug
+# -------------------------------------------
+# Archivos de aplicación empaquetada
+*.ipa
+
+# Símbolos de debug
+*.dSYM.zip
+*.dSYM
