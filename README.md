@@ -67,8 +67,28 @@ Luego abre el archivo `.xcworkspace` en lugar del `.xcodeproj`.
 2. Selecciona el simulador o dispositivo destino
 3. Presiona `Cmd + R` para compilar y ejecutar
 
+### 3. Configuración de Firebase Functions (Opcional pero recomendado)
+
+Las Firebase Cloud Functions son necesarias para las notificaciones push y validaciones del lado del servidor.
+
+#### Instalación de Functions:
+
+1. **Instalar dependencias**
+   ```bash
+   cd functions
+   npm install
+   ```
+
+2. **Desplegar a Firebase**
+   ```bash
+   npm run deploy
+   ```
+
+Para más información, consulta `functions/README.md`.
+
 ## Seguridad
 
 - **NUNCA** subas `GoogleService-Info.plist` al repositorio
 - El archivo está incluido en `.gitignore` para prevenir commits accidentales
 - Usa `GoogleService-Info.plist.example` como plantilla de referencia
+- Las Firebase Functions implementan validación del lado del servidor para prevenir modificaciones no autorizadas

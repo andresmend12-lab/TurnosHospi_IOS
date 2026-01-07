@@ -56,3 +56,22 @@ Pods/
 # Símbolos de debug
 *.dSYM.zip
 *.dSYM
+
+# -------------------------------------------
+# Firebase Functions
+# -------------------------------------------
+# Dependencias de Node.js
+functions/node_modules/
+functions/.firebase/
+
+# -------------------------------------------
+# Carpetas de proyecto Android (no deben estar aquí)
+# -------------------------------------------
+app/
+local.properties
+
+# -------------------------------------------
+# Localization
+# -------------------------------------------
+# Archivos temporales de localización
+*.lproj/*.strings.bak
