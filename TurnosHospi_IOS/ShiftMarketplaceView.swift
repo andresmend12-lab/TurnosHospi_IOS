@@ -436,7 +436,7 @@ struct ShiftMarketplaceView: View {
             
         } andCompletionBlock: { error, committed, snapshot in
             if !committed || error != nil {
-                print("Error o solicitud ya cogida.")
+                AppLogger.debug("Error o solicitud ya cogida.")
                 return
             }
             

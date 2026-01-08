@@ -230,7 +230,7 @@ struct CreatePlantView: View {
     
     func generateRandomPassword() {
         let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        accessPassword = String((0..<6).map { _ in chars.randomElement()! })
+        accessPassword = String((0..<6).compactMap { _ in chars.randomElement() })
     }
     
     private func binding(for key: String) -> Binding<Int> {
@@ -310,23 +310,23 @@ struct CreatePlantView: View {
         // 2. Guardar Planta en Firebase
         ref.child("plants").child(plantId).setValue(plantData) { error, _ in
             if let error = error {
-                print("Error creando planta: \(error.localizedDescription)")
+                AppLogger.error("Error creando planta: \(error.localizedDescription)")
                 isLoading = false
             } else {
-                
+
                 // 3. Actualizar el perfil del usuario (Supervisor) para vincularlo a esta planta
                 let userUpdates: [String: Any] = [
                     "plantId": plantId,
                     "role": authManager.userRole // Reconfirmamos rol por si acaso
                 ]
-                
+
                 ref.child("users").child(user.uid).updateChildValues(userUpdates) { err, _ in
                     isLoading = false
                     if err == nil {
                         // 4. Actualizar estado local para que la UI responda inmediatamente
                         DispatchQueue.main.async {
                             authManager.userPlantId = plantId
-                            print("Planta creada y supervisor asignado con éxito.")
+                            AppLogger.plant("Planta creada y supervisor asignado con éxito.")
                             dismiss()
                         }
                     }

@@ -131,7 +131,7 @@ struct StaffListView: View {
         
         staffRef.removeValue { error, _ in
             if let error = error {
-                print("Error al eliminar personal: \(error.localizedDescription)")
+                AppLogger.error("Error al eliminar personal: \(error.localizedDescription)")
                 DispatchQueue.main.async { self.isDeleting = false }
                 return
             }

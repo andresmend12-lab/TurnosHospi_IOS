@@ -266,7 +266,7 @@ struct MainMenuView: View {
         
         for (date, workers) in plantManager.monthlyAssignments {
             if let worker = workers.first(where: { $0.name == myName }) {
-                let shift = worker.shiftName?.isEmpty == false ? worker.shiftName! : "Turno asignado"
+                let shift = (worker.shiftName?.isEmpty == false) ? (worker.shiftName ?? "Turno asignado") : "Turno asignado"
                 map[keyFormatter.string(from: date)] = shift
             }
         }

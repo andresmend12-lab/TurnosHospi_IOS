@@ -123,7 +123,7 @@ struct AddEditStaffView: View {
         ref.child(staffId).setValue(staffData) { error, _ in
             isLoading = false
             if let error = error {
-                print("Error al guardar: \(error.localizedDescription)")
+                AppLogger.error("Error al guardar: \(error.localizedDescription)")
             } else {
                 dismiss()
             }
