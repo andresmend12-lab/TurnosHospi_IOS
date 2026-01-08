@@ -17,6 +17,7 @@
 		976F1F452EE492D40036A9E0 /* ShiftRulesEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976F1F442EE492D40036A9E0 /* ShiftRulesEngine.swift */; };
 		976F1F472EE492F90036A9E0 /* ShiftMarketplaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976F1F462EE492F90036A9E0 /* ShiftMarketplaceView.swift */; };
 		976F1F4B2EE494DF0036A9E0 /* ShiftChangeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976F1F4A2EE494DF0036A9E0 /* ShiftChangeModels.swift */; };
+		976F1F4D2EE49A1B0036A9E0 /* ShiftChangeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976F1F4C2EE49A1B0036A9E0 /* ShiftChangeViewModel.swift */; };
 		977BCEDE2EEB4E8400C40AE0 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 977BCEDD2EEB4E8400C40AE0 /* GoogleService-Info.plist */; };
 		97822B6B2EEA3D39008450EC /* NewChatSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97822B6A2EEA3D39008450EC /* NewChatSelectionView.swift */; };
 		979C54FD2EE3077300F21427 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 979C54FC2EE3077300F21427 /* ThemeManager.swift */; };
@@ -83,6 +84,7 @@
 		976F1F442EE492D40036A9E0 /* ShiftRulesEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftRulesEngine.swift; sourceTree = "<group>"; };
 		976F1F462EE492F90036A9E0 /* ShiftMarketplaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftMarketplaceView.swift; sourceTree = "<group>"; };
 		976F1F4A2EE494DF0036A9E0 /* ShiftChangeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftChangeModels.swift; sourceTree = "<group>"; };
+		976F1F4C2EE49A1B0036A9E0 /* ShiftChangeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModels/ShiftChangeViewModel.swift; sourceTree = "<group>"; };
 		977BCEDD2EEB4E8400C40AE0 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "../../../../Downloads/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		97822B6A2EEA3D39008450EC /* NewChatSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewChatSelectionView.swift; sourceTree = "<group>"; };
 		979C54FC2EE3077300F21427 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
@@ -223,6 +225,7 @@
 				97FB938A2EE20B4E00F5490F /* Shift.swift */,
 				976F1F4A2EE494DF0036A9E0 /* ShiftChangeModels.swift */,
 				976F1F422EE4909A0036A9E0 /* ShiftChangeView.swift */,
+				976F1F4C2EE49A1B0036A9E0 /* ShiftChangeViewModel.swift */,
 				97FB938C2EE20B7600F5490F /* ShiftManager.swift */,
 				976F1F462EE492F90036A9E0 /* ShiftMarketplaceView.swift */,
 				976F1F442EE492D40036A9E0 /* ShiftRulesEngine.swift */,
@@ -421,6 +424,7 @@
 				97E5A1112F3C1F250021BEEF /* NotificationAPI.swift in Sources */,
 				976F1F452EE492D40036A9E0 /* ShiftRulesEngine.swift in Sources */,
 				976F1F4B2EE494DF0036A9E0 /* ShiftChangeModels.swift in Sources */,
+				976F1F4D2EE49A1B0036A9E0 /* ShiftChangeViewModel.swift in Sources */,
 				97FB93932EE2182600F5490F /* StaffListView.swift in Sources */,
 				979C55012EE320A000F21427 /* ImportShiftsView.swift in Sources */,
 				97822B6B2EEA3D39008450EC /* NewChatSelectionView.swift in Sources */,
