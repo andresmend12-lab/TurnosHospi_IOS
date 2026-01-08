@@ -22,9 +22,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
             options: authOptions,
             completionHandler: { granted, error in
                 if let error = error {
-                    print("Error solicitando permisos de notificación: \(error)")
+                    AppLogger.error("Error solicitando permisos de notificación: \(error)")
                 }
-                print("Permiso de notificaciones: \(granted)")
+                AppLogger.notification("Permiso de notificaciones: \(granted)")
             }
         )
         
@@ -44,7 +44,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
     
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         // Este método se llama cada vez que el token se genera o actualiza
-        print("FCM Token recibido: \(fcmToken ?? "Nulo")")
+        AppLogger.notification("FCM Token recibido: \(fcmToken ?? "Nulo")")
         
         if let token = fcmToken {
             // IMPORTANTE: Asegurar que la actualización del token ocurra en el hilo principal
@@ -74,9 +74,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
-        
+
         // Aquí puedes procesar datos adicionales de la notificación
-        print("Usuario tocó la notificación: \(userInfo)")
+        AppLogger.notification("Usuario tocó la notificación: \(userInfo)")
         AuthManager.shared.handleRemoteNotificationPayload(userInfo)
         
         completionHandler()

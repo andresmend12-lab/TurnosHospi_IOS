@@ -366,7 +366,7 @@ class PlantManager: ObservableObject {
             if rawName.isEmpty { continue }
             
             guard let role = staffRoleMap[rawName.lowercased()] else {
-                print("Aviso: \(rawName) no encontrado en personal de planta. Se ignora.")
+                AppLogger.debug("Aviso: \(rawName) no encontrado en personal de planta. Se ignora.")
                 continue
             }
             

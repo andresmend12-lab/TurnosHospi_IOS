@@ -56,6 +56,7 @@
 		97FB93972EE2187700F5490F /* AddEditStaffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FB93962EE2187700F5490F /* AddEditStaffView.swift */; };
 		97FC10012FF0D00100ABCDEF /* VacationDaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC10002FF0D00100ABCDEF /* VacationDaysView.swift */; };
 		97FC10032FF0D00100ABCDEF /* VacationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC10022FF0D00100ABCDEF /* VacationManager.swift */; };
+		97FC10052FF0D00300ABCDEF /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC10062FF0D00300ABCDEF /* AppLogger.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -127,6 +128,7 @@
 		97FC10002FF0D00100ABCDEF /* VacationDaysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VacationDaysView.swift; sourceTree = "<group>"; };
 		97FC10022FF0D00100ABCDEF /* VacationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VacationManager.swift; sourceTree = "<group>"; };
 		97FC10042FF0D00200ABCDEF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		97FC10062FF0D00300ABCDEF /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -194,6 +196,7 @@
 				97FB93962EE2187700F5490F /* AddEditStaffView.swift */,
 				97E962CB2EE18976006E7707 /* Assets.xcassets */,
 				97F8A5032F5E1BB100ABCDEF /* InfoPlist.strings */,
+				97FC10062FF0D00300ABCDEF /* AppLogger.swift */,
 				97FB936B2EE1D6FE00F5490F /* AuthManager.swift */,
 				97E962C92EE18973006E7707 /* ContentView.swift */,
 				97FB93902EE212C400F5490F /* CreatePlantView.swift */,
@@ -438,6 +441,7 @@
 				979C55032EE3306500F21427 /* StatisticsView.swift in Sources */,
 				97AB1A542EE75FED00F34304 /* DirectChatModels.swift in Sources */,
 				97FC10032FF0D00100ABCDEF /* VacationManager.swift in Sources */,
+				97FC10052FF0D00300ABCDEF /* AppLogger.swift in Sources */,
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
 				97FB937F2EE1F26100F5490F /* PlantModels.swift in Sources */,
 				976F1F432EE4909A0036A9E0 /* ShiftChangeView.swift in Sources */,

@@ -61,9 +61,9 @@ class AuthManager: ObservableObject {
         // Guardamos el token dentro del nodo del usuario
         ref.child("users").child(uid).updateChildValues(["fcmToken": token]) { error, _ in
             if let error = error {
-                print("Error guardando FCM token: \(error.localizedDescription)")
+                AppLogger.error("Error guardando FCM token: \(error.localizedDescription)")
             } else {
-                print("FCM Token actualizado en base de datos para usuario \(uid)")
+                AppLogger.auth("FCM Token actualizado en base de datos para usuario \(uid)")
             }
         }
     }
@@ -167,7 +167,7 @@ class AuthManager: ObservableObject {
             stopListeningUnreadChats()
             cleanSession()
         } catch {
-            print("Error logout: \(error.localizedDescription)")
+            AppLogger.error("Error logout: \(error.localizedDescription)")
         }
     }
     
