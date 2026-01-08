@@ -190,7 +190,6 @@ struct ShiftMarketplaceView: View {
                 onCancel: { selectedRequestForPreview = nil }
             )
             .presentationDetents([.fraction(0.9)])
-            .presentationBackground(Color(red: 0.05, green: 0.05, blue: 0.1))
             .preferredColorScheme(.dark)
         }
     }
