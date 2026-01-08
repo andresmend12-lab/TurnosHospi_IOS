@@ -1,0 +1,53 @@
+{
+  "app_name": "Shift Manager",
+  "subtitle": "Turnos hospitalarios simplificados",
+  "description": {
+    "short": "Gestiona turnos de enfermería y personal sanitario de forma sencilla. Intercambia turnos, comunícate con tu equipo y visualiza tu calendario laboral.",
+    "full": "Shift Manager es la herramienta definitiva para la gestión de turnos en hospitales y centros de salud. Diseñada por y para profesionales sanitarios.\n\n GESTIÓN DE TURNOS INTELIGENTE\n• Visualiza tu calendario de turnos mensual con colores distintivos\n• Turnos de mañana, tarde y noche claramente diferenciados\n• Soporte para turnos de 8h y 12h\n• Gestión de medios turnos\n\n INTERCAMBIO DE TURNOS\n• Solicita cambios de turno con compañeros\n• Sistema de marketplace para encontrar cobertura\n• Validación automática de reglas laborales\n• Aprobación por supervisores integrada\n\n COMUNICACIÓN EN EQUIPO\n• Chat grupal de planta\n• Mensajes directos entre compañeros\n• Notificaciones push en tiempo real\n• Centro de notificaciones integrado\n\n PARA SUPERVISORES\n• Crea y gestiona plantas/unidades\n• Asigna turnos al personal\n• Aprueba o rechaza cambios\n• Estadísticas de horas trabajadas\n• Importa y exporta turnos (CSV)\n\n GESTIÓN DE VACACIONES\n• Marca tus días de vacaciones\n• Visualización en calendario\n• Sincronización con el equipo\n\n PERSONALIZACIÓN\n• Colores personalizables para cada turno\n• Tema oscuro elegante\n• Interfaz intuitiva en español\n\n SEGURIDAD Y PRIVACIDAD\n• Autenticación segura\n• Datos encriptados\n• Cumple con normativas de protección de datos\n• Opción de eliminar cuenta y datos\n\nIdeal para:\n• Enfermeros/as\n• Auxiliares de enfermería\n• Supervisores de planta\n• Coordinadores de personal\n• Hospitales y clínicas\n\nSimplifica la gestión de turnos de tu equipo. Descarga Shift Manager ahora."
+  },
+  "keywords": "turnos,enfermeria,hospital,sanitario,calendario,trabajo,salud,clinica,plantilla,horario,guardia,noche,rotativo,equipo,medico",
+  "category": {
+    "primary": "Productivity",
+    "secondary": "Medical"
+  },
+  "age_rating": "4+",
+  "pricing": {
+    "model": "free",
+    "price_tier": 0
+  },
+  "support": {
+    "url": "https://shiftmanager.app/support",
+    "email": "soporte@shiftmanager.app"
+  },
+  "privacy_policy_url": "https://shiftmanager.app/privacy",
+  "marketing_url": "https://shiftmanager.app",
+  "copyright": "2025 Shift Manager",
+  "version_notes": {
+    "1.0.0": "Primera versión de Shift Manager:\n• Gestión completa de turnos\n• Chat grupal y directo\n• Sistema de intercambio de turnos\n• Notificaciones push\n• Gestión de vacaciones\n• Panel de supervisor"
+  },
+  "screenshots_required": {
+    "iphone_6_5": {
+      "description": "iPhone 14 Pro Max, 15 Pro Max (6.7 pulgadas)",
+      "count": "3-10 screenshots",
+      "size": "1290 x 2796 px"
+    },
+    "iphone_5_5": {
+      "description": "iPhone 8 Plus (5.5 pulgadas) - Requerido si soportas iOS 16",
+      "count": "3-10 screenshots",
+      "size": "1242 x 2208 px"
+    },
+    "ipad_12_9": {
+      "description": "iPad Pro 12.9 pulgadas (opcional)",
+      "count": "3-10 screenshots",
+      "size": "2048 x 2732 px"
+    }
+  },
+  "suggested_screenshots": [
+    "Pantalla de login con gradiente",
+    "Calendario de turnos mensual",
+    "Vista de intercambio de turnos",
+    "Chat con compañeros",
+    "Panel de supervisor",
+    "Configuración de colores"
+  ]
+}
