@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Transport Security -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+    </dict>
+
+    <!-- Background Modes for Push Notifications -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>remote-notification</string>
+    </array>
+
+    <!-- Firebase Configuration -->
+    <key>FirebaseAppDelegateProxyEnabled</key>
+    <false/>
+
+    <!-- Privacy Usage Descriptions (Required by App Store) -->
+    <key>NSUserNotificationUsageDescription</key>
+    <string>Shift Manager te enviará notificaciones sobre cambios de turno, mensajes de compañeros y aprobaciones de supervisores.</string>
+
+    <!-- URL Schemes for Firebase -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>turnoshospi</string>
+            </array>
+        </dict>
+    </array>
+
+    <!-- Localization -->
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>es</string>
+        <string>en</string>
+    </array>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>es</string>
+
+    <!-- Privacy Policy URL (Required for App Store) -->
+    <key>NSPrivacyPolicyURL</key>
+    <string>https://shiftmanager.app/privacy</string>
+</dict>
+</plist>

@@ -1,0 +1,186 @@
+{
+  "rules": {
+    // =====================================================
+    // REGLAS DE SEGURIDAD - Firebase Realtime Database
+    // TurnosHospi - Gestión de Turnos Hospitalarios
+    // =====================================================
+
+    // Usuarios - Solo el propietario puede leer/escribir su perfil
+    "users": {
+      "$userId": {
+        ".read": "auth != null && auth.uid == $userId",
+        ".write": "auth != null && auth.uid == $userId",
+
+        // El FCM token solo puede ser actualizado por el propio usuario
+        "fcmToken": {
+          ".validate": "newData.isString() && newData.val().length < 500"
+        },
+
+        // Validación de campos del perfil
+        "firstName": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length < 100"
+        },
+        "lastName": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length < 100"
+        },
+        "email": {
+          ".validate": "newData.isString() && newData.val().matches(/^[^@]+@[^@]+\\.[^@]+$/)"
+        },
+        "role": {
+          ".validate": "newData.isString() && (newData.val() == 'Supervisor' || newData.val() == 'Enfermero' || newData.val() == 'Auxiliar')"
+        }
+      }
+    },
+
+    // Plantas/Unidades Hospitalarias
+    "plants": {
+      "$plantId": {
+        // Lectura: cualquier miembro de la planta puede leer
+        ".read": "auth != null && (
+          root.child('plants').child($plantId).child('userPlants').child(auth.uid).exists() ||
+          root.child('plants').child($plantId).child('createdBy').val() == auth.uid
+        )",
+
+        // Metadatos de la planta - solo supervisores pueden modificar
+        "name": {
+          ".write": "auth != null && root.child('plants').child($plantId).child('userPlants').child(auth.uid).child('staffRole').val().contains('Supervisor')"
+        },
+        "hospitalName": {
+          ".write": "auth != null && root.child('plants').child($plantId).child('userPlants').child(auth.uid).child('staffRole').val().contains('Supervisor')"
+        },
+        "accessPassword": {
+          ".write": "auth != null && root.child('plants').child($plantId).child('userPlants').child(auth.uid).child('staffRole').val().contains('Supervisor')"
+        },
+
+        // Creación de planta - cualquier usuario autenticado
+        ".write": "auth != null && !data.exists()",
+
+        // Lista de personal de la planta
+        "userPlants": {
+          "$staffId": {
+            // Unirse a planta - el usuario puede agregarse a sí mismo
+            ".write": "auth != null && (
+              auth.uid == $staffId ||
+              root.child('plants').child($plantId).child('userPlants').child(auth.uid).child('staffRole').val().contains('Supervisor')
+            )"
+          }
+        },
+
+        // Personal registrado
+        "personal_de_planta": {
+          "$staffId": {
+            ".write": "auth != null && root.child('plants').child($plantId).child('userPlants').child(auth.uid).child('staffRole').val().contains('Supervisor')"
+          }
+        },
+
+        // Turnos - solo supervisores pueden modificar
+        "turnos": {
+          "$dateKey": {
+            "$shiftName": {
+              ".write": "auth != null && root.child('plants').child($plantId).child('userPlants').child(auth.uid).child('staffRole').val().contains('Supervisor')",
+              ".validate": "newData.hasChildren(['asignados'])"
+            }
+          }
+        },
+
+        // Solicitudes de cambio de turno
+        "shift_requests": {
+          "$requestId": {
+            // Cualquier miembro puede crear solicitudes
+            ".write": "auth != null && root.child('plants').child($plantId).child('userPlants').child(auth.uid).exists()",
+
+            // Validación de status - solo supervisores pueden aprobar/rechazar
+            "status": {
+              ".validate": "
+                (newData.val() == 'DRAFT' || newData.val() == 'SEARCHING' || newData.val() == 'PENDING_PARTNER') ||
+                (
+                  (newData.val() == 'AWAITING_SUPERVISOR' || newData.val() == 'APPROVED' || newData.val() == 'REJECTED') &&
+                  root.child('plants').child($plantId).child('userPlants').child(auth.uid).child('staffRole').val().contains('Supervisor')
+                ) ||
+                (newData.val() == 'AWAITING_SUPERVISOR' && data.val() == 'PENDING_PARTNER')
+              "
+            }
+          }
+        },
+
+        // Chat grupal - cualquier miembro puede enviar mensajes
+        "chat": {
+          "$messageId": {
+            ".write": "auth != null && root.child('plants').child($plantId).child('userPlants').child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['senderId', 'text', 'timestamp']) && newData.child('senderId').val() == auth.uid"
+          }
+        },
+
+        // Chats directos
+        "direct_chats": {
+          "$chatId": {
+            "messages": {
+              "$messageId": {
+                ".write": "auth != null && $chatId.contains(auth.uid)",
+                ".validate": "newData.hasChildren(['senderId', 'text', 'timestamp']) && newData.child('senderId').val() == auth.uid"
+              }
+            }
+          }
+        },
+
+        // Vacaciones - usuarios pueden gestionar sus propias vacaciones
+        "vacations": {
+          "$userId": {
+            ".write": "auth != null && (auth.uid == $userId || root.child('plants').child($plantId).child('userPlants').child(auth.uid).child('staffRole').val().contains('Supervisor'))"
+          }
+        },
+
+        // Transacciones de favores
+        "transactions": {
+          "$transactionId": {
+            ".write": "auth != null && root.child('plants').child($plantId).child('userPlants').child(auth.uid).exists()"
+          }
+        },
+
+        // Configuración de la planta - solo supervisores
+        "staffRequirements": {
+          ".write": "auth != null && root.child('plants').child($plantId).child('userPlants').child(auth.uid).child('staffRole').val().contains('Supervisor')"
+        },
+        "shiftTimes": {
+          ".write": "auth != null && root.child('plants').child($plantId).child('userPlants').child(auth.uid).child('staffRole').val().contains('Supervisor')"
+        }
+      }
+    },
+
+    // Notificaciones de usuario - solo el propietario puede leer/escribir
+    "user_notifications": {
+      "$userId": {
+        ".read": "auth != null && auth.uid == $userId",
+        ".write": "auth != null",
+
+        "$notificationId": {
+          ".validate": "newData.hasChildren(['title', 'message', 'timestamp'])"
+        }
+      }
+    },
+
+    // Metadatos de chats directos
+    "user_direct_chats": {
+      "$userId": {
+        ".read": "auth != null && auth.uid == $userId",
+        ".write": "auth != null",
+
+        "$chatId": {
+          ".validate": "$chatId.contains($userId) || $chatId.contains(auth.uid)"
+        }
+      }
+    },
+
+    // Cola de notificaciones (usada por Cloud Functions)
+    "notifications_queue": {
+      ".read": false,
+      ".write": "auth != null"
+    },
+
+    // Logs de seguridad (solo Cloud Functions pueden escribir)
+    "security_logs": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
