@@ -343,7 +343,7 @@ class ShiftChangeViewModel: ObservableObject {
         tempSchedules: inout [String: [String: String]],
         potentialCandidates: inout [PlantShift],
         staffList: [PlantStaff],
-        plantUsers: [PlantUser]
+        plantUsers: [ChatUser]
     ) {
         for slot in list {
             let primaryName = slot["primary"] as? String ?? ""
@@ -391,7 +391,7 @@ class ShiftChangeViewModel: ObservableObject {
         tempSchedules: inout [String: [String: String]],
         potentialCandidates: inout [PlantShift],
         staffList: [PlantStaff],
-        plantUsers: [PlantUser]
+        plantUsers: [ChatUser]
     ) {
         let staff = staffList.first { $0.name == name }
         let chatUser = plantUsers.first {
