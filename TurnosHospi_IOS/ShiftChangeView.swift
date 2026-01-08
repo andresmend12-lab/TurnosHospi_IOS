@@ -78,9 +78,9 @@ struct ShiftChangeView: View {
                 onDismiss: { selectedShiftForRequest = nil }
             )
             .environmentObject(authManager)
-            .presentationDetents([.medium, .large])
-            .presentationBackground(Color(red: 0.05, green: 0.05, blue: 0.1))
-            .preferredColorScheme(.dark)
+            .presentationDetents([PresentationDetent.medium, PresentationDetent.large])
+            .background(Color(red: 0.05, green: 0.05, blue: 0.1))
+            .preferredColorScheme(ColorScheme.dark)
         }
         .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
             Button("OK") { viewModel.clearMessages() }
@@ -624,7 +624,7 @@ struct FullPlantShiftsList: View {
                 }
             )
             .presentationDetents([.fraction(0.8), .large])
-            .presentationBackground(Color(red: 0.05, green: 0.05, blue: 0.1))
+            .background(Color(red: 0.05, green: 0.05, blue: 0.1))
             .preferredColorScheme(.dark)
         }
     }
