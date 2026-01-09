@@ -1,5 +1,8 @@
 package com.example.turnoshospi
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -7,6 +10,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,12 +31,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -422,7 +436,6 @@ fun CustomCalendar(
     selectedShift: UserShift?,
     colleagues: List<Colleague>,
     isLoadingColleagues: Boolean,
-    // Parametros para Supervisor
     isSupervisor: Boolean = false,
     roster: Map<String, ShiftRoster> = emptyMap(),
     isLoadingRoster: Boolean = false,
@@ -431,304 +444,571 @@ fun CustomCalendar(
     onOpenSettings: () -> Unit = {}
 ) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
+    var selectedTab by remember { mutableStateOf(0) }
+    val today = remember { LocalDate.now() }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0F172A))
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = { currentMonth = currentMonth.minusMonths(1) }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Mes anterior", tint = Color.White)
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.forLanguageTag("es-ES")).uppercase()} ${currentMonth.year}",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(onClick = onOpenSettings) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Configuración",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF0F172A),
+                        Color(0xFF1E293B).copy(alpha = 0.5f),
+                        Color(0xFF0F172A)
                     )
-                }
-            }
-            IconButton(onClick = { currentMonth = currentMonth.plusMonths(1) }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Mes siguiente", tint = Color.White)
+                )
+            )
+            .verticalScroll(rememberScrollState())
+    ) {
+        // ===== HEADER: Mi Planilla =====
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 8.dp, start = 20.dp, end = 20.dp)
+        ) {
+            Text(
+                text = "Mi Planilla",
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.CenterStart)
+            )
+            IconButton(
+                onClick = onOpenSettings,
+                modifier = Modifier.align(Alignment.CenterEnd)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Configuración",
+                    tint = Color(0xFF94A3B8),
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // ===== TABS: Calendario | Estadísticas =====
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .background(Color(0x15FFFFFF), RoundedCornerShape(12.dp))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            TabButton(
+                text = "Calendario",
+                isSelected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                modifier = Modifier.weight(1f)
+            )
+            TabButton(
+                text = "Estadísticas",
+                isSelected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                modifier = Modifier.weight(1f)
+            )
+        }
 
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // ===== NAVEGACIÓN DEL MES =====
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.forLanguageTag("es-ES")).replaceFirstChar { it.uppercase() }} ${currentMonth.year}",
+                color = Color.White,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Row {
+                IconButton(
+                    onClick = { currentMonth = currentMonth.minusMonths(1) },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(Color(0x15FFFFFF), CircleShape)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Mes anterior",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = { currentMonth = currentMonth.plusMonths(1) },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(Color(0x15FFFFFF), CircleShape)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Mes siguiente",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ===== DÍAS DE LA SEMANA =====
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
             val daysOfWeek = listOf("L", "M", "X", "J", "V", "S", "D")
             daysOfWeek.forEach { day ->
                 Text(
                     text = day,
                     modifier = Modifier.weight(1f),
-                    color = Color.Gray,
+                    color = Color(0xFF64748B),
                     textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
+        // ===== GRID DEL CALENDARIO =====
         val firstDayOfMonth = currentMonth.atDay(1)
         val daysInMonth = currentMonth.lengthOfMonth()
         val dayOfWeekOffset = firstDayOfMonth.dayOfWeek.value - 1
         val totalCells = (daysInMonth + dayOfWeekOffset + 6) / 7 * 7
 
-        Column {
+        Column(modifier = Modifier.padding(horizontal = 12.dp)) {
             for (i in 0 until totalCells step 7) {
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
                     for (j in 0 until 7) {
                         val dayIndex = i + j - dayOfWeekOffset + 1
                         if (dayIndex in 1..daysInMonth) {
                             val date = currentMonth.atDay(dayIndex)
-                            val dateKey = date.toString()
-                            val shift = shifts[dateKey]
-
-                            // CAMBIO: Usamos getDayColor pasando shiftColors
-                            val color = if (isSupervisor) Color.Transparent else getDayColor(date, shifts, shiftColors)
-
+                            val shift = shifts[date.toString()]
                             val isSelected = date == selectedDate
+                            val isToday = date == today
+                            val dayColor = if (isSupervisor) Color.Transparent else getDayColor(date, shifts, shiftColors)
 
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp)
-                                    .padding(2.dp)
-                                    .background(
-                                        color = color,
-                                        shape = CircleShape
-                                    )
-                                    .border(
-                                        width = if(isSelected) 2.dp else 0.dp,
-                                        color = if(isSelected) Color.White else Color.Transparent,
-                                        shape = CircleShape
-                                    )
-                                    .clickable {
-                                        onDayClick(date, shift)
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = dayIndex.toString(),
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
+                            CalendarDayCell(
+                                day = dayIndex,
+                                isSelected = isSelected,
+                                isToday = isToday,
+                                shiftColor = dayColor,
+                                hasShift = shift != null && !isSupervisor,
+                                onClick = { onDayClick(date, shift) },
+                                modifier = Modifier.weight(1f)
+                            )
                         } else {
                             Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
             }
         }
 
-        // CAMBIO: Ocultamos leyenda si es supervisor, ya que no ve colores
+        // ===== LEYENDA DE COLORES =====
         if (plantId != null && !isSupervisor) {
-            Spacer(modifier = Modifier.height(20.dp))
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-            Spacer(modifier = Modifier.height(12.dp))
-
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                maxItemsInEachRow = 4
-            ) {
-                val legendItems = listOf(
-                    Triple(shiftColors.free, "Libre", null),
-                    Triple(shiftColors.morning, "Mañana", null),
-                    Triple(shiftColors.morningHalf, "M. Mañana", null),
-                    Triple(shiftColors.afternoon, "Tarde", null),
-                    Triple(shiftColors.afternoonHalf, "M. Tarde", null),
-                    Triple(shiftColors.night, "Noche", null),
-                    Triple(shiftColors.saliente, "Saliente", null),
-                    Triple(shiftColors.holiday, "Vacaciones", null)
-                )
-
-                legendItems.forEach { (color, text, _) ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 6.dp)
-                    ) {
-                        Box(modifier = Modifier.size(10.dp).background(color, CircleShape))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = text, color = Color(0xFFCCCCCC), style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-        }
-
-        if (selectedDate != null) {
-            Spacer(modifier = Modifier.height(24.dp))
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
             Spacer(modifier = Modifier.height(16.dp))
 
-            val formatter = DateTimeFormatter.ofPattern("d 'de' MMMM", Locale.forLanguageTag("es-ES"))
-            val dateStr = selectedDate.format(formatter)
-
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .background(Color(0x0AFFFFFF), RoundedCornerShape(16.dp))
+                    .padding(12.dp)
             ) {
-                if (isSupervisor) {
-                    // --- VISTA DE SUPERVISOR (Detalle completo del día) ---
-                    Text(
-                        text = "Agenda del día: $dateStr",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    LegendItem(color = shiftColors.morning, label = "Mañana")
+                    LegendItem(color = shiftColors.afternoon, label = "Tarde")
+                    LegendItem(color = shiftColors.night, label = "Noche")
+                    LegendItem(color = shiftColors.saliente, label = "Saliente")
+                    LegendItem(color = shiftColors.holiday, label = "Vacaciones")
+                    LegendItem(color = shiftColors.free, label = "Libre")
+                }
+            }
+        }
 
-                    if (isLoadingRoster) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            color = Color(0xFF54C7EC)
-                        )
-                    } else if (roster.isEmpty()) {
-                        Text(
-                            text = "No hay turnos asignados para este día.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray
-                        )
-                    } else {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            roster.forEach { (shiftName, data) ->
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(Color(0x22FFFFFF), RoundedCornerShape(12.dp))
-                                        .padding(12.dp)
-                                ) {
+        // ===== DETALLE DEL DÍA SELECCIONADO =====
+        AnimatedVisibility(
+            visible = selectedDate != null,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            selectedDate?.let { date ->
+                val formatter = DateTimeFormatter.ofPattern("d 'de' MMMM", Locale.forLanguageTag("es-ES"))
+                val dateStr = date.format(formatter)
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0x15FFFFFF)),
+                    border = BorderStroke(1.dp, Color(0x20FFFFFF))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        if (isSupervisor) {
+                            // --- VISTA SUPERVISOR ---
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
                                     Text(
-                                        text = shiftName,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = Color(0xFF54C7EC),
+                                        text = dateStr,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    if (data.nurses.isNotEmpty()) {
-                                        Text("Enfermeros:", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                                        data.nurses.forEach {
-                                            Text("• $it", color = Color.White, style = MaterialTheme.typography.bodySmall)
-                                        }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                    }
-                                    if (data.auxiliaries.isNotEmpty()) {
-                                        Text("Auxiliares:", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
-                                        data.auxiliaries.forEach {
-                                            Text("• $it", color = Color.White, style = MaterialTheme.typography.bodySmall)
-                                        }
-                                    }
+                                    Text(
+                                        text = "Agenda del día",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color(0xFF64748B)
+                                    )
                                 }
                             }
-                        }
-                    }
 
-                } else {
-                    // --- VISTA NORMAL (Turno propio y compañeros) ---
-                    Text(
-                        text = "Turno: ${selectedShift?.shiftName ?: "Libre"}",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = dateStr,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF54C7EC)
-                    )
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    if (selectedShift == null) {
-                        Text(
-                            text = "No tienes turno asignado este día.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray
-                        )
-                    } else if (isLoadingColleagues) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            color = Color(0xFF54C7EC)
-                        )
-                    } else {
-                        if (colleagues.isEmpty()) {
-                            Text(
-                                text = "No se encontraron compañeros para este turno.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.Gray
-                            )
+                            if (isLoadingRoster) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = Color(0xFF54C7EC),
+                                        strokeWidth = 3.dp
+                                    )
+                                }
+                            } else if (roster.isEmpty()) {
+                                EmptyStateMessage("No hay turnos asignados")
+                            } else {
+                                roster.forEach { (shiftName, data) ->
+                                    ShiftRosterCard(
+                                        shiftName = shiftName,
+                                        nurses = data.nurses,
+                                        auxiliaries = data.auxiliaries
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                            }
                         } else {
-                            Column(
+                            // --- VISTA NORMAL ---
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "Compañeros en servicio:",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = Color.Gray,
-                                    modifier = Modifier.align(Alignment.Start)
-                                )
+                                Column {
+                                    Text(
+                                        text = dateStr,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = selectedShift?.shiftName ?: "Libre",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color(0xFF54C7EC)
+                                    )
+                                }
 
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(
+                                            if (selectedShift != null)
+                                                getDayColor(date, shifts, shiftColors).copy(alpha = 0.3f)
+                                            else Color(0x15FFFFFF),
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = date.dayOfMonth.toString(),
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                            HorizontalDivider(color = Color(0x15FFFFFF))
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            if (selectedShift == null) {
+                                EmptyStateMessage("No tienes turno asignado")
+                            } else if (isLoadingColleagues) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = Color(0xFF54C7EC),
+                                        strokeWidth = 3.dp
+                                    )
+                                }
+                            } else if (colleagues.isEmpty()) {
+                                EmptyStateMessage("Sin compañeros asignados")
+                            } else {
+                                Text(
+                                    text = "Compañeros en servicio",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color(0xFF64748B),
+                                    modifier = Modifier.padding(bottom = 12.dp)
+                                )
                                 colleagues.forEach { colleague ->
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(Color(0x22FFFFFF), RoundedCornerShape(8.dp))
-                                            .padding(12.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Person,
-                                            contentDescription = null,
-                                            tint = Color(0xFF54C7EC),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Column {
-                                            Text(
-                                                text = colleague.name,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = Color.White,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                            Text(
-                                                text = colleague.role,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = Color.Gray
-                                            )
-                                        }
-                                    }
+                                    ColleagueCard(colleague = colleague)
+                                    Spacer(modifier = Modifier.height(8.dp))
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(80.dp))
+    }
+}
+
+// ===== COMPONENTES AUXILIARES =====
+
+@Composable
+private fun TabButton(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) Color(0xFF54C7EC) else Color.Transparent,
+        animationSpec = tween(300)
+    )
+    val textColor by animateColorAsState(
+        targetValue = if (isSelected) Color.Black else Color(0xFF94A3B8),
+        animationSpec = tween(300)
+    )
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(backgroundColor)
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = textColor,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            fontSize = 14.sp
+        )
+    }
+}
+
+@Composable
+private fun CalendarDayCell(
+    day: Int,
+    isSelected: Boolean,
+    isToday: Boolean,
+    shiftColor: Color,
+    hasShift: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.1f else 1f,
+        animationSpec = spring()
+    )
+
+    val backgroundColor by animateColorAsState(
+        targetValue = when {
+            isSelected -> Color(0xFF54C7EC)
+            hasShift -> shiftColor
+            else -> Color.Transparent
+        },
+        animationSpec = tween(200)
+    )
+
+    Box(
+        modifier = modifier
+            .padding(3.dp)
+            .aspectRatio(1f)
+            .scale(scale)
+            .clip(RoundedCornerShape(12.dp))
+            .background(backgroundColor)
+            .then(
+                if (isToday && !isSelected) {
+                    Modifier.border(2.dp, Color(0xFF54C7EC), RoundedCornerShape(12.dp))
+                } else Modifier
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = day.toString(),
+            color = when {
+                isSelected -> Color.Black
+                isToday -> Color(0xFF54C7EC)
+                else -> Color.White
+            },
+            fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 14.sp
+        )
+    }
+}
+
+@Composable
+private fun LegendItem(color: Color, label: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(horizontal = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .background(color, RoundedCornerShape(4.dp))
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = label,
+            color = Color(0xFF94A3B8),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun EmptyStateMessage(message: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color(0xFF64748B)
+        )
+    }
+}
+
+@Composable
+private fun ColleagueCard(colleague: Colleague) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0x10FFFFFF), RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(Color(0xFF54C7EC).copy(alpha = 0.2f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = null,
+                tint = Color(0xFF54C7EC),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = colleague.name,
+                color = Color.White,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp
+            )
+            Text(
+                text = colleague.role,
+                color = Color(0xFF64748B),
+                fontSize = 12.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun ShiftRosterCard(
+    shiftName: String,
+    nurses: List<String>,
+    auxiliaries: List<String>
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0x10FFFFFF), RoundedCornerShape(12.dp))
+            .padding(12.dp)
+    ) {
+        Text(
+            text = shiftName,
+            style = MaterialTheme.typography.titleSmall,
+            color = Color(0xFF54C7EC),
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (nurses.isNotEmpty()) {
+            Text(
+                text = "Enfermeros",
+                color = Color(0xFF64748B),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
+            )
+            nurses.forEach { name ->
+                Text(
+                    text = "• $name",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                )
+            }
+        }
+
+        if (auxiliaries.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Auxiliares",
+                color = Color(0xFF64748B),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
+            )
+            auxiliaries.forEach { name ->
+                Text(
+                    text = "• $name",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                )
             }
         }
     }
