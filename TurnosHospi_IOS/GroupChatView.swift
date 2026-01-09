@@ -88,7 +88,7 @@ struct GroupChatView: View {
                         }
                         .padding()
                     }
-                    .onChange(of: messages) { _, _ in
+                    .onChange(of: messages) { _ in
                         scrollToBottom(proxy: proxy)
                     }
                     .onAppear {

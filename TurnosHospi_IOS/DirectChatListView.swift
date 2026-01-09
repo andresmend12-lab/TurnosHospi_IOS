@@ -135,7 +135,7 @@ struct DirectChatListView: View {
                 consumePendingRoute()
             }
             .onDisappear { detachChatsListener() }
-            .onChange(of: pendingRoute) { _, _ in
+            .onChange(of: pendingRoute) { _ in
                 consumePendingRoute()
             }
             .sheet(isPresented: $showNewChatSheet) {
