@@ -364,72 +364,66 @@ struct OfflineCalendarView: View {
     }
 
     var calendarTabView: some View {
-        VStack(spacing: 0) {
-            // --- CALENDARIO + AJUSTES ---
-            ZStack(alignment: .topTrailing) {
-                VStack(spacing: 0) {
-                    CalendarGridView(viewModel: viewModel)
-                        .padding(.top, -6)
-                        .padding(.horizontal)
+        ZStack(alignment: .bottomTrailing) {
+            VStack(spacing: 0) {
+                // --- CALENDARIO + AJUSTES ---
+                ZStack(alignment: .topTrailing) {
+                    VStack(spacing: 0) {
+                        CalendarGridView(viewModel: viewModel)
+                            .padding(.horizontal)
+
+                        if !viewModel.isAssignmentMode {
+                            LegendView(items: viewModel.legendItems, viewModel: viewModel)
+                                .padding(.vertical, 6)
+                        }
+                    }
 
                     if !viewModel.isAssignmentMode {
-                        LegendView(items: viewModel.legendItems, viewModel: viewModel)
-                            .padding(.vertical, 6)
-                    }
-                }
-
-                if !viewModel.isAssignmentMode {
-                    Button(action: { showConfigDialog = true }) {
-                        Image(systemName: "gearshape")
-                            .foregroundColor(.black)
-                            .padding(8)
-                            .background(Color.white)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                    }
-                    .padding(.trailing, 48)
-                    .padding(.top, -10)
-                }
-            }
-
-            // --- PANEL INFERIOR ---
-            VStack {
-                Spacer()
-                if viewModel.isAssignmentMode {
-                    AssignmentControlPanel(viewModel: viewModel)
-                } else {
-                    NotesControlPanel(viewModel: viewModel)
-                }
-            }
-            .background(Color(hex: "1E293B"))
-            .cornerRadius(16, corners: [.topLeft, .topRight])
-            .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: -4)
-
-            // Botón Flotante (FAB)
-            if !viewModel.isAssignmentMode {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            viewModel.isAssignmentMode = true
-                        }) {
-                            Image(systemName: "pencil")
-                                .font(.title2)
+                        Button(action: { showConfigDialog = true }) {
+                            Image(systemName: "gearshape")
                                 .foregroundColor(.black)
-                                .padding(16)
-                                .background(Color(hex: "54C7EC"))
+                                .padding(8)
+                                .background(Color.white)
                                 .clipShape(Circle())
-                                .shadow(radius: 4)
+                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                         }
-                        .padding(.trailing, 10)
-                        .padding(.bottom, 140)
+                        .padding(.trailing, 24)
+                        .padding(.top, 4)
                     }
                 }
-                .offset(y: -290)
+
+                Spacer(minLength: 0)
+
+                // --- PANEL INFERIOR ---
+                Group {
+                    if viewModel.isAssignmentMode {
+                        AssignmentControlPanel(viewModel: viewModel)
+                    } else {
+                        NotesControlPanel(viewModel: viewModel)
+                    }
+                }
+                .background(Color(hex: "1E293B"))
+                .cornerRadius(16, corners: [.topLeft, .topRight])
+                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: -4)
+            }
+
+            // Botón Flotante (FAB) - Solo visible cuando NO está en modo asignación
+            if !viewModel.isAssignmentMode {
+                Button(action: {
+                    viewModel.isAssignmentMode = true
+                }) {
+                    Image(systemName: "pencil")
+                        .font(.title2)
+                        .foregroundColor(.black)
+                        .padding(16)
+                        .background(Color(hex: "54C7EC"))
+                        .clipShape(Circle())
+                        .shadow(radius: 4)
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 200)
             }
         }
-        .padding(.top, -10)
     }
 }
 
@@ -647,13 +641,18 @@ struct CalendarGridView: View {
     }
 
     func daysInMonth() -> [Date?] {
-        let calendar = Calendar.current
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "es_ES")
+        calendar.firstWeekday = 2 // Lunes como primer día de la semana
+
         guard let range = calendar.range(of: .day, in: .month, for: viewModel.currentMonth),
               let firstDayOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: viewModel.currentMonth)) else {
             return []
         }
 
         let firstWeekday = calendar.component(.weekday, from: firstDayOfMonth)
+        // weekday: 1=Domingo, 2=Lunes, 3=Martes, 4=Miércoles, 5=Jueves, 6=Viernes, 7=Sábado
+        // Queremos: Lunes=0, Martes=1, Miércoles=2, Jueves=3, Viernes=4, Sábado=5, Domingo=6
         let offset = (firstWeekday + 5) % 7
 
         var days: [Date?] = Array(repeating: nil, count: offset)
@@ -862,7 +861,7 @@ struct NotesControlPanel: View {
                     }
                 }
             }
-            .frame(maxHeight: 250)
+            .frame(maxHeight: 120)
 
             if viewModel.isAddingNote {
                 HStack {

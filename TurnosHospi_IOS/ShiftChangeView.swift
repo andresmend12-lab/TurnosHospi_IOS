@@ -1071,8 +1071,12 @@ struct MyShiftsCalendarTab: View {
 
     private var firstWeekdayOffset: Int {
         let c = calendar.dateComponents([.year, .month], from: currentMonth)
-        let d = calendar.date(from: c)!
-        return (calendar.component(.weekday, from: d) + 5) % 7
+        guard let firstDayOfMonth = calendar.date(from: c) else { return 0 }
+        let weekday = calendar.component(.weekday, from: firstDayOfMonth)
+        // weekday: 1=Domingo, 2=Lunes, 3=Martes, 4=Miércoles, 5=Jueves, 6=Viernes, 7=Sábado
+        // Queremos: Lunes=0, Martes=1, Miércoles=2, Jueves=3, Viernes=4, Sábado=5, Domingo=6
+        // Fórmula: (weekday - 2 + 7) % 7 = (weekday + 5) % 7
+        return (weekday + 5) % 7
     }
 
     private func dateFor(day: Int) -> Date {
