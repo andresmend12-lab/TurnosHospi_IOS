@@ -366,29 +366,14 @@ struct OfflineCalendarView: View {
     var calendarTabView: some View {
         ZStack(alignment: .bottomTrailing) {
             VStack(spacing: 0) {
-                // --- CALENDARIO + AJUSTES ---
-                ZStack(alignment: .topTrailing) {
-                    VStack(spacing: 0) {
-                        CalendarGridView(viewModel: viewModel)
-                            .padding(.horizontal)
-
-                        if !viewModel.isAssignmentMode {
-                            LegendView(items: viewModel.legendItems, viewModel: viewModel)
-                                .padding(.vertical, 6)
-                        }
-                    }
+                // --- CALENDARIO ---
+                VStack(spacing: 0) {
+                    CalendarGridView(viewModel: viewModel, showConfigDialog: $showConfigDialog)
+                        .padding(.horizontal)
 
                     if !viewModel.isAssignmentMode {
-                        Button(action: { showConfigDialog = true }) {
-                            Image(systemName: "gearshape")
-                                .foregroundColor(.black)
-                                .padding(8)
-                                .background(Color.white)
-                                .clipShape(Circle())
-                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                        }
-                        .padding(.trailing, 24)
-                        .padding(.top, 4)
+                        LegendView(items: viewModel.legendItems, viewModel: viewModel)
+                            .padding(.vertical, 6)
                     }
                 }
 
@@ -420,8 +405,8 @@ struct OfflineCalendarView: View {
                         .clipShape(Circle())
                         .shadow(radius: 4)
                 }
-                .padding(.trailing, 20)
-                .padding(.bottom, 220)
+                .padding(.trailing, 16)
+                .padding(.bottom, 240)
             }
         }
     }
@@ -587,25 +572,49 @@ struct StatisticsTabView: View {
 
 struct CalendarGridView: View {
     @ObservedObject var viewModel: OfflineCalendarViewModel
+    @Binding var showConfigDialog: Bool
     let daysOfWeek = ["L", "M", "X", "J", "V", "S", "D"]
     let columns = Array(repeating: GridItem(.flexible()), count: 7)
 
     var body: some View {
         VStack {
-            // Cabecera Mes
+            // Cabecera Mes con botón de configuración
             HStack {
-                Button(action: { viewModel.changeMonth(by: -1) }) {
-                    Image(systemName: "chevron.left").foregroundColor(.white)
-                }
-                Spacer()
+                // Título del mes a la izquierda
                 Text(monthTitle(from: viewModel.currentMonth))
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                     .textCase(.uppercase)
+
+                // Botón de configuración junto al título
+                if !viewModel.isAssignmentMode {
+                    Button(action: { showConfigDialog = true }) {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 18))
+                            .foregroundColor(Color(hex: "94A3B8"))
+                    }
+                    .padding(.leading, 8)
+                }
+
                 Spacer()
-                Button(action: { viewModel.changeMonth(by: 1) }) {
-                    Image(systemName: "chevron.right").foregroundColor(.white)
+
+                // Flechas de navegación a la derecha
+                HStack(spacing: 8) {
+                    Button(action: { viewModel.changeMonth(by: -1) }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.white)
+                            .padding(8)
+                            .background(Color.white.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    Button(action: { viewModel.changeMonth(by: 1) }) {
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.white)
+                            .padding(8)
+                            .background(Color.white.opacity(0.1))
+                            .clipShape(Circle())
+                    }
                 }
             }
             .padding(.bottom, 16)
