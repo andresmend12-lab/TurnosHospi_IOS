@@ -36,9 +36,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -243,6 +245,7 @@ fun MainMenuScreen(
                     roster = selectedDateRoster,
                     isLoadingRoster = isLoadingRoster,
                     shiftColors = shiftColors,
+                    onOpenSettings = onOpenSettings,
                     onDayClick = { date, shift ->
                         selectedDate = date
                         selectedShift = shift
@@ -383,7 +386,7 @@ fun MainMenuScreen(
                 onClick = onOpenDirectChats,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(horizontal= 20.dp,vertical = 40.dp),
+                    .padding(end = 8.dp, bottom = 16.dp),
                 containerColor = Color(0xFF54C7EC),
                 contentColor = Color.White,
                 shape = CircleShape
@@ -403,7 +406,7 @@ fun MainMenuScreen(
                         }
                     }
                 ) {
-                    Icon(Icons.Default.Chat, contentDescription = "Chats")
+                    Icon(Icons.Default.Edit, contentDescription = "Chats")
                 }
             }
         }
@@ -424,7 +427,8 @@ fun CustomCalendar(
     roster: Map<String, ShiftRoster> = emptyMap(),
     isLoadingRoster: Boolean = false,
     shiftColors: ShiftColors,
-    onDayClick: (LocalDate, UserShift?) -> Unit
+    onDayClick: (LocalDate, UserShift?) -> Unit,
+    onOpenSettings: () -> Unit = {}
 ) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
 
@@ -444,12 +448,25 @@ fun CustomCalendar(
             IconButton(onClick = { currentMonth = currentMonth.minusMonths(1) }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Mes anterior", tint = Color.White)
             }
-            Text(
-                text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.forLanguageTag("es-ES")).uppercase()} ${currentMonth.year}",
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.forLanguageTag("es-ES")).uppercase()} ${currentMonth.year}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = onOpenSettings) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Configuración",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
             IconButton(onClick = { currentMonth = currentMonth.plusMonths(1) }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Mes siguiente", tint = Color.White)
             }
