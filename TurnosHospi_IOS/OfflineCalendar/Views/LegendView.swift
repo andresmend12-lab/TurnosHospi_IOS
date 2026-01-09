@@ -5,6 +5,7 @@ import SwiftUI
 struct LegendView: View {
     let items: [String]
     @ObservedObject var viewModel: OfflineCalendarViewModel
+    @EnvironmentObject var themeManager: ThemeManager
 
     let columns = Array(repeating: GridItem(.flexible(), spacing: DesignSpacing.xs), count: 3)
 
@@ -32,6 +33,10 @@ struct LegendView: View {
     }
 
     func colorForShiftName(_ name: String) -> Color {
-        return getShiftColorForType(name, customShiftTypes: viewModel.customShiftTypes)
+        return getShiftColorForType(
+            name,
+            customShiftTypes: viewModel.customShiftTypes,
+            themeManager: themeManager
+        )
     }
 }

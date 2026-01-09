@@ -107,6 +107,7 @@ class OfflineCalendarViewModel: ObservableObject {
 
         if selectedShiftToApply == "Libre" {
             localShifts.removeValue(forKey: key)
+            HapticManager.deleted()
         } else {
             let isHalf = selectedShiftToApply.lowercased().contains("media") ||
                          selectedShiftToApply.lowercased().contains("medio") ||
@@ -118,6 +119,7 @@ class OfflineCalendarViewModel: ObservableObject {
             }
 
             localShifts[key] = UserShift(shiftName: cleanName, isHalfDay: isHalf)
+            HapticManager.shiftAssigned()
         }
 
         saveData()
@@ -127,6 +129,47 @@ class OfflineCalendarViewModel: ObservableObject {
         selectedDate = date
         isAddingNote = false
         editingNoteIndex = nil
+        HapticManager.selection()
+    }
+
+    // MARK: - Lógica de Saliente
+
+    /// Verifica si una fecha debería mostrar "Saliente" automáticamente
+    /// Solo aplica si NO hay un turno asignado manualmente ese día
+    func shouldShowSaliente(for date: Date) -> Bool {
+        let key = dateKey(for: date)
+
+        // Si ya hay un turno asignado, no mostrar saliente automático
+        if localShifts[key] != nil {
+            return false
+        }
+
+        // Verificar si el día anterior fue noche
+        guard let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: date) else {
+            return false
+        }
+
+        let yesterdayKey = dateKey(for: yesterday)
+        guard let yesterdayShift = localShifts[yesterdayKey] else {
+            return false
+        }
+
+        return normalizeShiftType(yesterdayShift.shiftName) == "Noche"
+    }
+
+    /// Obtiene el turno efectivo para una fecha (considerando saliente automático)
+    func getEffectiveShift(for date: Date) -> (name: String, isAutomatic: Bool)? {
+        let key = dateKey(for: date)
+
+        if let shift = localShifts[key] {
+            return (shift.shiftName, false)
+        }
+
+        if shouldShowSaliente(for: date) {
+            return ("Saliente", true)
+        }
+
+        return nil
     }
 
     // MARK: - Gestión de notas
@@ -140,6 +183,7 @@ class OfflineCalendarViewModel: ObservableObject {
         saveData()
         newNoteText = ""
         isAddingNote = false
+        HapticManager.success()
     }
 
     func updateNote(at index: Int) {
@@ -152,6 +196,7 @@ class OfflineCalendarViewModel: ObservableObject {
             saveData()
         }
         editingNoteIndex = nil
+        HapticManager.success()
     }
 
     func deleteNote(at index: Int) {
@@ -162,6 +207,7 @@ class OfflineCalendarViewModel: ObservableObject {
             localNotes[key] = notes
             saveData()
         }
+        HapticManager.deleted()
     }
 
     func startEditingNote(at index: Int, currentText: String) {
@@ -180,6 +226,7 @@ class OfflineCalendarViewModel: ObservableObject {
     func changeMonth(by value: Int) {
         if let newDate = Calendar.current.date(byAdding: .month, value: value, to: currentMonth) {
             currentMonth = newDate
+            HapticManager.selection()
         }
     }
 
@@ -187,6 +234,25 @@ class OfflineCalendarViewModel: ObservableObject {
 
     var legendItems: [String] {
         shiftTypes
+    }
+
+    // MARK: - Resumen rápido del mes
+
+    struct MonthQuickStats {
+        let totalShifts: Int
+        let totalHours: Double
+        let mostCommonShift: String?
+    }
+
+    var currentMonthQuickStats: MonthQuickStats {
+        let stats = calculateStats(for: currentMonth)
+        let mostCommon = stats.breakdown.max(by: { $0.value.count < $1.value.count })?.key
+
+        return MonthQuickStats(
+            totalShifts: stats.totalShifts,
+            totalHours: stats.totalHours,
+            mostCommonShift: mostCommon
+        )
     }
 
     // MARK: - Configuración de turnos
@@ -249,6 +315,7 @@ class OfflineCalendarViewModel: ObservableObject {
         let newShift = CustomShiftType(name: name, colorHex: colorHex, durationHours: durationHours)
         customShiftTypes.append(newShift)
         saveCustomShiftTypes()
+        HapticManager.success()
     }
 
     func updateCustomShift(id: UUID, name: String, colorHex: String, durationHours: Double) {
@@ -260,12 +327,91 @@ class OfflineCalendarViewModel: ObservableObject {
                 durationHours: durationHours
             )
             saveCustomShiftTypes()
+            HapticManager.success()
         }
     }
 
     func deleteCustomShift(id: UUID) {
         customShiftTypes.removeAll { $0.id == id }
         saveCustomShiftTypes()
+        HapticManager.deleted()
+    }
+
+    // MARK: - Migración de turnos
+
+    /// Resultado de análisis de migración
+    struct ShiftMigrationAnalysis {
+        let orphanedShifts: [String: Int]  // [nombre_turno: cantidad]
+        let totalOrphaned: Int
+        let canAutoMigrate: Bool
+    }
+
+    /// Analiza qué turnos quedarían huérfanos al cambiar de patrón
+    func analyzePatternChange(to newPattern: ShiftPattern) -> ShiftMigrationAnalysis {
+        guard shiftPattern == .custom && newPattern != .custom else {
+            return ShiftMigrationAnalysis(orphanedShifts: [:], totalOrphaned: 0, canAutoMigrate: true)
+        }
+
+        let newTypes = getShiftTypesFor(pattern: newPattern)
+        var orphaned: [String: Int] = [:]
+
+        for (_, shift) in localShifts {
+            let normalized = normalizeShiftType(shift.shiftName)
+            if !newTypes.contains(normalized) && !["Vacaciones", "Libre"].contains(normalized) {
+                orphaned[shift.shiftName, default: 0] += 1
+            }
+        }
+
+        let total = orphaned.values.reduce(0, +)
+
+        return ShiftMigrationAnalysis(
+            orphanedShifts: orphaned,
+            totalOrphaned: total,
+            canAutoMigrate: total == 0
+        )
+    }
+
+    /// Obtiene los tipos de turno para un patrón específico
+    private func getShiftTypesFor(pattern: ShiftPattern) -> [String] {
+        switch pattern {
+        case .three:
+            return ["Mañana", "Tarde", "Noche", "Saliente", "Media Mañana", "Media Tarde"]
+        case .two:
+            return ["Día", "Noche", "Saliente", "Medio Día"]
+        case .custom:
+            return customShiftTypes.map { $0.name }
+        }
+    }
+
+    /// Intenta migrar turnos huérfanos a un tipo compatible
+    func migrateOrphanedShifts(mapping: [String: String]) {
+        var updatedShifts = localShifts
+
+        for (dateKey, shift) in localShifts {
+            if let newName = mapping[shift.shiftName] {
+                updatedShifts[dateKey] = UserShift(
+                    shiftName: newName,
+                    isHalfDay: shift.isHalfDay
+                )
+            }
+        }
+
+        localShifts = updatedShifts
+        saveData()
+    }
+
+    /// Elimina todos los turnos huérfanos
+    func removeOrphanedShifts() {
+        let validTypes = Set(shiftTypes)
+
+        localShifts = localShifts.filter { (_, shift) in
+            let normalized = normalizeShiftType(shift.shiftName)
+            return validTypes.contains(normalized) ||
+                   validTypes.contains(shift.shiftName) ||
+                   ["Vacaciones", "Libre"].contains(normalized)
+        }
+
+        saveData()
     }
 
     // MARK: - Aplicación de configuración

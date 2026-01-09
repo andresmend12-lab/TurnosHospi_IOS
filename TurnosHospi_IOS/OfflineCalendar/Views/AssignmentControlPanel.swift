@@ -16,26 +16,36 @@ struct AssignmentControlPanel: View {
                 HStack(spacing: DesignSpacing.md) {
                     ForEach(viewModel.shiftTypes, id: \.self) { (typeName: String) in
                         let isSelected = viewModel.selectedShiftToApply == typeName
-                        let chipColor = getShiftColorForType(typeName, customShiftTypes: viewModel.customShiftTypes)
+                        let chipColor = getShiftColorForType(
+                            typeName,
+                            customShiftTypes: viewModel.customShiftTypes,
+                            themeManager: themeManager
+                        )
 
-                        Button(action: { viewModel.selectedShiftToApply = typeName }) {
+                        Button(action: {
+                            viewModel.selectedShiftToApply = typeName
+                            HapticManager.selection()
+                        }) {
                             Text(typeName)
                                 .font(.system(size: 14, weight: .medium))
                                 .padding(.horizontal, DesignSpacing.lg)
                                 .padding(.vertical, DesignSpacing.sm)
-                                .background(isSelected ? chipColor : getButtonColor(for: typeName).opacity(0.6))
+                                .background(isSelected ? chipColor : chipColor.opacity(0.3))
                                 .foregroundColor(isSelected ? (chipColor.luminance < 0.45 ? .white : .black) : .white)
                                 .cornerRadius(DesignCornerRadius.pill)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: DesignCornerRadius.pill)
-                                        .stroke(DesignColors.accent, lineWidth: isSelected ? 0 : 1)
+                                        .stroke(isSelected ? Color.clear : DesignColors.accent.opacity(0.5), lineWidth: 1)
                                 )
                         }
                     }
                 }
             }
 
-            Button(action: { viewModel.isAssignmentMode = false }) {
+            Button(action: {
+                viewModel.isAssignmentMode = false
+                HapticManager.success()
+            }) {
                 HStack {
                     Image(systemName: "checkmark")
                     Text("Guardar y Salir")
@@ -49,9 +59,5 @@ struct AssignmentControlPanel: View {
             }
         }
         .padding(DesignSpacing.lg)
-    }
-
-    private func getButtonColor(for typeName: String) -> Color {
-        return getShiftColorForType(typeName, customShiftTypes: viewModel.customShiftTypes)
     }
 }

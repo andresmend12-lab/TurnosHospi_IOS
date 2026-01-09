@@ -10,22 +10,37 @@ struct CalendarGridView: View {
 
     var body: some View {
         VStack {
-            // Cabecera Mes
+            // Cabecera Mes con stats
             HStack {
                 Button(action: { viewModel.changeMonth(by: -1) }) {
                     Image(systemName: "chevron.left")
                         .foregroundColor(.white)
+                        .padding(DesignSpacing.sm)
                 }
+
                 Spacer()
-                Text(monthTitle(from: viewModel.currentMonth))
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .textCase(.uppercase)
+
+                VStack(spacing: 2) {
+                    Text(monthTitle(from: viewModel.currentMonth))
+                        .font(DesignFonts.title)
+                        .foregroundColor(.white)
+                        .textCase(.uppercase)
+
+                    // Mini stats
+                    let stats = viewModel.currentMonthQuickStats
+                    if stats.totalShifts > 0 {
+                        Text("\(stats.totalShifts) turnos · \(String(format: "%.0f", stats.totalHours))h")
+                            .font(DesignFonts.caption)
+                            .foregroundColor(DesignColors.textSecondary)
+                    }
+                }
+
                 Spacer()
+
                 Button(action: { viewModel.changeMonth(by: 1) }) {
                     Image(systemName: "chevron.right")
                         .foregroundColor(.white)
+                        .padding(DesignSpacing.sm)
                 }
             }
             .padding(.bottom, DesignSpacing.lg)

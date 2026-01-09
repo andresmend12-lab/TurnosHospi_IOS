@@ -7,30 +7,62 @@ struct DayCellView: View {
     @ObservedObject var viewModel: OfflineCalendarViewModel
     @EnvironmentObject var themeManager: ThemeManager
 
+    private var isToday: Bool {
+        Calendar.current.isDateInToday(date)
+    }
+
+    private var isSelected: Bool {
+        Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate)
+    }
+
     var body: some View {
         let dateKey = viewModel.dateKey(for: date)
-        let shift = viewModel.localShifts[dateKey]
-        let isSelected = Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate)
+        let effectiveShift = viewModel.getEffectiveShift(for: date)
         let hasNotes = !(viewModel.localNotes[dateKey]?.isEmpty ?? true)
+        let bgColor = getBackgroundColor(effectiveShift: effectiveShift)
 
-        let bgColor = getBackgroundColor(shift: shift, date: date)
-
-        ZStack(alignment: .top) {
+        ZStack(alignment: .topTrailing) {
+            // Día con fondo
             Text("\(Calendar.current.component(.day, from: date))")
-                .fontWeight(.medium)
-                .foregroundColor(.white)
+                .fontWeight(isToday ? .bold : .medium)
+                .foregroundColor(getTextColor(effectiveShift: effectiveShift))
                 .frame(width: DesignSizes.dayCell, height: DesignSizes.dayCell)
-                .background(Circle().fill(bgColor))
+                .background(
+                    ZStack {
+                        // Fondo del turno
+                        Circle().fill(bgColor)
+
+                        // Anillo de "Hoy"
+                        if isToday {
+                            Circle()
+                                .stroke(DesignColors.accent, lineWidth: 2)
+                        }
+                    }
+                )
                 .overlay(
                     Circle()
                         .stroke(Color.white, lineWidth: isSelected ? 2 : 0)
                 )
+                // Indicador visual de saliente automático (borde punteado)
+                .overlay(
+                    Group {
+                        if effectiveShift?.isAutomatic == true {
+                            Circle()
+                                .strokeBorder(
+                                    style: StrokeStyle(lineWidth: 1, dash: [3, 2])
+                                )
+                                .foregroundColor(.white.opacity(0.5))
+                        }
+                    }
+                )
 
+            // Indicador de notas (esquina superior derecha)
             if hasNotes {
                 Circle()
                     .fill(DesignColors.noteIndicator)
                     .frame(width: DesignSizes.noteIndicator, height: DesignSizes.noteIndicator)
-                    .offset(y: 2)
+                    .offset(x: 2, y: -2)
+                    .shadow(color: DesignColors.noteIndicator.opacity(0.5), radius: 2)
             }
         }
         .onTapGesture {
@@ -38,17 +70,32 @@ struct DayCellView: View {
         }
     }
 
-    func getBackgroundColor(shift: UserShift?, date: Date) -> Color {
-        if let shift = shift {
-            return getShiftColorForType(shift.shiftName, customShiftTypes: viewModel.customShiftTypes)
-        } else {
-            // Detectar "Saliente"
-            if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: date),
-               let prevShift = viewModel.localShifts[viewModel.dateKey(for: yesterday)],
-               normalizeShiftType(prevShift.shiftName) == "Noche" {
-                return themeManager.salienteColor
-            }
+    // MARK: - Helpers
+
+    private func getBackgroundColor(effectiveShift: (name: String, isAutomatic: Bool)?) -> Color {
+        guard let shift = effectiveShift else {
             return Color.clear
         }
+
+        return getShiftColorForType(
+            shift.name,
+            customShiftTypes: viewModel.customShiftTypes,
+            themeManager: themeManager
+        )
+    }
+
+    private func getTextColor(effectiveShift: (name: String, isAutomatic: Bool)?) -> Color {
+        guard let shift = effectiveShift else {
+            return .white
+        }
+
+        let bgColor = getShiftColorForType(
+            shift.name,
+            customShiftTypes: viewModel.customShiftTypes,
+            themeManager: themeManager
+        )
+
+        // Usar color oscuro si el fondo es claro
+        return bgColor.luminance > 0.5 ? .black : .white
     }
 }

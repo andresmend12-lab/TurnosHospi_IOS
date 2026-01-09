@@ -7,12 +7,20 @@ struct OfflineCalendarSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingCustomShiftEditor = false
     @State private var editingShiftId: UUID? = nil
+    @State private var pendingPatternChange: ShiftPattern? = nil
+    @State private var migrationAnalysis: OfflineCalendarViewModel.ShiftMigrationAnalysis? = nil
+    @State private var showMigrationAlert = false
 
     var body: some View {
         NavigationStack {
             Form {
                 Section(header: Text("Tipo de Turnos")) {
-                    Picker("Patrón", selection: $viewModel.shiftPattern) {
+                    Picker("Patrón", selection: Binding(
+                        get: { viewModel.shiftPattern },
+                        set: { newPattern in
+                            handlePatternChange(to: newPattern)
+                        }
+                    )) {
                         ForEach(ShiftPattern.allCases) { pattern in
                             Text(pattern.title).tag(pattern)
                         }
@@ -36,6 +44,40 @@ struct OfflineCalendarSettingsView: View {
             .sheet(isPresented: $showingCustomShiftEditor) {
                 CustomShiftEditorView(viewModel: viewModel, editingShiftId: editingShiftId)
             }
+            .sheet(isPresented: $showMigrationAlert) {
+                if let analysis = migrationAnalysis, let pending = pendingPatternChange {
+                    ShiftMigrationAlert(
+                        analysis: analysis,
+                        onDelete: {
+                            viewModel.shiftPattern = pending
+                            viewModel.removeOrphanedShifts()
+                            showMigrationAlert = false
+                            pendingPatternChange = nil
+                            HapticManager.success()
+                        },
+                        onCancel: {
+                            showMigrationAlert = false
+                            pendingPatternChange = nil
+                        }
+                    )
+                    .presentationDetents([.medium])
+                }
+            }
+        }
+    }
+
+    // MARK: - Pattern Change Handler
+
+    private func handlePatternChange(to newPattern: ShiftPattern) {
+        let analysis = viewModel.analyzePatternChange(to: newPattern)
+
+        if analysis.canAutoMigrate {
+            viewModel.shiftPattern = newPattern
+            HapticManager.success()
+        } else {
+            pendingPatternChange = newPattern
+            migrationAnalysis = analysis
+            showMigrationAlert = true
         }
     }
 
@@ -88,6 +130,9 @@ struct OfflineCalendarSettingsView: View {
                         .frame(width: DesignSpacing.md, height: DesignSpacing.md)
                     Text(shift.name)
                     Spacer()
+                    Text("\(String(format: "%.1f", shift.durationHours))h")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     Button(action: {
                         editingShiftId = shift.id
                         showingCustomShiftEditor = true

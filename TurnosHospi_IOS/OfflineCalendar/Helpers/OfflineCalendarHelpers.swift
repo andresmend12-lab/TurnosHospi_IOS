@@ -34,14 +34,44 @@ func normalizeShiftType(_ raw: String) -> String {
 }
 
 /// Obtiene el color correspondiente a un tipo de turno
-func getShiftColorForType(_ type: String, customShiftTypes: [CustomShiftType]) -> Color {
-    // Primero buscar en turnos personalizados
+/// Prioridad: 1) Turnos personalizados, 2) ThemeManager, 3) Colores por defecto
+func getShiftColorForType(
+    _ type: String,
+    customShiftTypes: [CustomShiftType],
+    themeManager: ThemeManager? = nil
+) -> Color {
+    // 1. Primero buscar en turnos personalizados
     if let custom = customShiftTypes.first(where: { $0.name.lowercased() == type.lowercased() }) {
         return custom.color
     }
 
     let normalized = normalizeShiftType(type).lowercased()
 
+    // 2. Si hay ThemeManager, usar sus colores
+    if let theme = themeManager {
+        switch normalized {
+        case "mañana", "día":
+            return theme.morningColor
+        case "media mañana", "m. mañana", "medio día":
+            return theme.morningHalfColor
+        case "tarde":
+            return theme.afternoonColor
+        case "media tarde", "m. tarde":
+            return theme.afternoonHalfColor
+        case "noche":
+            return theme.nightColor
+        case "saliente":
+            return theme.salienteColor
+        case "libre":
+            return theme.freeDayColor
+        case "vacaciones":
+            return theme.holidayColor
+        default:
+            break
+        }
+    }
+
+    // 3. Colores por defecto (fallback)
     switch normalized {
     case "vacaciones":
         return DesignColors.shiftVacation
