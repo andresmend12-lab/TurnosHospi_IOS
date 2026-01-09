@@ -171,7 +171,7 @@ struct PlantDashboardView: View {
                                                 monthlyAssignments: plantManager.monthlyAssignments,
                                                 vacationDays: vacationManager.vacationDays
                                             )
-                                            .onChange(of: selectedDate) { _, newDate in
+                                            .onChange(of: selectedDate) { newDate in
                                                 scheduleDateHandling(for: newDate)
                                             }
                                             
@@ -369,7 +369,6 @@ struct PlantDashboardView: View {
                         }
                     )
                     .presentationDetents([.medium, .large])
-                    .presentationBackground(Color(red: 0.05, green: 0.05, blue: 0.1))
                 } else {
                     Text("No se encontró la planta.")
                         .foregroundColor(.white)
@@ -401,10 +400,10 @@ struct PlantDashboardView: View {
                 
                 updateVacationContext()
             }
-            .onChange(of: authManager.userPlantId) { _, _ in
+            .onChange(of: authManager.userPlantId) { _ in
                 updateVacationContext()
             }
-            .onChange(of: authManager.user?.uid ?? "") { _, _ in
+            .onChange(of: authManager.user?.uid ?? "") { _ in
                 updateVacationContext()
             }
             .onDisappear {
