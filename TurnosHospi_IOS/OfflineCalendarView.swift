@@ -732,8 +732,9 @@ struct AssignmentControlPanel: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
+                    let selectedShift = viewModel.selectedShiftToApply
                     ForEach(viewModel.shiftTypes, id: \.self) { typeName in
-                        let isSelected = viewModel.selectedShiftToApply == typeName
+                        let isSelected = selectedShift == typeName
                         let chipColor = getShiftColorForType(typeName, customShiftTypes: viewModel.customShiftTypes)
 
                         Button(action: { viewModel.selectedShiftToApply = typeName }) {

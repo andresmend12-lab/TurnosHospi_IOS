@@ -113,26 +113,4 @@ class ThemeManager: ObservableObject {
 }
 
 // MARK: - Extensiones Color
-
-extension Color {
-    // Note: init(hex:) is already defined in OfflineCalendarView.swift
-    // Only defining toHex() here to avoid duplicate declaration
-
-    func toHex() -> String? {
-        let uic = UIColor(self)
-        guard let components = uic.cgColor.components, components.count >= 3 else {
-            return nil
-        }
-        let r = Float(components[0])
-        let g = Float(components[1])
-        let b = Float(components[2])
-        var a = Float(1.0)
-        if components.count >= 4 { a = Float(components[3]) }
-        
-        if a != Float(1.0) {
-            return String(format: "%02lX%02lX%02lX%02lX", lroundf(a * 255), lroundf(r * 255), lroundf(g * 255), lroundf(b * 255))
-        } else {
-            return String(format: "%02lX%02lX%02lX", lroundf(r * 255), lroundf(g * 255), lroundf(b * 255))
-        }
-    }
-}
+// Note: Color extensions (init(hex:) and toHex()) are defined in OfflineCalendarView.swift
