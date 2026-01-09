@@ -21,7 +21,11 @@ struct ShiftChangeView: View {
     // MARK: - UI State
 
     @State private var selectedTab = 0
-    @State private var currentMonth = Date()
+    @State private var currentMonth: Date = {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month], from: Date())
+        return calendar.date(from: components) ?? Date()
+    }()
     @State private var selectedDate = Date()
     @State private var selectedShiftForRequest: MyShiftDisplay?
     @State private var selectedRequestForSuggestions: ShiftChangeRequest?
@@ -207,11 +211,6 @@ struct ShiftChangeView: View {
     // MARK: - Actions
 
     private func onViewAppear() {
-        let components = Calendar.current.dateComponents([.year, .month], from: Date())
-        if let first = Calendar.current.date(from: components) {
-            currentMonth = first
-        }
-
         if !plantId.isEmpty {
             plantManager.fetchCurrentPlant(plantId: plantId)
             plantManager.fetchMonthlyAssignments(plantId: plantId, month: currentMonth)
@@ -946,10 +945,20 @@ struct MyShiftsCalendarTab: View {
     }
 
     private var calendarGrid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 7), spacing: 8) {
-            ForEach(0..<firstWeekdayOffset, id: \.self) { _ in Color.clear.frame(height: 36) }
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
+        let offset = firstWeekdayOffset
+        let days = daysInMonth
 
-            ForEach(daysInMonth, id: \.self) { day in
+        return LazyVGrid(columns: columns, spacing: 8) {
+            // Espacios vacíos antes del primer día del mes
+            ForEach(0..<offset, id: \.self) { index in
+                Color.clear
+                    .frame(height: 36)
+                    .id("empty_\(index)")
+            }
+
+            // Días del mes
+            ForEach(days, id: \.self) { day in
                 let date = dateFor(day: day)
                 let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
 
@@ -975,7 +984,9 @@ struct MyShiftsCalendarTab: View {
                 } label: {
                     ZStack {
                         displayColor.opacity(isSelected ? 1.0 : 0.8)
-                        Text("\(day)").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                        Text("\(day)")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
                         if isVacationDay {
                             VStack {
                                 Spacer()
@@ -988,9 +999,13 @@ struct MyShiftsCalendarTab: View {
                     }
                     .frame(height: 36)
                     .cornerRadius(8)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(isSelected ? Color.white : Color.clear, lineWidth: 2))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(isSelected ? Color.white : Color.clear, lineWidth: 2)
+                    )
                 }
                 .buttonStyle(.plain)
+                .id("day_\(day)")
             }
         }
         .padding(.horizontal, 4)
@@ -1066,29 +1081,40 @@ struct MyShiftsCalendarTab: View {
     }
 
     private var daysInMonth: [Int] {
-        return Array(calendar.range(of: .day, in: .month, for: currentMonth)!)
+        guard let range = calendar.range(of: .day, in: .month, for: currentMonth) else {
+            return []
+        }
+        return Array(range)
     }
 
     private var firstWeekdayOffset: Int {
-        let c = calendar.dateComponents([.year, .month], from: currentMonth)
-        guard let firstDayOfMonth = calendar.date(from: c) else { return 0 }
+        // Asegurar que estamos calculando desde el primer día del mes
+        let components = calendar.dateComponents([.year, .month], from: currentMonth)
+        guard let firstDayOfMonth = calendar.date(from: components) else { return 0 }
+
+        // Obtener el día de la semana (1=Domingo, 2=Lunes, ..., 7=Sábado)
         let weekday = calendar.component(.weekday, from: firstDayOfMonth)
-        // weekday: 1=Domingo, 2=Lunes, 3=Martes, 4=Miércoles, 5=Jueves, 6=Viernes, 7=Sábado
-        // Queremos: Lunes=0, Martes=1, Miércoles=2, Jueves=3, Viernes=4, Sábado=5, Domingo=6
-        // Fórmula: (weekday - 2 + 7) % 7 = (weekday + 5) % 7
-        return (weekday + 5) % 7
+
+        // Convertir a offset para calendario que comienza en Lunes
+        // Lunes (2) -> 0, Martes (3) -> 1, ..., Domingo (1) -> 6
+        let offset = (weekday + 5) % 7
+
+        return offset
     }
 
     private func dateFor(day: Int) -> Date {
-        var c = calendar.dateComponents([.year, .month], from: currentMonth)
-        c.day = day
-        return calendar.date(from: c)!
+        let components = calendar.dateComponents([.year, .month], from: currentMonth)
+        var dateComponents = components
+        dateComponents.day = day
+        return calendar.date(from: dateComponents) ?? currentMonth
     }
 
     private func changeMonth(by v: Int) {
         if let n = calendar.date(byAdding: .month, value: v, to: currentMonth) {
-            let c = calendar.dateComponents([.year, .month], from: n)
-            currentMonth = calendar.date(from: c)!
+            let components = calendar.dateComponents([.year, .month], from: n)
+            if let firstDayOfNewMonth = calendar.date(from: components) {
+                currentMonth = firstDayOfNewMonth
+            }
         }
     }
 

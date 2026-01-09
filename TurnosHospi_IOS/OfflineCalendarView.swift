@@ -421,7 +421,7 @@ struct OfflineCalendarView: View {
                         .shadow(radius: 4)
                 }
                 .padding(.trailing, 20)
-                .padding(.bottom, 200)
+                .padding(.bottom, 220)
             }
         }
     }
@@ -433,10 +433,10 @@ struct LegendView: View {
     let items: [String]
     @ObservedObject var viewModel: OfflineCalendarViewModel
 
-    let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 4)
+    let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 3)
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
+        LazyVGrid(columns: columns, spacing: 8) {
             ForEach(items, id: \.self) { item in
                 HStack(spacing: 4) {
                     Circle()
@@ -445,16 +445,17 @@ struct LegendView: View {
                         .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
 
                     Text(item)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: 9, weight: .medium))
                         .foregroundColor(.gray)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .minimumScaleFactor(0.7)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
     }
 
     func colorForShiftName(_ name: String) -> Color {
@@ -777,17 +778,18 @@ struct NotesControlPanel: View {
     @ObservedObject var viewModel: OfflineCalendarViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             // Cabecera Día
             HStack {
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(formattedDate(viewModel.selectedDate))
-                        .font(.title2)
+                        .font(.headline)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
 
                     let key = viewModel.dateKey(for: viewModel.selectedDate)
                     Text(viewModel.localShifts[key]?.shiftName ?? "Libre")
+                        .font(.subheadline)
                         .foregroundColor(.gray)
                 }
                 Spacer()
