@@ -106,9 +106,8 @@ class ThemeManager: ObservableObject {
     }
     
     private static func saveColor(color: Color, key: String) {
-        if let hex = color.toHex() {
-            UserDefaults.standard.set(hex, forKey: key)
-        }
+        let hex = color.toHex()
+        UserDefaults.standard.set(hex, forKey: key)
     }
 }
 
