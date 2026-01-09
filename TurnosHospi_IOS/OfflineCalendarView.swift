@@ -678,7 +678,7 @@ struct DayCell: View {
         let isSelected = Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate)
         let hasNotes = !(viewModel.localNotes[dateKey]?.isEmpty ?? true)
 
-        var bgColor = getBackgroundColor(shift: shift, date: date)
+        let bgColor = getBackgroundColor(shift: shift, date: date)
 
         return ZStack(alignment: .top) {
             Text("\(Calendar.current.component(.day, from: date))")
@@ -711,7 +711,7 @@ struct DayCell: View {
             if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: date),
                let prevShift = viewModel.localShifts[viewModel.dateKey(for: yesterday)],
                normalizeShiftType(prevShift.shiftName) == "Noche" {
-                return themeManager.color(for: .saliente)
+                return themeManager.salienteColor
             }
             return Color.clear
         }
@@ -732,9 +732,8 @@ struct AssignmentControlPanel: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    let selectedShift = viewModel.selectedShiftToApply
-                    ForEach(viewModel.shiftTypes, id: \.self) { typeName in
-                        let isSelected = selectedShift == typeName
+                    ForEach(Array(viewModel.shiftTypes), id: \.self) { typeName in
+                        let isSelected = viewModel.selectedShiftToApply == typeName
                         let chipColor = getShiftColorForType(typeName, customShiftTypes: viewModel.customShiftTypes)
 
                         Button(action: { viewModel.selectedShiftToApply = typeName }) {
