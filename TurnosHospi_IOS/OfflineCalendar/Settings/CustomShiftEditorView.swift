@@ -29,7 +29,7 @@ struct CustomShiftEditorView: View {
                     // Campo nombre con validación
                     VStack(alignment: .leading, spacing: 4) {
                         TextField("Nombre del turno", text: $shiftName)
-                            .onChange(of: shiftName) { _, _ in validateName() }
+                            .onChange(of: shiftName) { _ in validateName() }
 
                         if let error = nameError {
                             Text(error)
@@ -43,7 +43,7 @@ struct CustomShiftEditorView: View {
                         HStack {
                             TextField("Duración", text: $shiftDuration)
                                 .keyboardType(.decimalPad)
-                                .onChange(of: shiftDuration) { _, _ in validateDuration() }
+                                .onChange(of: shiftDuration) { _ in validateDuration() }
 
                             Text("horas")
                                 .foregroundColor(DesignColors.textSecondary)
