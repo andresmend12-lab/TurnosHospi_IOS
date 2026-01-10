@@ -47,17 +47,21 @@ struct OfflineCalendarView: View {
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showConfigDialog) {
             OfflineCalendarSettingsView(viewModel: viewModel)
+                .environmentObject(themeManager)
         }
         .sheet(isPresented: $showExportSheet) {
             ExportSheet(viewModel: viewModel)
+                .environmentObject(themeManager)
                 .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(viewModel: viewModel)
+                .environmentObject(themeManager)
                 .presentationDetents([.large])
         }
         .sheet(isPresented: $showTemplates) {
             TemplateSheet(viewModel: viewModel)
+                .environmentObject(themeManager)
                 .presentationDetents([.large])
         }
     }
@@ -79,8 +83,8 @@ struct OfflineCalendarView: View {
             Spacer()
 
             if !viewModel.isAssignmentMode {
-                // Menú de opciones
-                if selectedTab == .calendar {
+                // Menú de opciones (visible en calendario y estadísticas)
+                if selectedTab == .calendar || selectedTab == .statistics {
                     optionsMenu
                 }
 
@@ -138,30 +142,31 @@ struct OfflineCalendarView: View {
     // MARK: - Calendar Tab
 
     private var calendarTabView: some View {
-        ZStack(alignment: .bottomTrailing) {
-            VStack(spacing: 0) {
-                ScrollView {
-                    VStack(spacing: DesignSpacing.md) {
-                        // Grid del calendario
-                        CalendarGridView(viewModel: viewModel)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: DesignSpacing.md) {
+                    // Grid del calendario
+                    CalendarGridView(viewModel: viewModel)
+                        .padding(.horizontal, DesignSpacing.md)
+
+                    // Leyenda expandible
+                    if !viewModel.isAssignmentMode {
+                        LegendView(items: viewModel.legendItems, viewModel: viewModel)
                             .padding(.horizontal, DesignSpacing.md)
-
-                        // Leyenda expandible
-                        if !viewModel.isAssignmentMode {
-                            LegendView(items: viewModel.legendItems, viewModel: viewModel)
-                                .padding(.horizontal, DesignSpacing.md)
-                        }
                     }
-                    .padding(.bottom, viewModel.isAssignmentMode ? 200 : 280)
                 }
-
-                // Panel de control
-                controlPanel
+                .padding(.bottom, viewModel.isAssignmentMode ? 180 : 220)
             }
 
-            // FAB para modo asignación
-            if !viewModel.isAssignmentMode {
-                floatingActionButton
+            // Panel de control con FAB superpuesto
+            ZStack(alignment: .topTrailing) {
+                controlPanel
+
+                // FAB para modo asignación
+                if !viewModel.isAssignmentMode {
+                    floatingActionButton
+                        .offset(y: -30)
+                }
             }
         }
     }
@@ -322,16 +327,16 @@ struct OfflineCalendarView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: DesignSizes.fabButton, height: DesignSizes.fabButton)
+                    .frame(width: 56, height: 56)
                     .shadow(color: DesignColors.accent.opacity(0.4), radius: 12, y: 6)
 
                 Image(systemName: "pencil")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.white)
             }
         }
-        .padding(.trailing, DesignSpacing.xl)
-        .padding(.bottom, 240)
+        .buttonStyle(.plain)
+        .padding(.trailing, 16)
     }
 
     // MARK: - Helpers
