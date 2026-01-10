@@ -59,7 +59,7 @@ struct CustomShiftEditorView: View {
                     // Info adicional
                     Text("La duración debe ser entre 0.5 y 24 horas")
                         .font(.footnote)
-                        .foregroundColor(DesignColors.textMuted)
+                        .foregroundColor(DesignColors.textTertiary)
                 }
 
                 Section(header: Text("Color")) {
