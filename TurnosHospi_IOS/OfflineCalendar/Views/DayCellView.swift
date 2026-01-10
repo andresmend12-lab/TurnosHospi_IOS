@@ -15,59 +15,126 @@ struct DayCellView: View {
         Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate)
     }
 
+    private var isWeekend: Bool {
+        let weekday = Calendar.current.component(.weekday, from: date)
+        return weekday == 1 || weekday == 7
+    }
+
     var body: some View {
         let dateKey = viewModel.dateKey(for: date)
         let effectiveShift = viewModel.getEffectiveShift(for: date)
         let hasNotes = !(viewModel.localNotes[dateKey]?.isEmpty ?? true)
         let bgColor = getBackgroundColor(effectiveShift: effectiveShift)
 
-        ZStack(alignment: .topTrailing) {
-            // Día con fondo
+        ZStack {
+            // Fondo principal del día
+            dayCellBackground(bgColor: bgColor, effectiveShift: effectiveShift)
+
+            // Número del día
             Text("\(Calendar.current.component(.day, from: date))")
-                .fontWeight(isToday ? .bold : .medium)
+                .font(isToday ? DesignFonts.dayNumberLarge : DesignFonts.dayNumber)
                 .foregroundColor(getTextColor(effectiveShift: effectiveShift))
-                .frame(width: DesignSizes.dayCell, height: DesignSizes.dayCell)
-                .background(
-                    ZStack {
-                        // Fondo del turno
-                        Circle().fill(bgColor)
+                .shadow(color: effectiveShift != nil ? .black.opacity(0.3) : .clear, radius: 1, y: 1)
 
-                        // Anillo de "Hoy"
-                        if isToday {
-                            Circle()
-                                .stroke(DesignColors.accent, lineWidth: 2)
-                        }
+            // Indicadores
+            VStack {
+                HStack {
+                    Spacer()
+                    // Indicador de notas (esquina superior derecha)
+                    if hasNotes {
+                        noteIndicator
                     }
-                )
-                .overlay(
-                    Circle()
-                        .stroke(Color.white, lineWidth: isSelected ? 2 : 0)
-                )
-                // Indicador visual de saliente automático (borde punteado)
-                .overlay(
-                    Group {
-                        if effectiveShift?.isAutomatic == true {
-                            Circle()
-                                .strokeBorder(
-                                    style: StrokeStyle(lineWidth: 1, dash: [3, 2])
-                                )
-                                .foregroundColor(.white.opacity(0.5))
-                        }
+                }
+                Spacer()
+                HStack {
+                    // Indicador de media jornada (esquina inferior izquierda)
+                    if let shift = viewModel.localShifts[dateKey], shift.isHalfDay {
+                        halfDayIndicator
                     }
-                )
-
-            // Indicador de notas (esquina superior derecha)
-            if hasNotes {
-                Circle()
-                    .fill(DesignColors.noteIndicator)
-                    .frame(width: DesignSizes.noteIndicator, height: DesignSizes.noteIndicator)
-                    .offset(x: 2, y: -2)
-                    .shadow(color: DesignColors.noteIndicator.opacity(0.5), radius: 2)
+                    Spacer()
+                }
+            }
+            .padding(DesignSpacing.xxs)
+        }
+        .frame(width: DesignSizes.dayCell, height: DesignSizes.dayCell)
+        .contentShape(Circle())
+        .onTapGesture {
+            withAnimation(DesignAnimation.quick) {
+                viewModel.handleDayClick(date: date)
             }
         }
-        .onTapGesture {
-            viewModel.handleDayClick(date: date)
+        .scaleEffect(isSelected ? 1.05 : 1.0)
+        .animation(DesignAnimation.springBouncy, value: isSelected)
+    }
+
+    // MARK: - Subviews
+
+    @ViewBuilder
+    private func dayCellBackground(bgColor: Color, effectiveShift: (name: String, isAutomatic: Bool)?) -> some View {
+        ZStack {
+            // Fondo base con gradiente si tiene turno
+            if effectiveShift != nil {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [bgColor, bgColor.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: bgColor.opacity(0.4), radius: 4, y: 2)
+            } else {
+                Circle()
+                    .fill(isWeekend ? DesignColors.cardBackgroundLight.opacity(0.3) : Color.clear)
+            }
+
+            // Anillo de "Hoy" con glow
+            if isToday {
+                Circle()
+                    .stroke(
+                        LinearGradient(
+                            colors: [DesignColors.accent, DesignColors.accentSecondary],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: DesignSizes.todayRing
+                    )
+                    .shadow(color: DesignColors.accent.opacity(0.5), radius: 4)
+            }
+
+            // Anillo de selección
+            if isSelected {
+                Circle()
+                    .stroke(Color.white, lineWidth: 2)
+            }
+
+            // Indicador visual de saliente automático (borde punteado)
+            if effectiveShift?.isAutomatic == true {
+                Circle()
+                    .strokeBorder(
+                        style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                    )
+                    .foregroundColor(.white.opacity(0.6))
+            }
         }
+    }
+
+    private var noteIndicator: some View {
+        Circle()
+            .fill(DesignColors.noteIndicator)
+            .frame(width: DesignSizes.noteIndicator, height: DesignSizes.noteIndicator)
+            .shadow(color: DesignColors.noteIndicator.opacity(0.6), radius: 3)
+            .overlay(
+                Circle()
+                    .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
+            )
+    }
+
+    private var halfDayIndicator: some View {
+        RoundedRectangle(cornerRadius: 2)
+            .fill(DesignColors.halfDayIndicator)
+            .frame(width: 8, height: DesignSizes.halfDayIndicator)
+            .shadow(color: DesignColors.halfDayIndicator.opacity(0.5), radius: 2)
     }
 
     // MARK: - Helpers
@@ -86,7 +153,7 @@ struct DayCellView: View {
 
     private func getTextColor(effectiveShift: (name: String, isAutomatic: Bool)?) -> Color {
         guard let shift = effectiveShift else {
-            return .white
+            return isWeekend ? DesignColors.textSecondary : .white
         }
 
         let bgColor = getShiftColorForType(
