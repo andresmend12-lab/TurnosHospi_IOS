@@ -43,14 +43,14 @@ struct AssignmentControlPanel: View {
             Spacer()
 
             // Badge indicador de turno seleccionado
-            if let selected = viewModel.selectedShiftToApply {
-                Text(selected)
+            if !viewModel.selectedShiftToApply.isEmpty {
+                Text(viewModel.selectedShiftToApply)
                     .font(DesignFonts.captionBold)
                     .padding(.horizontal, DesignSpacing.md)
                     .padding(.vertical, DesignSpacing.xs)
                     .background(
                         Capsule()
-                            .fill(getShiftColorForType(selected, customShiftTypes: viewModel.customShiftTypes, themeManager: themeManager))
+                            .fill(getShiftColorForType(viewModel.selectedShiftToApply, customShiftTypes: viewModel.customShiftTypes, themeManager: themeManager))
                     )
                     .foregroundColor(.white)
             }

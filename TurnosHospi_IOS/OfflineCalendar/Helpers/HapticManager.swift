@@ -41,4 +41,9 @@ enum HapticManager {
     static func error() {
         notification(.error)
     }
+
+    /// Feedback para advertencia
+    static func warning() {
+        notification(.warning)
+    }
 }
