@@ -162,12 +162,6 @@ struct StatisticsTabView: View {
                 )
             }
 
-            // NOTA: Para habilitar gráficos, añadir estos archivos al proyecto en Xcode:
-            // - Views/Components/Charts/ShiftPieChart.swift
-            // - Views/Components/Charts/ShiftBarChart.swift
-            // Luego descomentar las siguientes líneas:
-
-            /*
             // Gráfico de pastel
             if !stats.breakdown.isEmpty {
                 ShiftPieChart(
@@ -185,7 +179,6 @@ struct StatisticsTabView: View {
                 previousMonthName: previousMonthName,
                 animate: animateStats
             )
-            */
 
             // Detalle por turno
             if !stats.breakdown.isEmpty {
