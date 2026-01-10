@@ -9,6 +9,11 @@ struct OfflineCalendarView: View {
     @State private var showConfigDialog = false
     @State private var selectedTab: OfflineCalendarTab = .calendar
 
+    // Nuevos sheets
+    @State private var showExportSheet = false
+    @State private var showDatePicker = false
+    @State private var showTemplates = false
+
     init(showSettings: Binding<Bool> = .constant(false)) {
         _showSettings = showSettings
     }
@@ -43,6 +48,18 @@ struct OfflineCalendarView: View {
         .sheet(isPresented: $showConfigDialog) {
             OfflineCalendarSettingsView(viewModel: viewModel)
         }
+        .sheet(isPresented: $showExportSheet) {
+            ExportSheet(viewModel: viewModel)
+                .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showDatePicker) {
+            DatePickerSheet(viewModel: viewModel)
+                .presentationDetents([.large])
+        }
+        .sheet(isPresented: $showTemplates) {
+            TemplateSheet(viewModel: viewModel)
+                .presentationDetents([.large])
+        }
     }
 
     // MARK: - Header View
@@ -62,12 +79,46 @@ struct OfflineCalendarView: View {
             Spacer()
 
             if !viewModel.isAssignmentMode {
+                // Menú de opciones
+                if selectedTab == .calendar {
+                    optionsMenu
+                }
+
                 settingsButton
             }
         }
         .padding(.horizontal, DesignSpacing.lg)
         .padding(.top, DesignSpacing.md)
         .padding(.bottom, DesignSpacing.sm)
+    }
+
+    // MARK: - Options Menu
+
+    private var optionsMenu: some View {
+        Menu {
+            Button {
+                showDatePicker = true
+            } label: {
+                Label("Ir a fecha", systemImage: "calendar.badge.clock")
+            }
+
+            Button {
+                showTemplates = true
+            } label: {
+                Label("Plantillas", systemImage: "doc.on.doc")
+            }
+
+            Button {
+                showExportSheet = true
+            } label: {
+                Label("Exportar", systemImage: "square.and.arrow.up")
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.system(size: 20))
+                .foregroundColor(DesignColors.textSecondary)
+                .frame(width: 44, height: 44)
+        }
     }
 
     // MARK: - Tab Content
@@ -123,6 +174,9 @@ struct OfflineCalendarView: View {
                 // Card de configuración rápida
                 quickSettingsCard
 
+                // Acciones rápidas
+                quickActionsCard
+
                 // Botón para configuración completa
                 fullSettingsButton
             }
@@ -158,6 +212,42 @@ struct OfflineCalendarView: View {
                     .foregroundColor(.white)
             }
             .tint(DesignColors.accent)
+        }
+        .padding(DesignSpacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: DesignCornerRadius.large)
+                .fill(DesignGradients.cardElevated)
+        )
+    }
+
+    private var quickActionsCard: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.lg) {
+            Label("Acciones Rápidas", systemImage: "bolt.fill")
+                .font(DesignFonts.headline)
+                .foregroundColor(DesignColors.accent)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignSpacing.md) {
+                QuickActionButton(title: "Ir a fecha", icon: "calendar.badge.clock") {
+                    showDatePicker = true
+                }
+
+                QuickActionButton(title: "Plantillas", icon: "doc.on.doc") {
+                    showTemplates = true
+                }
+
+                QuickActionButton(title: "Exportar", icon: "square.and.arrow.up") {
+                    showExportSheet = true
+                }
+
+                QuickActionButton(title: "Hoy", icon: "sun.max.fill") {
+                    withAnimation {
+                        viewModel.currentMonth = Date()
+                        viewModel.selectedDate = Date()
+                        selectedTab = .calendar
+                    }
+                    HapticManager.selection()
+                }
+            }
         }
         .padding(DesignSpacing.lg)
         .background(
@@ -251,6 +341,34 @@ struct OfflineCalendarView: View {
         formatter.locale = Locale(identifier: "es_ES")
         formatter.dateFormat = "EEEE, d 'de' MMMM"
         return formatter.string(from: Date()).capitalized
+    }
+}
+
+// MARK: - Quick Action Button
+
+struct QuickActionButton: View {
+    let title: String
+    let icon: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: DesignSpacing.sm) {
+                Image(systemName: icon)
+                    .font(.system(size: 22))
+                    .foregroundColor(DesignColors.accent)
+
+                Text(title)
+                    .font(DesignFonts.caption)
+                    .foregroundColor(DesignColors.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(DesignSpacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: DesignCornerRadius.medium)
+                    .fill(DesignColors.cardBackgroundLight)
+            )
+        }
     }
 }
 

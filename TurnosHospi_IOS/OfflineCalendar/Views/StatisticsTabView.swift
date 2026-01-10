@@ -13,6 +13,28 @@ struct StatisticsTabView: View {
         viewModel.calculateStats(for: currentMonth)
     }
 
+    private var previousMonth: Date {
+        Calendar.current.date(byAdding: .month, value: -1, to: currentMonth) ?? currentMonth
+    }
+
+    private var previousMonthStats: OfflineMonthlyStats {
+        viewModel.calculateStats(for: previousMonth)
+    }
+
+    private var currentMonthName: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "es_ES")
+        formatter.dateFormat = "MMM"
+        return formatter.string(from: currentMonth).capitalized
+    }
+
+    private var previousMonthName: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "es_ES")
+        formatter.dateFormat = "MMM"
+        return formatter.string(from: previousMonth).capitalized
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: DesignSpacing.xl) {
@@ -139,6 +161,24 @@ struct StatisticsTabView: View {
                     color: DesignColors.success
                 )
             }
+
+            // Gráfico de pastel
+            if !stats.breakdown.isEmpty {
+                ShiftPieChart(
+                    data: stats.breakdown,
+                    customShiftTypes: viewModel.customShiftTypes,
+                    animate: animateStats
+                )
+            }
+
+            // Comparativa mensual
+            ShiftBarChart(
+                currentMonth: stats,
+                previousMonth: previousMonthStats,
+                currentMonthName: currentMonthName,
+                previousMonthName: previousMonthName,
+                animate: animateStats
+            )
 
             // Detalle por turno
             if !stats.breakdown.isEmpty {
