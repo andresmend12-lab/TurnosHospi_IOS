@@ -7,6 +7,7 @@ struct OfflineCalendarView: View {
     @StateObject private var viewModel = OfflineCalendarViewModel()
     @Binding var showSettings: Bool
     @State private var showConfigDialog = false
+    @State private var selectedTab: OfflineCalendarTab = .calendar
 
     init(showSettings: Binding<Bool> = .constant(false)) {
         _showSettings = showSettings
@@ -15,40 +16,72 @@ struct OfflineCalendarView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                DesignColors.background.edgesIgnoringSafeArea(.all)
+                // Fondo con gradiente
+                DesignGradients.backgroundMain
+                    .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    tabPicker
+                    // Header
+                    headerView
 
-                    if viewModel.selectedTab == 0 {
-                        calendarTabView
-                    } else {
-                        StatisticsTabView(viewModel: viewModel)
+                    // Contenido principal según tab
+                    tabContent
+
+                    // Tab bar personalizado
+                    if !viewModel.isAssignmentMode {
+                        CustomTabBar(selectedTab: $selectedTab)
                     }
                 }
             }
-            .navigationBarTitle("Mi Planilla", displayMode: .inline)
-            .navigationBarBackButtonHidden(true)
+            .navigationBarHidden(true)
             .onAppear {
                 viewModel.loadData()
             }
         }
+        .navigationViewStyle(.stack)
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showConfigDialog) {
             OfflineCalendarSettingsView(viewModel: viewModel)
         }
     }
 
-    // MARK: - Tab Picker
+    // MARK: - Header View
 
-    private var tabPicker: some View {
-        Picker("Vista", selection: $viewModel.selectedTab) {
-            Text("Calendario").tag(0)
-            Text("Estadísticas").tag(1)
+    private var headerView: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: DesignSpacing.xxs) {
+                Text("Mi Planilla")
+                    .font(DesignFonts.titleLarge)
+                    .foregroundColor(.white)
+
+                Text(currentDateString())
+                    .font(DesignFonts.caption)
+                    .foregroundColor(DesignColors.textSecondary)
+            }
+
+            Spacer()
+
+            if !viewModel.isAssignmentMode {
+                settingsButton
+            }
         }
-        .pickerStyle(.segmented)
-        .padding()
-        .background(DesignColors.background)
+        .padding(.horizontal, DesignSpacing.lg)
+        .padding(.top, DesignSpacing.md)
+        .padding(.bottom, DesignSpacing.sm)
+    }
+
+    // MARK: - Tab Content
+
+    @ViewBuilder
+    private var tabContent: some View {
+        switch selectedTab {
+        case .calendar:
+            calendarTabView
+        case .statistics:
+            StatisticsTabView(viewModel: viewModel)
+        case .settings:
+            settingsTabView
+        }
     }
 
     // MARK: - Calendar Tab
@@ -56,30 +89,98 @@ struct OfflineCalendarView: View {
     private var calendarTabView: some View {
         ZStack(alignment: .bottomTrailing) {
             VStack(spacing: 0) {
-                ZStack(alignment: .topTrailing) {
-                    VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: DesignSpacing.md) {
+                        // Grid del calendario
                         CalendarGridView(viewModel: viewModel)
-                            .padding(.horizontal)
+                            .padding(.horizontal, DesignSpacing.md)
 
+                        // Leyenda expandible
                         if !viewModel.isAssignmentMode {
                             LegendView(items: viewModel.legendItems, viewModel: viewModel)
-                                .padding(.vertical, DesignSpacing.sm)
+                                .padding(.horizontal, DesignSpacing.md)
                         }
                     }
-
-                    if !viewModel.isAssignmentMode {
-                        settingsButton
-                    }
+                    .padding(.bottom, viewModel.isAssignmentMode ? 200 : 280)
                 }
 
-                Spacer(minLength: 0)
-
+                // Panel de control
                 controlPanel
             }
 
+            // FAB para modo asignación
             if !viewModel.isAssignmentMode {
                 floatingActionButton
             }
+        }
+    }
+
+    // MARK: - Settings Tab View
+
+    private var settingsTabView: some View {
+        ScrollView {
+            VStack(spacing: DesignSpacing.lg) {
+                // Card de configuración rápida
+                quickSettingsCard
+
+                // Botón para configuración completa
+                fullSettingsButton
+            }
+            .padding(DesignSpacing.lg)
+        }
+        .background(DesignGradients.backgroundMain.ignoresSafeArea())
+    }
+
+    private var quickSettingsCard: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.lg) {
+            Label("Configuración Rápida", systemImage: "slider.horizontal.3")
+                .font(DesignFonts.headline)
+                .foregroundColor(DesignColors.accent)
+
+            // Patrón actual
+            HStack {
+                Text("Patrón de turnos")
+                    .font(DesignFonts.body)
+                    .foregroundColor(.white)
+                Spacer()
+                Text(viewModel.shiftPattern.title)
+                    .font(DesignFonts.bodyMedium)
+                    .foregroundColor(DesignColors.accent)
+            }
+
+            Divider()
+                .background(DesignColors.border)
+
+            // Media jornada
+            Toggle(isOn: $viewModel.allowHalfDay) {
+                Text("Medias jornadas")
+                    .font(DesignFonts.body)
+                    .foregroundColor(.white)
+            }
+            .tint(DesignColors.accent)
+        }
+        .padding(DesignSpacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: DesignCornerRadius.large)
+                .fill(DesignGradients.cardElevated)
+        )
+    }
+
+    private var fullSettingsButton: some View {
+        Button(action: { showConfigDialog = true }) {
+            HStack {
+                Image(systemName: "gearshape.fill")
+                Text("Configuración Completa")
+                Spacer()
+                Image(systemName: "chevron.right")
+            }
+            .font(DesignFonts.bodyMedium)
+            .foregroundColor(.white)
+            .padding(DesignSpacing.lg)
+            .background(
+                RoundedRectangle(cornerRadius: DesignCornerRadius.medium)
+                    .fill(DesignColors.cardBackground)
+            )
         }
     }
 
@@ -87,44 +188,69 @@ struct OfflineCalendarView: View {
 
     private var settingsButton: some View {
         Button(action: { showConfigDialog = true }) {
-            Image(systemName: "gearshape")
-                .foregroundColor(.black)
-                .padding(DesignSpacing.sm)
-                .background(Color.white)
-                .clipShape(Circle())
-                .shadow(color: DesignShadows.medium, radius: 4, x: 0, y: 2)
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 18))
+                .foregroundColor(DesignColors.accent)
+                .frame(width: 44, height: 44)
+                .background(
+                    Circle()
+                        .fill(DesignColors.glassBackground)
+                        .overlay(
+                            Circle()
+                                .stroke(DesignColors.glassBorder, lineWidth: 1)
+                        )
+                )
         }
-        .padding(.trailing, DesignSpacing.xxl)
-        .padding(.top, DesignSpacing.xs)
     }
 
     private var controlPanel: some View {
         Group {
             if viewModel.isAssignmentMode {
                 AssignmentControlPanel(viewModel: viewModel)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             } else {
                 NotesControlPanel(viewModel: viewModel)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .background(DesignColors.cardBackground)
-        .cornerRadius(DesignCornerRadius.large, corners: [.topLeft, .topRight])
-        .shadow(color: DesignShadows.heavy, radius: 8, x: 0, y: -4)
+        .animation(DesignAnimation.springGentle, value: viewModel.isAssignmentMode)
     }
 
     private var floatingActionButton: some View {
         Button(action: {
-            viewModel.isAssignmentMode = true
+            withAnimation(DesignAnimation.springBouncy) {
+                viewModel.isAssignmentMode = true
+            }
+            HapticManager.impact()
         }) {
-            Image(systemName: "pencil")
-                .font(.title2)
-                .foregroundColor(.black)
-                .padding(DesignSpacing.lg)
-                .background(DesignColors.accent)
-                .clipShape(Circle())
-                .shadow(radius: 4)
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [DesignColors.accent, DesignColors.accentSecondary],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: DesignSizes.fabButton, height: DesignSizes.fabButton)
+                    .shadow(color: DesignColors.accent.opacity(0.4), radius: 12, y: 6)
+
+                Image(systemName: "pencil")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.white)
+            }
         }
         .padding(.trailing, DesignSpacing.xl)
-        .padding(.bottom, 220)
+        .padding(.bottom, 240)
+    }
+
+    // MARK: - Helpers
+
+    private func currentDateString() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "es_ES")
+        formatter.dateFormat = "EEEE, d 'de' MMMM"
+        return formatter.string(from: Date()).capitalized
     }
 }
 
