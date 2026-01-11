@@ -9,9 +9,8 @@ struct OfflineCalendarView: View {
     @State private var showConfigDialog = false
     @State private var selectedTab: OfflineCalendarTab = .calendar
 
-    // Nuevos sheets
+    // Sheets
     @State private var showExportSheet = false
-    @State private var showDatePicker = false
     @State private var showTemplates = false
 
     // Bottom sheet state
@@ -62,11 +61,6 @@ struct OfflineCalendarView: View {
             ExportSheet(viewModel: viewModel)
                 .environmentObject(themeManager)
                 .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $showDatePicker) {
-            DatePickerSheet(viewModel: viewModel)
-                .environmentObject(themeManager)
-                .presentationDetents([.large])
         }
         .sheet(isPresented: $showTemplates) {
             TemplateSheet(viewModel: viewModel)
@@ -525,30 +519,17 @@ struct OfflineCalendarView: View {
 
     private var quickActionsCard: some View {
         VStack(alignment: .leading, spacing: DesignSpacing.lg) {
-            Label("Acciones Rápidas", systemImage: "bolt.fill")
+            Label("Herramientas", systemImage: "wrench.and.screwdriver.fill")
                 .font(DesignFonts.headline)
                 .foregroundColor(DesignColors.accent)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DesignSpacing.md) {
-                QuickActionButton(title: "Ir a fecha", icon: "calendar.badge.clock") {
-                    showDatePicker = true
-                }
-
                 QuickActionButton(title: "Plantillas", icon: "doc.on.doc") {
                     showTemplates = true
                 }
 
                 QuickActionButton(title: "Exportar", icon: "square.and.arrow.up") {
                     showExportSheet = true
-                }
-
-                QuickActionButton(title: "Hoy", icon: "sun.max.fill") {
-                    withAnimation {
-                        viewModel.currentMonth = Date()
-                        viewModel.selectedDate = Date()
-                        selectedTab = .calendar
-                    }
-                    HapticManager.selection()
                 }
             }
         }
