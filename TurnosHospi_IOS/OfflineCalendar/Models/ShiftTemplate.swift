@@ -1,132 +1,96 @@
 import Foundation
 
-// MARK: - Modelo de Plantilla de Turnos
+// MARK: - Modelo de Plantilla de Turnos Personalizable
 
 struct ShiftTemplate: Codable, Identifiable, Equatable {
-    let id: UUID
+    var id: UUID
     var name: String
     var description: String
-    var pattern: [TemplateDay]
-    var rotationWeeks: Int
+    var weekPattern: [String?]  // Array de 7 elementos: [Lunes, Martes, ..., Domingo]
+                                 // nil = Libre, String = nombre del turno
 
     init(
         id: UUID = UUID(),
-        name: String,
+        name: String = "",
         description: String = "",
-        pattern: [TemplateDay],
-        rotationWeeks: Int = 1
+        weekPattern: [String?] = Array(repeating: nil, count: 7)
     ) {
         self.id = id
         self.name = name
         self.description = description
-        self.pattern = pattern
-        self.rotationWeeks = rotationWeeks
+        // Asegurar que siempre tenga 7 elementos
+        self.weekPattern = weekPattern.count == 7 ? weekPattern : Array(repeating: nil, count: 7)
     }
+
+    // Helper para obtener el turno de un día específico
+    func shift(for dayIndex: Int) -> String? {
+        guard dayIndex >= 0 && dayIndex < 7 else { return nil }
+        return weekPattern[dayIndex]
+    }
+
+    // Helper para establecer el turno de un día específico
+    mutating func setShift(_ shiftName: String?, for dayIndex: Int) {
+        guard dayIndex >= 0 && dayIndex < 7 else { return }
+        weekPattern[dayIndex] = shiftName
+    }
+
+    // Nombres de los días
+    static let dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+    static let dayAbbreviations = ["L", "M", "X", "J", "V", "S", "D"]
 }
 
-struct TemplateDay: Codable, Equatable {
-    let dayIndex: Int
-    let shiftName: String?
-    let isHalfDay: Bool
+// MARK: - Gestor de Plantillas (Persistencia)
 
-    init(dayIndex: Int, shiftName: String? = nil, isHalfDay: Bool = false) {
-        self.dayIndex = dayIndex
-        self.shiftName = shiftName
-        self.isHalfDay = isHalfDay
+class TemplateManager: ObservableObject {
+    static let shared = TemplateManager()
+
+    @Published var templates: [ShiftTemplate] = []
+
+    private let userDefaultsKey = "user_shift_templates"
+
+    private init() {
+        loadTemplates()
     }
-}
 
-// MARK: - Plantillas predefinidas
+    // MARK: - Cargar plantillas
 
-extension ShiftTemplate {
+    func loadTemplates() {
+        guard let data = UserDefaults.standard.data(forKey: userDefaultsKey),
+              let decoded = try? JSONDecoder().decode([ShiftTemplate].self, from: data) else {
+            templates = []
+            return
+        }
+        templates = decoded
+    }
 
-    static let predefined: [ShiftTemplate] = [
-        // Turno rotativo mañana/tarde
-        ShiftTemplate(
-            name: "Rotativo M/T",
-            description: "Alterna mañana y tarde cada semana",
-            pattern: [
-                TemplateDay(dayIndex: 0, shiftName: "Mañana"),
-                TemplateDay(dayIndex: 1, shiftName: "Mañana"),
-                TemplateDay(dayIndex: 2, shiftName: "Mañana"),
-                TemplateDay(dayIndex: 3, shiftName: "Mañana"),
-                TemplateDay(dayIndex: 4, shiftName: "Mañana"),
-                TemplateDay(dayIndex: 5),
-                TemplateDay(dayIndex: 6),
-                TemplateDay(dayIndex: 0, shiftName: "Tarde"),
-                TemplateDay(dayIndex: 1, shiftName: "Tarde"),
-                TemplateDay(dayIndex: 2, shiftName: "Tarde"),
-                TemplateDay(dayIndex: 3, shiftName: "Tarde"),
-                TemplateDay(dayIndex: 4, shiftName: "Tarde"),
-                TemplateDay(dayIndex: 5),
-                TemplateDay(dayIndex: 6),
-            ],
-            rotationWeeks: 2
-        ),
+    // MARK: - Guardar plantillas
 
-        // Turno de noches
-        ShiftTemplate(
-            name: "Noches 4x3",
-            description: "4 noches seguidas, 3 días libres",
-            pattern: [
-                TemplateDay(dayIndex: 0, shiftName: "Noche"),
-                TemplateDay(dayIndex: 1, shiftName: "Noche"),
-                TemplateDay(dayIndex: 2, shiftName: "Noche"),
-                TemplateDay(dayIndex: 3, shiftName: "Noche"),
-                TemplateDay(dayIndex: 4),
-                TemplateDay(dayIndex: 5),
-                TemplateDay(dayIndex: 6),
-            ],
-            rotationWeeks: 1
-        ),
+    private func saveTemplates() {
+        guard let encoded = try? JSONEncoder().encode(templates) else { return }
+        UserDefaults.standard.set(encoded, forKey: userDefaultsKey)
+    }
 
-        // 12 horas
-        ShiftTemplate(
-            name: "12h Día/Noche",
-            description: "2 días, 2 noches, 4 libres",
-            pattern: [
-                TemplateDay(dayIndex: 0, shiftName: "Día"),
-                TemplateDay(dayIndex: 1, shiftName: "Día"),
-                TemplateDay(dayIndex: 2, shiftName: "Noche"),
-                TemplateDay(dayIndex: 3, shiftName: "Noche"),
-                TemplateDay(dayIndex: 4),
-                TemplateDay(dayIndex: 5),
-                TemplateDay(dayIndex: 6),
-                TemplateDay(dayIndex: 0),
-            ],
-            rotationWeeks: 1
-        ),
+    // MARK: - CRUD Operations
 
-        // Solo fines de semana
-        ShiftTemplate(
-            name: "Fines de semana",
-            description: "Solo sábado y domingo",
-            pattern: [
-                TemplateDay(dayIndex: 0),
-                TemplateDay(dayIndex: 1),
-                TemplateDay(dayIndex: 2),
-                TemplateDay(dayIndex: 3),
-                TemplateDay(dayIndex: 4),
-                TemplateDay(dayIndex: 5, shiftName: "Mañana"),
-                TemplateDay(dayIndex: 6, shiftName: "Mañana"),
-            ],
-            rotationWeeks: 1
-        ),
+    func addTemplate(_ template: ShiftTemplate) {
+        templates.append(template)
+        saveTemplates()
+    }
 
-        // Turno partido
-        ShiftTemplate(
-            name: "Partido L-V",
-            description: "Mañana y tarde de lunes a viernes",
-            pattern: [
-                TemplateDay(dayIndex: 0, shiftName: "Mañana"),
-                TemplateDay(dayIndex: 1, shiftName: "Tarde"),
-                TemplateDay(dayIndex: 2, shiftName: "Mañana"),
-                TemplateDay(dayIndex: 3, shiftName: "Tarde"),
-                TemplateDay(dayIndex: 4, shiftName: "Mañana"),
-                TemplateDay(dayIndex: 5),
-                TemplateDay(dayIndex: 6),
-            ],
-            rotationWeeks: 1
-        ),
-    ]
+    func updateTemplate(_ template: ShiftTemplate) {
+        if let index = templates.firstIndex(where: { $0.id == template.id }) {
+            templates[index] = template
+            saveTemplates()
+        }
+    }
+
+    func deleteTemplate(id: UUID) {
+        templates.removeAll { $0.id == id }
+        saveTemplates()
+    }
+
+    func deleteTemplate(at offsets: IndexSet) {
+        templates.remove(atOffsets: offsets)
+        saveTemplates()
+    }
 }
