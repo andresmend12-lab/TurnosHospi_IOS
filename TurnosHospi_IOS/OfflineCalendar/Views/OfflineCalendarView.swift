@@ -14,6 +14,15 @@ struct OfflineCalendarView: View {
     @State private var showDatePicker = false
     @State private var showTemplates = false
 
+    // Bottom sheet state
+    @State private var sheetOffset: CGFloat = 0
+    @State private var lastSheetOffset: CGFloat = 0
+    @State private var sheetExpanded: Bool = false
+
+    // Constantes para el bottom sheet
+    private let sheetMinHeight: CGFloat = 140
+    private let sheetMaxHeight: CGFloat = UIScreen.main.bounds.height * 0.55
+
     init(showSettings: Binding<Bool> = .constant(false)) {
         _showSettings = showSettings
     }
@@ -142,33 +151,360 @@ struct OfflineCalendarView: View {
     // MARK: - Calendar Tab
 
     private var calendarTabView: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: DesignSpacing.md) {
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                // Capa 1: Calendario FIJO (siempre visible)
+                VStack(spacing: 0) {
                     // Grid del calendario
                     CalendarGridView(viewModel: viewModel)
                         .padding(.horizontal, DesignSpacing.md)
 
-                    // Leyenda expandible
+                    // Leyenda
                     if !viewModel.isAssignmentMode {
                         LegendView(items: viewModel.legendItems, viewModel: viewModel)
                             .padding(.horizontal, DesignSpacing.md)
+                            .padding(.top, DesignSpacing.sm)
                     }
+
+                    Spacer()
                 }
-                .padding(.bottom, viewModel.isAssignmentMode ? 180 : 220)
-            }
 
-            // Panel de control con FAB superpuesto
-            ZStack(alignment: .topTrailing) {
-                controlPanel
-
-                // FAB para modo asignación
-                if !viewModel.isAssignmentMode {
-                    floatingActionButton
-                        .offset(y: -30)
+                // Capa 2: Bottom Sheet deslizable
+                if viewModel.isAssignmentMode {
+                    // Modo asignación: panel fijo sin arrastrar
+                    AssignmentControlPanel(viewModel: viewModel)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    // Modo normal: bottom sheet deslizable
+                    draggableBottomSheet(geometry: geometry)
                 }
             }
         }
+    }
+
+    // MARK: - Draggable Bottom Sheet
+
+    private func draggableBottomSheet(geometry: GeometryProxy) -> some View {
+        let currentHeight = sheetMinHeight + sheetOffset
+
+        return VStack(spacing: 0) {
+            // Handle para arrastrar
+            sheetHandle
+
+            // Contenido del panel
+            bottomSheetContent
+        }
+        .frame(height: max(sheetMinHeight, min(currentHeight, sheetMaxHeight)))
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: DesignCornerRadius.extraLarge)
+                .fill(DesignColors.cardBackground)
+                .shadow(color: Color.black.opacity(0.3), radius: 20, y: -5)
+        )
+        .overlay(
+            // FAB superpuesto
+            floatingActionButton
+                .offset(x: -16, y: -28),
+            alignment: .topTrailing
+        )
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    let newOffset = lastSheetOffset - value.translation.height
+                    sheetOffset = max(0, min(newOffset, sheetMaxHeight - sheetMinHeight))
+                }
+                .onEnded { value in
+                    let velocity = value.predictedEndLocation.y - value.location.y
+                    let threshold = (sheetMaxHeight - sheetMinHeight) / 2
+
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        if velocity > 100 {
+                            // Arrastrar hacia abajo rápido: colapsar
+                            sheetOffset = 0
+                            sheetExpanded = false
+                        } else if velocity < -100 {
+                            // Arrastrar hacia arriba rápido: expandir
+                            sheetOffset = sheetMaxHeight - sheetMinHeight
+                            sheetExpanded = true
+                        } else if sheetOffset > threshold {
+                            // Más de la mitad: expandir
+                            sheetOffset = sheetMaxHeight - sheetMinHeight
+                            sheetExpanded = true
+                        } else {
+                            // Menos de la mitad: colapsar
+                            sheetOffset = 0
+                            sheetExpanded = false
+                        }
+                        lastSheetOffset = sheetOffset
+                    }
+                    HapticManager.selection()
+                }
+        )
+    }
+
+    private var sheetHandle: some View {
+        VStack(spacing: DesignSpacing.xs) {
+            // Barra indicadora
+            RoundedRectangle(cornerRadius: 3)
+                .fill(DesignColors.textTertiary.opacity(0.5))
+                .frame(width: 40, height: 5)
+                .padding(.top, DesignSpacing.sm)
+
+            // Indicador de expansión
+            HStack {
+                Image(systemName: sheetExpanded ? "chevron.down" : "chevron.up")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(DesignColors.textTertiary)
+
+                Text(sheetExpanded ? "Desliza para cerrar" : "Desliza para ver más")
+                    .font(DesignFonts.caption)
+                    .foregroundColor(DesignColors.textTertiary)
+
+                Image(systemName: sheetExpanded ? "chevron.down" : "chevron.up")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(DesignColors.textTertiary)
+            }
+            .padding(.bottom, DesignSpacing.xs)
+        }
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+    }
+
+    private var bottomSheetContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignSpacing.md) {
+                // Header del día seleccionado
+                dayInfoHeader
+
+                Divider()
+                    .background(DesignColors.border)
+
+                // Sección de notas
+                notesSection
+            }
+            .padding(.horizontal, DesignSpacing.lg)
+            .padding(.bottom, DesignSpacing.lg)
+        }
+    }
+
+    private var dayInfoHeader: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: DesignSpacing.xs) {
+                Text(formattedSelectedDate)
+                    .font(DesignFonts.headline)
+                    .foregroundColor(.white)
+
+                // Turno del día
+                let key = viewModel.dateKey(for: viewModel.selectedDate)
+                let shiftName = viewModel.localShifts[key]?.shiftName ?? "Libre"
+                let shiftColor = getShiftColorForType(
+                    shiftName,
+                    customShiftTypes: viewModel.customShiftTypes,
+                    themeManager: themeManager
+                )
+
+                HStack(spacing: DesignSpacing.xs) {
+                    Circle()
+                        .fill(shiftColor)
+                        .frame(width: 10, height: 10)
+                    Text(shiftName)
+                        .font(DesignFonts.caption)
+                        .foregroundColor(DesignColors.textSecondary)
+                }
+            }
+
+            Spacer()
+
+            // Badge de notas
+            let notesCount = viewModel.localNotes[viewModel.dateKey(for: viewModel.selectedDate)]?.count ?? 0
+            if notesCount > 0 {
+                Text("\(notesCount)")
+                    .font(DesignFonts.captionBold)
+                    .foregroundColor(.white)
+                    .frame(width: 24, height: 24)
+                    .background(DesignColors.accent)
+                    .clipShape(Circle())
+            }
+        }
+    }
+
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: DesignSpacing.sm) {
+            // Header de notas
+            HStack {
+                Label("Anotaciones", systemImage: "note.text")
+                    .font(DesignFonts.bodyMedium)
+                    .foregroundColor(DesignColors.accent)
+
+                Spacer()
+
+                if !viewModel.isAddingNote && viewModel.editingNoteIndex == nil {
+                    Button(action: {
+                        withAnimation(DesignAnimation.springBouncy) {
+                            viewModel.isAddingNote = true
+                            viewModel.newNoteText = ""
+                            // Expandir el sheet al añadir nota
+                            if !sheetExpanded {
+                                sheetOffset = sheetMaxHeight - sheetMinHeight
+                                lastSheetOffset = sheetOffset
+                                sheetExpanded = true
+                            }
+                        }
+                        HapticManager.selection()
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(DesignColors.accent)
+                    }
+                }
+            }
+
+            // Lista de notas o estado vacío
+            notesListView
+
+            // Campo para nueva nota
+            if viewModel.isAddingNote {
+                addNoteField
+            }
+        }
+    }
+
+    private var notesListView: some View {
+        let key = viewModel.dateKey(for: viewModel.selectedDate)
+        let notes = viewModel.localNotes[key] ?? []
+
+        return Group {
+            if notes.isEmpty && !viewModel.isAddingNote {
+                HStack {
+                    Image(systemName: "text.bubble")
+                        .foregroundColor(DesignColors.textTertiary)
+                    Text("No hay notas. Pulsa + para crear una.")
+                        .font(DesignFonts.caption)
+                        .foregroundColor(DesignColors.textTertiary)
+                }
+                .padding(.vertical, DesignSpacing.md)
+            } else {
+                ForEach(Array(notes.enumerated()), id: \.offset) { index, note in
+                    if viewModel.editingNoteIndex == index {
+                        editNoteField(index: index)
+                    } else {
+                        noteRow(note: note, index: index)
+                    }
+                }
+            }
+        }
+    }
+
+    private func noteRow(note: String, index: Int) -> some View {
+        HStack(spacing: DesignSpacing.sm) {
+            Text(note)
+                .font(DesignFonts.body)
+                .foregroundColor(.white)
+                .padding(DesignSpacing.md)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignCornerRadius.small)
+                        .fill(DesignColors.glassBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DesignCornerRadius.small)
+                                .stroke(DesignColors.glassBorder, lineWidth: 1)
+                        )
+                )
+
+            VStack(spacing: DesignSpacing.xs) {
+                Button(action: {
+                    viewModel.editingNoteIndex = index
+                    viewModel.editingNoteText = note
+                    viewModel.isAddingNote = false
+                    HapticManager.selection()
+                }) {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(DesignColors.accent)
+                }
+
+                Button(action: {
+                    withAnimation(DesignAnimation.springBouncy) {
+                        viewModel.deleteNote(at: index)
+                    }
+                    HapticManager.warning()
+                }) {
+                    Image(systemName: "trash.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(DesignColors.error)
+                }
+            }
+        }
+    }
+
+    private func editNoteField(index: Int) -> some View {
+        HStack(spacing: DesignSpacing.sm) {
+            TextField("Editar nota", text: $viewModel.editingNoteText)
+                .textInputAutocapitalization(.sentences)
+                .padding(DesignSpacing.md)
+                .background(Color.white)
+                .foregroundColor(.black)
+                .cornerRadius(DesignCornerRadius.small)
+
+            Button(action: {
+                viewModel.updateNote(at: index)
+                HapticManager.success()
+            }) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(DesignColors.success)
+            }
+
+            Button(action: {
+                withAnimation {
+                    viewModel.editingNoteIndex = nil
+                }
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(DesignColors.error)
+            }
+        }
+    }
+
+    private var addNoteField: some View {
+        HStack(spacing: DesignSpacing.sm) {
+            TextField("Escribe una nota...", text: $viewModel.newNoteText)
+                .textInputAutocapitalization(.sentences)
+                .padding(DesignSpacing.md)
+                .background(Color.white)
+                .foregroundColor(.black)
+                .cornerRadius(DesignCornerRadius.small)
+
+            Button(action: {
+                viewModel.addNote()
+                HapticManager.success()
+            }) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(DesignColors.success)
+            }
+            .disabled(viewModel.newNoteText.trimmingCharacters(in: .whitespaces).isEmpty)
+            .opacity(viewModel.newNoteText.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
+
+            Button(action: {
+                withAnimation {
+                    viewModel.isAddingNote = false
+                }
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(DesignColors.error)
+            }
+        }
+        .padding(.top, DesignSpacing.sm)
+    }
+
+    private var formattedSelectedDate: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "es_ES")
+        formatter.dateFormat = "EEEE, d 'de' MMMM"
+        return formatter.string(from: viewModel.selectedDate).capitalized
     }
 
     // MARK: - Settings Tab View
@@ -296,19 +632,6 @@ struct OfflineCalendarView: View {
                         )
                 )
         }
-    }
-
-    private var controlPanel: some View {
-        Group {
-            if viewModel.isAssignmentMode {
-                AssignmentControlPanel(viewModel: viewModel)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            } else {
-                NotesControlPanel(viewModel: viewModel)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .animation(DesignAnimation.springGentle, value: viewModel.isAssignmentMode)
     }
 
     private var floatingActionButton: some View {
