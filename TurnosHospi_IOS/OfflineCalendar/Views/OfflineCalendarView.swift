@@ -90,48 +90,10 @@ struct OfflineCalendarView: View {
             }
 
             Spacer()
-
-            if !viewModel.isAssignmentMode {
-                // Menú de opciones (visible en calendario y estadísticas)
-                if selectedTab == .calendar || selectedTab == .statistics {
-                    optionsMenu
-                }
-
-                settingsButton
-            }
         }
         .padding(.horizontal, DesignSpacing.lg)
         .padding(.top, DesignSpacing.md)
         .padding(.bottom, DesignSpacing.sm)
-    }
-
-    // MARK: - Options Menu
-
-    private var optionsMenu: some View {
-        Menu {
-            Button {
-                showDatePicker = true
-            } label: {
-                Label("Ir a fecha", systemImage: "calendar.badge.clock")
-            }
-
-            Button {
-                showTemplates = true
-            } label: {
-                Label("Plantillas", systemImage: "doc.on.doc")
-            }
-
-            Button {
-                showExportSheet = true
-            } label: {
-                Label("Exportar", systemImage: "square.and.arrow.up")
-            }
-        } label: {
-            Image(systemName: "ellipsis.circle")
-                .font(.system(size: 20))
-                .foregroundColor(DesignColors.textSecondary)
-                .frame(width: 44, height: 44)
-        }
     }
 
     // MARK: - Tab Content
@@ -616,23 +578,6 @@ struct OfflineCalendarView: View {
     }
 
     // MARK: - Subviews
-
-    private var settingsButton: some View {
-        Button(action: { showConfigDialog = true }) {
-            Image(systemName: "gearshape.fill")
-                .font(.system(size: 18))
-                .foregroundColor(DesignColors.accent)
-                .frame(width: 44, height: 44)
-                .background(
-                    Circle()
-                        .fill(DesignColors.glassBackground)
-                        .overlay(
-                            Circle()
-                                .stroke(DesignColors.glassBorder, lineWidth: 1)
-                        )
-                )
-        }
-    }
 
     private var floatingActionButton: some View {
         Button(action: {
