@@ -96,17 +96,13 @@ struct OfflineCalendarSettingsView: View {
         Section(header: Text("Duración de turnos (horas)")) {
             let durationKeys = getDurationKeys()
             ForEach(durationKeys, id: \.self) { key in
-                HStack {
-                    Text(key)
-                    Spacer()
-                    TextField("Horas", value: Binding(
-                        get: { viewModel.shiftDurations[key] ?? 0.0 },
+                DurationTextField(
+                    label: key,
+                    value: Binding(
+                        get: { viewModel.shiftDurations[key] ?? 8.0 },
                         set: { viewModel.shiftDurations[key] = $0 }
-                    ), format: .number)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 100)
-                }
+                    )
+                )
             }
             Text("Las medias jornadas usan el 50% de la duración base.")
                 .font(.footnote)
@@ -161,5 +157,87 @@ struct OfflineCalendarSettingsView: View {
         case .custom:
             return []
         }
+    }
+}
+
+// MARK: - TextField de Duración Mejorado
+
+/// TextField que permite borrar completamente el campo y escribir un nuevo valor
+struct DurationTextField: View {
+    let label: String
+    @Binding var value: Double
+
+    @State private var text: String = ""
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack {
+            Text(label)
+            Spacer()
+            TextField("0", text: $text)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 80)
+                .focused($isFocused)
+                .onChange(of: text) { newValue in
+                    // Filtrar solo números y punto decimal
+                    let filtered = newValue.filter { $0.isNumber || $0 == "." || $0 == "," }
+                    // Reemplazar coma por punto
+                    let normalized = filtered.replacingOccurrences(of: ",", with: ".")
+                    // Evitar múltiples puntos
+                    let parts = normalized.split(separator: ".", omittingEmptySubsequences: false)
+                    if parts.count > 2 {
+                        text = String(parts[0]) + "." + String(parts[1])
+                    } else if filtered != newValue {
+                        text = normalized
+                    }
+                }
+                .onChange(of: isFocused) { focused in
+                    if !focused {
+                        // Al perder el foco, guardar el valor
+                        saveValue()
+                    }
+                }
+                .onSubmit {
+                    saveValue()
+                }
+            Text("h")
+                .foregroundColor(.secondary)
+        }
+        .onAppear {
+            // Inicializar texto desde el valor
+            text = formatValue(value)
+        }
+        .onChange(of: value) { newValue in
+            // Sincronizar si el valor externo cambia
+            if !isFocused {
+                text = formatValue(newValue)
+            }
+        }
+    }
+
+    private func formatValue(_ val: Double) -> String {
+        if val == floor(val) {
+            return String(format: "%.0f", val)
+        } else {
+            return String(format: "%.1f", val)
+        }
+    }
+
+    private func saveValue() {
+        if text.isEmpty {
+            // Si está vacío, usar valor por defecto
+            value = 8.0
+            text = "8"
+        } else if let parsed = Double(text.replacingOccurrences(of: ",", with: ".")) {
+            // Limitar entre 0.5 y 24 horas
+            let clamped = max(0.5, min(24.0, parsed))
+            value = clamped
+            text = formatValue(clamped)
+        } else {
+            // Si no se puede parsear, restaurar el valor anterior
+            text = formatValue(value)
+        }
+        HapticManager.selection()
     }
 }
