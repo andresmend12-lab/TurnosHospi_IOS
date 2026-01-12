@@ -46,8 +46,8 @@ class TemplateManager: ObservableObject {
 
     @Published var templates: [ShiftTemplate] = []
 
-    private let userDefaultsKey = "user_shift_templates"
-    private let migrationKey = "templates_migrated_v2"
+    private let userDefaultsKey = "user_shift_templates_v3"
+    private let migrationKey = "templates_migrated_v3"
 
     private init() {
         migrateIfNeeded()
@@ -62,14 +62,18 @@ class TemplateManager: ObservableObject {
             return
         }
 
-        // Limpiar cualquier dato antiguo de plantillas
+        // Limpiar cualquier dato antiguo de plantillas (todas las versiones anteriores)
+        UserDefaults.standard.removeObject(forKey: "user_shift_templates")
+        UserDefaults.standard.removeObject(forKey: "user_shift_templates_v2")
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+        UserDefaults.standard.removeObject(forKey: "shiftTemplates")
+        UserDefaults.standard.removeObject(forKey: "templates")
 
         // Marcar como migrado
         UserDefaults.standard.set(true, forKey: migrationKey)
         UserDefaults.standard.synchronize()
 
-        print("✅ Plantillas migradas: datos antiguos eliminados")
+        print("✅ Plantillas migradas v3: datos antiguos eliminados")
     }
 
     // MARK: - Cargar plantillas

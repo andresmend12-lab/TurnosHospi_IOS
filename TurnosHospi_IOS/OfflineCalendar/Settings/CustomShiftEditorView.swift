@@ -165,13 +165,6 @@ struct CustomShiftEditorView: View {
             return
         }
 
-        // Verificar nombres reservados
-        let reservedNames = ["mañana", "tarde", "noche", "saliente", "día", "libre", "vacaciones"]
-        if reservedNames.contains(trimmed.lowercased()) {
-            nameError = "Este nombre está reservado"
-            return
-        }
-
         nameError = nil
     }
 
