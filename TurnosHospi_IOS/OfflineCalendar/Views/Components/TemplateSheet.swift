@@ -9,7 +9,7 @@ struct TemplateSheet: View {
 
     @State private var selectedTemplate: ShiftTemplate? = nil
     @State private var startDate = Date()
-    @State private var weeksToApply = 4
+    @State private var repetitions = 4  // Número de veces que se repite el patrón
     @State private var showConfirmation = false
     @State private var showEditor = false
     @State private var editingTemplate: ShiftTemplate? = nil
@@ -169,6 +169,17 @@ struct TemplateSheet: View {
                 .font(DesignFonts.headline)
                 .foregroundColor(DesignColors.textPrimary)
 
+            // Info de la plantilla
+            if let template = selectedTemplate {
+                HStack {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(DesignColors.accent)
+                    Text("Duración del patrón: \(template.durationDays) días")
+                        .font(DesignFonts.caption)
+                        .foregroundColor(DesignColors.textSecondary)
+                }
+            }
+
             // Fecha de inicio
             VStack(alignment: .leading, spacing: DesignSpacing.sm) {
                 Text("Desde")
@@ -185,32 +196,45 @@ struct TemplateSheet: View {
                 .tint(DesignColors.accent)
             }
 
-            // Semanas a aplicar
+            // Repeticiones del patrón
             VStack(alignment: .leading, spacing: DesignSpacing.sm) {
-                Text("Número de semanas")
+                Text("Repetir el patrón")
                     .font(DesignFonts.bodyMedium)
                     .foregroundColor(DesignColors.textSecondary)
 
-                Stepper("\(weeksToApply) semanas", value: $weeksToApply, in: 1...12)
+                Stepper("\(repetitions) veces", value: $repetitions, in: 1...52)
                     .tint(DesignColors.accent)
             }
 
             // Resumen
-            let endDate = Calendar.current.date(
-                byAdding: .day,
-                value: weeksToApply * 7 - 1,
-                to: startDate
-            )!
+            if let template = selectedTemplate {
+                let totalDays = template.durationDays * repetitions
+                let endDate = Calendar.current.date(
+                    byAdding: .day,
+                    value: totalDays - 1,
+                    to: startDate
+                )!
 
-            Text("Se aplicará desde \(formatDate(startDate)) hasta \(formatDate(endDate))")
-                .font(DesignFonts.caption)
-                .foregroundColor(DesignColors.textTertiary)
+                VStack(alignment: .leading, spacing: DesignSpacing.xs) {
+                    Text("Se aplicará:")
+                        .font(DesignFonts.captionBold)
+                        .foregroundColor(DesignColors.textSecondary)
+
+                    Text("• Patrón de \(template.durationDays) días × \(repetitions) = \(totalDays) días")
+                        .font(DesignFonts.caption)
+                        .foregroundColor(DesignColors.textTertiary)
+
+                    Text("• Desde \(formatDate(startDate)) hasta \(formatDate(endDate))")
+                        .font(DesignFonts.caption)
+                        .foregroundColor(DesignColors.textTertiary)
+                }
                 .padding(DesignSpacing.md)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: DesignCornerRadius.small)
                         .fill(DesignColors.accent.opacity(0.1))
                 )
+            }
 
             // Botón aplicar
             Button {
@@ -235,7 +259,7 @@ struct TemplateSheet: View {
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "es_ES")
-        formatter.dateFormat = "d MMM"
+        formatter.dateFormat = "d MMM yyyy"
         return formatter.string(from: date)
     }
 
@@ -244,19 +268,24 @@ struct TemplateSheet: View {
 
         HapticManager.impact()
 
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.firstWeekday = 2  // Lunes = 1
+        let calendar = Calendar.current
+        let patternLength = template.durationDays
+        let totalDays = patternLength * repetitions
 
-        // Obtener el lunes de la semana de inicio
-        let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: startDate)) ?? startDate
-
-        let totalDays = weeksToApply * 7
+        print("🔄 Aplicando plantilla '\(template.name)':")
+        print("   - Patrón de \(patternLength) días")
+        print("   - Repeticiones: \(repetitions)")
+        print("   - Total días: \(totalDays)")
+        print("   - Fecha inicio: \(startDate)")
 
         for dayOffset in 0..<totalDays {
-            guard let date = calendar.date(byAdding: .day, value: dayOffset, to: startOfWeek) else { continue }
+            guard let date = calendar.date(byAdding: .day, value: dayOffset, to: startDate) else {
+                print("   ⚠️ Error calculando fecha para offset \(dayOffset)")
+                continue
+            }
 
-            let dayIndex = dayOffset % 7
-            let shiftName = template.weekPattern[dayIndex]
+            let patternIndex = dayOffset % patternLength
+            let shiftName = template.pattern[patternIndex]
 
             let key = viewModel.dateKey(for: date)
 
@@ -265,12 +294,16 @@ struct TemplateSheet: View {
                     shiftName: shiftName,
                     isHalfDay: false
                 )
+                print("   ✓ Día \(dayOffset + 1): \(key) = \(shiftName)")
             } else {
                 viewModel.localShifts.removeValue(forKey: key)
+                print("   ✓ Día \(dayOffset + 1): \(key) = Libre")
             }
         }
 
         viewModel.saveData()
+        print("✅ Plantilla aplicada correctamente")
+
         HapticManager.success()
         dismiss()
     }
@@ -298,10 +331,16 @@ struct TemplateRow: View {
                                 .font(DesignFonts.bodyMedium)
                                 .foregroundColor(DesignColors.textPrimary)
 
-                            if !template.description.isEmpty {
-                                Text(template.description)
+                            HStack(spacing: DesignSpacing.xs) {
+                                if !template.description.isEmpty {
+                                    Text(template.description)
+                                        .font(DesignFonts.caption)
+                                        .foregroundColor(DesignColors.textTertiary)
+                                }
+
+                                Text("(\(template.durationDays) días)")
                                     .font(DesignFonts.caption)
-                                    .foregroundColor(DesignColors.textTertiary)
+                                    .foregroundColor(DesignColors.accent)
                             }
                         }
 
@@ -313,21 +352,8 @@ struct TemplateRow: View {
                         }
                     }
 
-                    // Preview del patrón semanal
-                    HStack(spacing: 4) {
-                        ForEach(0..<7, id: \.self) { dayIndex in
-                            let shiftName = template.weekPattern[dayIndex]
-
-                            Circle()
-                                .fill(colorForShift(shiftName))
-                                .frame(width: 24, height: 24)
-                                .overlay(
-                                    Text(ShiftTemplate.dayAbbreviations[dayIndex])
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundColor(.white)
-                                )
-                        }
-                    }
+                    // Preview del patrón (mostrar máximo 14 días, con scroll si hay más)
+                    patternPreview
                 }
             }
             .buttonStyle(.plain)
@@ -358,6 +384,42 @@ struct TemplateRow: View {
         )
     }
 
+    @ViewBuilder
+    private var patternPreview: some View {
+        let displayDays = min(template.durationDays, 14)
+
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(0..<template.durationDays, id: \.self) { dayIndex in
+                    let shiftName = template.pattern[dayIndex]
+
+                    VStack(spacing: 2) {
+                        Circle()
+                            .fill(colorForShift(shiftName))
+                            .frame(width: 22, height: 22)
+                            .overlay(
+                                Text(ShiftTemplate.dayAbbreviation(for: dayIndex))
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundColor(.white)
+                            )
+
+                        if dayIndex % 7 == 0 && dayIndex > 0 {
+                            Rectangle()
+                                .fill(DesignColors.accent.opacity(0.5))
+                                .frame(width: 22, height: 2)
+                        }
+                    }
+                }
+
+                if template.durationDays > 14 {
+                    Text("+\(template.durationDays - 14)")
+                        .font(.system(size: 10))
+                        .foregroundColor(DesignColors.textTertiary)
+                }
+            }
+        }
+    }
+
     private func colorForShift(_ shiftName: String?) -> Color {
         guard let name = shiftName else { return DesignColors.shiftFree }
         return getShiftColorForType(name, customShiftTypes: customShiftTypes)
@@ -375,12 +437,11 @@ struct TemplateEditorSheet: View {
 
     @State private var name: String = ""
     @State private var description: String = ""
-    @State private var weekPattern: [String?] = Array(repeating: nil, count: 7)
+    @State private var pattern: [String?] = Array(repeating: nil, count: 7)
 
     private var isEditing: Bool { editingTemplate != nil }
 
     private var availableShifts: [String] {
-        // Filtrar solo los turnos principales (sin "Libre" que se representa como nil)
         viewModel.shiftTypes.filter { $0 != "Libre" }
     }
 
@@ -394,18 +455,55 @@ struct TemplateEditorSheet: View {
                     TextField("Descripción (opcional)", text: $description)
                 }
 
-                // Patrón semanal
-                Section(header: Text("Patrón semanal")) {
-                    ForEach(0..<7, id: \.self) { dayIndex in
+                // Duración del patrón
+                Section(header: Text("Duración del patrón")) {
+                    Stepper("\(pattern.count) días", value: Binding(
+                        get: { pattern.count },
+                        set: { newValue in
+                            let clampedValue = max(1, min(56, newValue))  // 1-56 días (8 semanas max)
+                            if clampedValue > pattern.count {
+                                pattern.append(contentsOf: Array(repeating: nil, count: clampedValue - pattern.count))
+                            } else if clampedValue < pattern.count {
+                                pattern = Array(pattern.prefix(clampedValue))
+                            }
+                        }
+                    ), in: 1...56)
+
+                    // Botones rápidos de duración
+                    HStack(spacing: DesignSpacing.sm) {
+                        ForEach([7, 14, 21, 28], id: \.self) { days in
+                            Button("\(days)d") {
+                                setDuration(days)
+                                HapticManager.selection()
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(pattern.count == days ? DesignColors.accent : .secondary)
+                        }
+                    }
+                }
+
+                // Patrón de turnos
+                Section(header: Text("Patrón de turnos (\(pattern.count) días)")) {
+                    ForEach(0..<pattern.count, id: \.self) { dayIndex in
                         HStack {
-                            Text(ShiftTemplate.dayNames[dayIndex])
-                                .frame(width: 100, alignment: .leading)
+                            // Indicador de semana
+                            if dayIndex % 7 == 0 {
+                                Text("S\(dayIndex / 7 + 1)")
+                                    .font(.caption)
+                                    .foregroundColor(DesignColors.accent)
+                                    .frame(width: 25)
+                            } else {
+                                Color.clear.frame(width: 25)
+                            }
+
+                            Text(ShiftTemplate.dayName(for: dayIndex))
+                                .frame(width: 90, alignment: .leading)
 
                             Spacer()
 
                             Picker("", selection: Binding(
-                                get: { weekPattern[dayIndex] ?? "" },
-                                set: { weekPattern[dayIndex] = $0.isEmpty ? nil : $0 }
+                                get: { pattern[dayIndex] ?? "" },
+                                set: { pattern[dayIndex] = $0.isEmpty ? nil : $0 }
                             )) {
                                 Text("Libre").tag("")
                                 ForEach(availableShifts, id: \.self) { shift in
@@ -435,25 +533,43 @@ struct TemplateEditorSheet: View {
                                 .foregroundColor(.secondary)
                         }
 
-                        HStack(spacing: 6) {
-                            ForEach(0..<7, id: \.self) { dayIndex in
-                                VStack(spacing: 2) {
-                                    Circle()
-                                        .fill(colorForShift(weekPattern[dayIndex]))
-                                        .frame(width: 30, height: 30)
-                                        .overlay(
-                                            Text(ShiftTemplate.dayAbbreviations[dayIndex])
-                                                .font(.system(size: 10, weight: .bold))
-                                                .foregroundColor(.white)
-                                        )
+                        Text("\(pattern.count) días de duración")
+                            .font(.caption)
+                            .foregroundColor(DesignColors.accent)
 
-                                    Text(abbreviateShift(weekPattern[dayIndex]))
-                                        .font(.system(size: 8))
+                        // Mostrar por semanas
+                        let weeksCount = (pattern.count + 6) / 7
+                        ForEach(0..<weeksCount, id: \.self) { weekIndex in
+                            VStack(alignment: .leading, spacing: 2) {
+                                if weeksCount > 1 {
+                                    Text("Semana \(weekIndex + 1)")
+                                        .font(.system(size: 10))
                                         .foregroundColor(.secondary)
+                                }
+
+                                HStack(spacing: 6) {
+                                    ForEach(0..<7, id: \.self) { dayInWeek in
+                                        let dayIndex = weekIndex * 7 + dayInWeek
+                                        if dayIndex < pattern.count {
+                                            VStack(spacing: 2) {
+                                                Circle()
+                                                    .fill(colorForShift(pattern[dayIndex]))
+                                                    .frame(width: 28, height: 28)
+                                                    .overlay(
+                                                        Text(ShiftTemplate.dayAbbreviation(for: dayIndex))
+                                                            .font(.system(size: 9, weight: .bold))
+                                                            .foregroundColor(.white)
+                                                    )
+
+                                                Text(abbreviateShift(pattern[dayIndex]))
+                                                    .font(.system(size: 7))
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
-                        .frame(maxWidth: .infinity)
                     }
                     .padding(.vertical, DesignSpacing.sm)
                 }
@@ -461,20 +577,33 @@ struct TemplateEditorSheet: View {
                 // Acciones rápidas
                 Section(header: Text("Acciones rápidas")) {
                     Button("Poner todos Libre") {
-                        weekPattern = Array(repeating: nil, count: 7)
+                        pattern = Array(repeating: nil, count: pattern.count)
                         HapticManager.selection()
                     }
 
                     if let firstShift = availableShifts.first {
                         Button("Poner L-V como \(firstShift)") {
-                            for i in 0..<5 {
-                                weekPattern[i] = firstShift
+                            for i in 0..<pattern.count {
+                                let dayInWeek = i % 7
+                                if dayInWeek < 5 {  // Lunes a Viernes
+                                    pattern[i] = firstShift
+                                } else {
+                                    pattern[i] = nil
+                                }
                             }
-                            weekPattern[5] = nil
-                            weekPattern[6] = nil
                             HapticManager.selection()
                         }
                     }
+
+                    Button("Copiar primera semana al resto") {
+                        guard pattern.count > 7 else { return }
+                        let firstWeek = Array(pattern.prefix(7))
+                        for i in 7..<pattern.count {
+                            pattern[i] = firstWeek[i % 7]
+                        }
+                        HapticManager.selection()
+                    }
+                    .disabled(pattern.count <= 7)
                 }
             }
             .navigationTitle(isEditing ? "Editar Plantilla" : "Nueva Plantilla")
@@ -494,9 +623,17 @@ struct TemplateEditorSheet: View {
                 if let template = editingTemplate {
                     name = template.name
                     description = template.description
-                    weekPattern = template.weekPattern
+                    pattern = template.pattern
                 }
             }
+        }
+    }
+
+    private func setDuration(_ days: Int) {
+        if days > pattern.count {
+            pattern.append(contentsOf: Array(repeating: nil, count: days - pattern.count))
+        } else if days < pattern.count {
+            pattern = Array(pattern.prefix(days))
         }
     }
 
@@ -507,7 +644,6 @@ struct TemplateEditorSheet: View {
 
     private func abbreviateShift(_ shiftName: String?) -> String {
         guard let name = shiftName else { return "-" }
-        // Abreviar a 3 caracteres
         return String(name.prefix(3))
     }
 
@@ -520,14 +656,14 @@ struct TemplateEditorSheet: View {
             var updated = existing
             updated.name = trimmedName
             updated.description = description.trimmingCharacters(in: .whitespaces)
-            updated.weekPattern = weekPattern
+            updated.pattern = pattern
             templateManager.updateTemplate(updated)
         } else {
             // Crear nueva
             let newTemplate = ShiftTemplate(
                 name: trimmedName,
                 description: description.trimmingCharacters(in: .whitespaces),
-                weekPattern: weekPattern
+                pattern: pattern
             )
             templateManager.addTemplate(newTemplate)
         }
