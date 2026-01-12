@@ -15,17 +15,21 @@ struct OfflineCalendarSettingsView: View {
         NavigationStack {
             Form {
                 Section(header: Text("Tipo de Turnos")) {
-                    Picker("Patrón", selection: Binding(
-                        get: { viewModel.shiftPattern },
-                        set: { newPattern in
-                            handlePatternChange(to: newPattern)
-                        }
-                    )) {
-                        ForEach(ShiftPattern.allCases) { pattern in
-                            Text(pattern.title).tag(pattern)
+                    ForEach(ShiftPattern.allCases) { pattern in
+                        Button {
+                            handlePatternChange(to: pattern)
+                        } label: {
+                            HStack {
+                                Text(pattern.title)
+                                    .foregroundColor(DesignColors.textPrimary)
+                                Spacer()
+                                if viewModel.shiftPattern == pattern {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(DesignColors.accent)
+                                }
+                            }
                         }
                     }
-                    .pickerStyle(.inline)
                 }
 
                 if viewModel.shiftPattern != .custom {
@@ -129,18 +133,25 @@ struct OfflineCalendarSettingsView: View {
                     Text("\(String(format: "%.1f", shift.durationHours))h")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Button(action: {
+                    Button {
                         editingShiftId = shift.id
                         showingCustomShiftEditor = true
-                    }) {
+                    } label: {
                         Image(systemName: "pencil")
+                            .foregroundColor(DesignColors.accent)
+                            .padding(DesignSpacing.xs)
                     }
-                    Button(action: {
+                    .buttonStyle(.borderless)
+
+                    Button {
                         viewModel.deleteCustomShift(id: shift.id)
-                    }) {
+                        HapticManager.warning()
+                    } label: {
                         Image(systemName: "trash")
                             .foregroundColor(DesignColors.error)
+                            .padding(DesignSpacing.xs)
                     }
+                    .buttonStyle(.borderless)
                 }
             }
         }

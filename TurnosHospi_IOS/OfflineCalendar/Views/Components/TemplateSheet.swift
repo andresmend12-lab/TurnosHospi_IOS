@@ -4,7 +4,7 @@ import SwiftUI
 
 struct TemplateSheet: View {
     @ObservedObject var viewModel: OfflineCalendarViewModel
-    @StateObject private var templateManager = TemplateManager.shared
+    @ObservedObject private var templateManager = TemplateManager.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedTemplate: ShiftTemplate? = nil
