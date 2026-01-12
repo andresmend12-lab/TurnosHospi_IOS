@@ -66,6 +66,7 @@
 		97FC10012FF0D00100ABCDEF /* VacationDaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC10002FF0D00100ABCDEF /* VacationDaysView.swift */; };
 		97FC10032FF0D00100ABCDEF /* VacationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC10022FF0D00100ABCDEF /* VacationManager.swift */; };
 		97FC10052FF0D00300ABCDEF /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC10062FF0D00300ABCDEF /* AppLogger.swift */; };
+<<<<<<< HEAD
 		97FC20012FF0D10100ABCDEF /* OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20002FF0D10100ABCDEF /* OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift */; };
 		97FC20122FF0D10100ABCDEF /* OfflineCalendar/Models/OfflineCalendarModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20022FF0D10100ABCDEF /* OfflineCalendar/Models/OfflineCalendarModels.swift */; };
 		97FC20132FF0D10100ABCDEF /* OfflineCalendar/Helpers/OfflineCalendarHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20032FF0D10100ABCDEF /* OfflineCalendar/Helpers/OfflineCalendarHelpers.swift */; };
@@ -80,6 +81,23 @@
 		97FC201C2FF0D10100ABCDEF /* OfflineCalendar/Settings/OfflineCalendarSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200C2FF0D10100ABCDEF /* OfflineCalendar/Settings/OfflineCalendarSettingsView.swift */; };
 		97FC201D2FF0D10100ABCDEF /* OfflineCalendar/Settings/CustomShiftEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200D2FF0D10100ABCDEF /* OfflineCalendar/Settings/CustomShiftEditorView.swift */; };
 		97FC201E2FF0D10100ABCDEF /* OfflineCalendar/Settings/ShiftMigrationAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200E2FF0D10100ABCDEF /* OfflineCalendar/Settings/ShiftMigrationAlert.swift */; };
+=======
+		97FC20122FF0D10100ABCDEF /* OfflineCalendarModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20022FF0D10100ABCDEF /* OfflineCalendarModels.swift */; };
+		97FC20132FF0D10100ABCDEF /* OfflineCalendarHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20032FF0D10100ABCDEF /* OfflineCalendarHelpers.swift */; };
+		97FC20142FF0D10100ABCDEF /* OfflineCalendarDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20042FF0D10100ABCDEF /* OfflineCalendarDesign.swift */; };
+		97FC20152FF0D10100ABCDEF /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20052FF0D10100ABCDEF /* HapticManager.swift */; };
+		97FC20162FF0D10100ABCDEF /* CalendarGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20062FF0D10100ABCDEF /* CalendarGridView.swift */; };
+		97FC20172FF0D10100ABCDEF /* DayCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20072FF0D10100ABCDEF /* DayCellView.swift */; };
+		97FC20182FF0D10100ABCDEF /* LegendView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20082FF0D10100ABCDEF /* LegendView.swift */; };
+		97FC20192FF0D10100ABCDEF /* AssignmentControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20092FF0D10100ABCDEF /* AssignmentControlPanel.swift */; };
+		97FC201A2FF0D10100ABCDEF /* NotesControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200A2FF0D10100ABCDEF /* NotesControlPanel.swift */; };
+		97FC201B2FF0D10100ABCDEF /* StatisticsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200B2FF0D10100ABCDEF /* StatisticsTabView.swift */; };
+		97FC201C2FF0D10100ABCDEF /* OfflineCalendarSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200C2FF0D10100ABCDEF /* OfflineCalendarSettingsView.swift */; };
+		97FC201D2FF0D10100ABCDEF /* CustomShiftEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200D2FF0D10100ABCDEF /* CustomShiftEditorView.swift */; };
+		97FC201E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift */; };
+		97FC201F2FF0D10100ABCDEF /* ShiftTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20202FF0D10100ABCDEF /* ShiftTemplate.swift */; };
+		97FC20212FF0D10100ABCDEF /* TemplateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20222FF0D10100ABCDEF /* TemplateSheet.swift */; };
+>>>>>>> 462c31056b079f388e3a45a24cfbf7537713779e
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -161,6 +179,7 @@
 		97FC10022FF0D00100ABCDEF /* VacationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VacationManager.swift; sourceTree = "<group>"; };
 		97FC10042FF0D00200ABCDEF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		97FC10062FF0D00300ABCDEF /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+<<<<<<< HEAD
 		97FC20002FF0D10100ABCDEF /* OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift; sourceTree = "<group>"; };
 		97FC20022FF0D10100ABCDEF /* OfflineCalendar/Models/OfflineCalendarModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Models/OfflineCalendarModels.swift; sourceTree = "<group>"; };
 		97FC20032FF0D10100ABCDEF /* OfflineCalendar/Helpers/OfflineCalendarHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Helpers/OfflineCalendarHelpers.swift; sourceTree = "<group>"; };
@@ -175,6 +194,23 @@
 		97FC200C2FF0D10100ABCDEF /* OfflineCalendar/Settings/OfflineCalendarSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Settings/OfflineCalendarSettingsView.swift; sourceTree = "<group>"; };
 		97FC200D2FF0D10100ABCDEF /* OfflineCalendar/Settings/CustomShiftEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Settings/CustomShiftEditorView.swift; sourceTree = "<group>"; };
 		97FC200E2FF0D10100ABCDEF /* OfflineCalendar/Settings/ShiftMigrationAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Settings/ShiftMigrationAlert.swift; sourceTree = "<group>"; };
+=======
+		97FC20022FF0D10100ABCDEF /* OfflineCalendarModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Models/OfflineCalendarModels.swift; sourceTree = "<group>"; };
+		97FC20032FF0D10100ABCDEF /* OfflineCalendarHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Helpers/OfflineCalendarHelpers.swift; sourceTree = "<group>"; };
+		97FC20042FF0D10100ABCDEF /* OfflineCalendarDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Helpers/OfflineCalendarDesign.swift; sourceTree = "<group>"; };
+		97FC20052FF0D10100ABCDEF /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Helpers/HapticManager.swift; sourceTree = "<group>"; };
+		97FC20062FF0D10100ABCDEF /* CalendarGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/CalendarGridView.swift; sourceTree = "<group>"; };
+		97FC20072FF0D10100ABCDEF /* DayCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/DayCellView.swift; sourceTree = "<group>"; };
+		97FC20082FF0D10100ABCDEF /* LegendView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/LegendView.swift; sourceTree = "<group>"; };
+		97FC20092FF0D10100ABCDEF /* AssignmentControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/AssignmentControlPanel.swift; sourceTree = "<group>"; };
+		97FC200A2FF0D10100ABCDEF /* NotesControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/NotesControlPanel.swift; sourceTree = "<group>"; };
+		97FC200B2FF0D10100ABCDEF /* StatisticsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/StatisticsTabView.swift; sourceTree = "<group>"; };
+		97FC200C2FF0D10100ABCDEF /* OfflineCalendarSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Settings/OfflineCalendarSettingsView.swift; sourceTree = "<group>"; };
+		97FC200D2FF0D10100ABCDEF /* CustomShiftEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Settings/CustomShiftEditorView.swift; sourceTree = "<group>"; };
+		97FC200E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Settings/ShiftMigrationAlert.swift; sourceTree = "<group>"; };
+		97FC20202FF0D10100ABCDEF /* ShiftTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Models/ShiftTemplate.swift; sourceTree = "<group>"; };
+		97FC20222FF0D10100ABCDEF /* TemplateSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/Components/TemplateSheet.swift; sourceTree = "<group>"; };
+>>>>>>> 462c31056b079f388e3a45a24cfbf7537713779e
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -265,6 +301,7 @@
 				97FB93822EE1F29F00F5490F /* JoinPlantView.swift */,
 				97FB93692EE1D55700F5490F /* LoginView.swift */,
 				97FB936D2EE1DAF300F5490F /* MainMenuView.swift */,
+<<<<<<< HEAD
 				976F1F3E2EE46A0C0036A9E0 /* OfflineCalendar/Views/OfflineCalendarView.swift */,
 				97FC20002FF0D10100ABCDEF /* OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift */,
 				97FC20022FF0D10100ABCDEF /* OfflineCalendar/Models/OfflineCalendarModels.swift */,
@@ -280,6 +317,25 @@
 				97FC200C2FF0D10100ABCDEF /* OfflineCalendar/Settings/OfflineCalendarSettingsView.swift */,
 				97FC200D2FF0D10100ABCDEF /* OfflineCalendar/Settings/CustomShiftEditorView.swift */,
 				97FC200E2FF0D10100ABCDEF /* OfflineCalendar/Settings/ShiftMigrationAlert.swift */,
+=======
+				976F1F3E2EE46A0C0036A9E0 /* OfflineCalendarView.swift */,
+				97FC20002FF0D10100ABCDEF /* OfflineCalendarViewModel.swift */,
+				97FC20022FF0D10100ABCDEF /* OfflineCalendarModels.swift */,
+				97FC20032FF0D10100ABCDEF /* OfflineCalendarHelpers.swift */,
+				97FC20042FF0D10100ABCDEF /* OfflineCalendarDesign.swift */,
+				97FC20052FF0D10100ABCDEF /* HapticManager.swift */,
+				97FC20062FF0D10100ABCDEF /* CalendarGridView.swift */,
+				97FC20072FF0D10100ABCDEF /* DayCellView.swift */,
+				97FC20082FF0D10100ABCDEF /* LegendView.swift */,
+				97FC20092FF0D10100ABCDEF /* AssignmentControlPanel.swift */,
+				97FC200A2FF0D10100ABCDEF /* NotesControlPanel.swift */,
+				97FC200B2FF0D10100ABCDEF /* StatisticsTabView.swift */,
+				97FC200C2FF0D10100ABCDEF /* OfflineCalendarSettingsView.swift */,
+				97FC200D2FF0D10100ABCDEF /* CustomShiftEditorView.swift */,
+				97FC200E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift */,
+				97FC20202FF0D10100ABCDEF /* ShiftTemplate.swift */,
+				97FC20222FF0D10100ABCDEF /* TemplateSheet.swift */,
+>>>>>>> 462c31056b079f388e3a45a24cfbf7537713779e
 				97C4F0032F2A5A6A00ABCDEF /* NotificationCenterView.swift */,
 				97C4F0012F2A5A6A00ABCDEF /* NotificationCenterManager.swift */,
 				97E5A1102F3C1F250021BEEF /* NotificationAPI.swift */,
@@ -520,6 +576,7 @@
 				97E962C82EE18973006E7707 /* TurnosHospi_IOSApp.swift in Sources */,
 				97FB937F2EE1F26100F5490F /* PlantModels.swift in Sources */,
 				976F1F432EE4909A0036A9E0 /* ShiftChangeView.swift in Sources */,
+<<<<<<< HEAD
 				976F1F3F2EE46A0C0036A9E0 /* OfflineCalendar/Views/OfflineCalendarView.swift in Sources */,
 				97FC20012FF0D10100ABCDEF /* OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift in Sources */,
 				97FC20122FF0D10100ABCDEF /* OfflineCalendar/Models/OfflineCalendarModels.swift in Sources */,
@@ -538,6 +595,25 @@
 				97EB06CF2F12BEDF0098C100 /* ExportSheet.swift in Sources */,
 				97EB06D02F12BEDF0098C100 /* DatePickerSheet.swift in Sources */,
 				97EB06D12F12BEDF0098C100 /* TemplateSheet.swift in Sources */,
+=======
+				976F1F3F2EE46A0C0036A9E0 /* OfflineCalendarView.swift in Sources */,
+				97FC20012FF0D10100ABCDEF /* OfflineCalendarViewModel.swift in Sources */,
+				97FC20122FF0D10100ABCDEF /* OfflineCalendarModels.swift in Sources */,
+				97FC20132FF0D10100ABCDEF /* OfflineCalendarHelpers.swift in Sources */,
+				97FC20142FF0D10100ABCDEF /* OfflineCalendarDesign.swift in Sources */,
+				97FC20152FF0D10100ABCDEF /* HapticManager.swift in Sources */,
+				97FC20162FF0D10100ABCDEF /* CalendarGridView.swift in Sources */,
+				97FC20172FF0D10100ABCDEF /* DayCellView.swift in Sources */,
+				97FC20182FF0D10100ABCDEF /* LegendView.swift in Sources */,
+				97FC20192FF0D10100ABCDEF /* AssignmentControlPanel.swift in Sources */,
+				97FC201A2FF0D10100ABCDEF /* NotesControlPanel.swift in Sources */,
+				97FC201B2FF0D10100ABCDEF /* StatisticsTabView.swift in Sources */,
+				97FC201C2FF0D10100ABCDEF /* OfflineCalendarSettingsView.swift in Sources */,
+				97FC201D2FF0D10100ABCDEF /* CustomShiftEditorView.swift in Sources */,
+				97FC201E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift in Sources */,
+				97FC201F2FF0D10100ABCDEF /* ShiftTemplate.swift in Sources */,
+				97FC20212FF0D10100ABCDEF /* TemplateSheet.swift in Sources */,
+>>>>>>> 462c31056b079f388e3a45a24cfbf7537713779e
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
