@@ -71,6 +71,8 @@
 		97FC201C2FF0D10100ABCDEF /* OfflineCalendarSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200C2FF0D10100ABCDEF /* OfflineCalendarSettingsView.swift */; };
 		97FC201D2FF0D10100ABCDEF /* CustomShiftEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200D2FF0D10100ABCDEF /* CustomShiftEditorView.swift */; };
 		97FC201E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift */; };
+		97FC201F2FF0D10100ABCDEF /* ShiftTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20202FF0D10100ABCDEF /* ShiftTemplate.swift */; };
+		97FC20212FF0D10100ABCDEF /* TemplateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20222FF0D10100ABCDEF /* TemplateSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -157,6 +159,8 @@
 		97FC200C2FF0D10100ABCDEF /* OfflineCalendarSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Settings/OfflineCalendarSettingsView.swift; sourceTree = "<group>"; };
 		97FC200D2FF0D10100ABCDEF /* CustomShiftEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Settings/CustomShiftEditorView.swift; sourceTree = "<group>"; };
 		97FC200E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Settings/ShiftMigrationAlert.swift; sourceTree = "<group>"; };
+		97FC20202FF0D10100ABCDEF /* ShiftTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Models/ShiftTemplate.swift; sourceTree = "<group>"; };
+		97FC20222FF0D10100ABCDEF /* TemplateSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/Components/TemplateSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -253,6 +257,8 @@
 				97FC200C2FF0D10100ABCDEF /* OfflineCalendarSettingsView.swift */,
 				97FC200D2FF0D10100ABCDEF /* CustomShiftEditorView.swift */,
 				97FC200E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift */,
+				97FC20202FF0D10100ABCDEF /* ShiftTemplate.swift */,
+				97FC20222FF0D10100ABCDEF /* TemplateSheet.swift */,
 				97C4F0032F2A5A6A00ABCDEF /* NotificationCenterView.swift */,
 				97C4F0012F2A5A6A00ABCDEF /* NotificationCenterManager.swift */,
 				97E5A1102F3C1F250021BEEF /* NotificationAPI.swift */,
@@ -502,6 +508,8 @@
 				97FC201C2FF0D10100ABCDEF /* OfflineCalendarSettingsView.swift in Sources */,
 				97FC201D2FF0D10100ABCDEF /* CustomShiftEditorView.swift in Sources */,
 				97FC201E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift in Sources */,
+				97FC201F2FF0D10100ABCDEF /* ShiftTemplate.swift in Sources */,
+				97FC20212FF0D10100ABCDEF /* TemplateSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
