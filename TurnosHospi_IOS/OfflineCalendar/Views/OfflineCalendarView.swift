@@ -606,7 +606,10 @@ struct QuickActionButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            HapticManager.selection()
+            action()
+        } label: {
             VStack(spacing: DesignSpacing.sm) {
                 Image(systemName: icon)
                     .font(.system(size: 22))
@@ -622,7 +625,9 @@ struct QuickActionButton: View {
                 RoundedRectangle(cornerRadius: DesignCornerRadius.medium)
                     .fill(DesignColors.cardBackgroundLight)
             )
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 }
 
