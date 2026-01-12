@@ -73,6 +73,13 @@
 		97FC201E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC200E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift */; };
 		97FC20302FF0D10100ABCDEF /* ShiftTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20312FF0D10100ABCDEF /* ShiftTemplate.swift */; };
 		97FC20322FF0D10100ABCDEF /* TemplateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20332FF0D10100ABCDEF /* TemplateSheet.swift */; };
+		97FC20402FF0D10100ABCDEF /* CustomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20412FF0D10100ABCDEF /* CustomTabBar.swift */; };
+		97FC20422FF0D10100ABCDEF /* ShiftPieChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20432FF0D10100ABCDEF /* ShiftPieChart.swift */; };
+		97FC20442FF0D10100ABCDEF /* ShiftBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20452FF0D10100ABCDEF /* ShiftBarChart.swift */; };
+		97FC20462FF0D10100ABCDEF /* CalendarExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20472FF0D10100ABCDEF /* CalendarExportService.swift */; };
+		97FC20482FF0D10100ABCDEF /* ExportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20492FF0D10100ABCDEF /* ExportSheet.swift */; };
+		97FC204A2FF0D10100ABCDEF /* DatePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC204B2FF0D10100ABCDEF /* DatePickerSheet.swift */; };
+		97FC204C2FF0D10100ABCDEF /* WidgetData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC204D2FF0D10100ABCDEF /* WidgetData.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -161,6 +168,13 @@
 		97FC200E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Settings/ShiftMigrationAlert.swift; sourceTree = "<group>"; };
 		97FC20312FF0D10100ABCDEF /* ShiftTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Models/ShiftTemplate.swift; sourceTree = "<group>"; };
 		97FC20332FF0D10100ABCDEF /* TemplateSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/Components/TemplateSheet.swift; sourceTree = "<group>"; };
+		97FC20412FF0D10100ABCDEF /* CustomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Components/CustomTabBar.swift; sourceTree = "<group>"; };
+		97FC20432FF0D10100ABCDEF /* ShiftPieChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/Components/Charts/ShiftPieChart.swift; sourceTree = "<group>"; };
+		97FC20452FF0D10100ABCDEF /* ShiftBarChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/Components/Charts/ShiftBarChart.swift; sourceTree = "<group>"; };
+		97FC20472FF0D10100ABCDEF /* CalendarExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Services/CalendarExportService.swift; sourceTree = "<group>"; };
+		97FC20492FF0D10100ABCDEF /* ExportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/Components/ExportSheet.swift; sourceTree = "<group>"; };
+		97FC204B2FF0D10100ABCDEF /* DatePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Views/Components/DatePickerSheet.swift; sourceTree = "<group>"; };
+		97FC204D2FF0D10100ABCDEF /* WidgetData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Models/WidgetData.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -259,6 +273,13 @@
 				97FC200E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift */,
 				97FC20312FF0D10100ABCDEF /* ShiftTemplate.swift */,
 				97FC20332FF0D10100ABCDEF /* TemplateSheet.swift */,
+				97FC20412FF0D10100ABCDEF /* CustomTabBar.swift */,
+				97FC20432FF0D10100ABCDEF /* ShiftPieChart.swift */,
+				97FC20452FF0D10100ABCDEF /* ShiftBarChart.swift */,
+				97FC20472FF0D10100ABCDEF /* CalendarExportService.swift */,
+				97FC20492FF0D10100ABCDEF /* ExportSheet.swift */,
+				97FC204B2FF0D10100ABCDEF /* DatePickerSheet.swift */,
+				97FC204D2FF0D10100ABCDEF /* WidgetData.swift */,
 				97C4F0032F2A5A6A00ABCDEF /* NotificationCenterView.swift */,
 				97C4F0012F2A5A6A00ABCDEF /* NotificationCenterManager.swift */,
 				97E5A1102F3C1F250021BEEF /* NotificationAPI.swift */,
@@ -510,6 +531,13 @@
 				97FC201E2FF0D10100ABCDEF /* ShiftMigrationAlert.swift in Sources */,
 				97FC20302FF0D10100ABCDEF /* ShiftTemplate.swift in Sources */,
 				97FC20322FF0D10100ABCDEF /* TemplateSheet.swift in Sources */,
+				97FC20402FF0D10100ABCDEF /* CustomTabBar.swift in Sources */,
+				97FC20422FF0D10100ABCDEF /* ShiftPieChart.swift in Sources */,
+				97FC20442FF0D10100ABCDEF /* ShiftBarChart.swift in Sources */,
+				97FC20462FF0D10100ABCDEF /* CalendarExportService.swift in Sources */,
+				97FC20482FF0D10100ABCDEF /* ExportSheet.swift in Sources */,
+				97FC204A2FF0D10100ABCDEF /* DatePickerSheet.swift in Sources */,
+				97FC204C2FF0D10100ABCDEF /* WidgetData.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
