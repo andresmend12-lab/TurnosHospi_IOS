@@ -83,14 +83,16 @@ class AuthManager: ObservableObject {
     }
     
     // MARK: - Actualizar Perfil
-    func updateUserProfile(firstName: String, lastName: String, role: String, completion: @escaping (Bool, String?) -> Void) {
+    func updateUserProfile(firstName: String, lastName: String, role: String?, completion: @escaping (Bool, String?) -> Void) {
         guard let uid = user?.uid else { return }
         
-        let updates = [
+        var updates: [String: Any] = [
             "firstName": firstName,
-            "lastName": lastName,
-            "role": role
+            "lastName": lastName
         ]
+        if let role = role, !role.isEmpty {
+            updates["role"] = role
+        }
         
         ref.child("users").child(uid).updateChildValues(updates) { error, _ in
             if let error = error {
@@ -99,7 +101,9 @@ class AuthManager: ObservableObject {
                 DispatchQueue.main.async {
                     self.currentUserName = firstName
                     self.currentUserLastName = lastName
-                    self.userRole = role
+                    if let role = role, !role.isEmpty {
+                        self.userRole = role
+                    }
                 }
                 completion(true, nil)
             }
@@ -107,7 +111,7 @@ class AuthManager: ObservableObject {
     }
     
     // MARK: - Registro
-    func register(email: String, pass: String, firstName: String, lastName: String, gender: String, role: String, completion: @escaping (String?) -> Void) {
+    func register(email: String, pass: String, firstName: String, lastName: String, gender: String?, role: String?, completion: @escaping (String?) -> Void) {
         Auth.auth().createUser(withEmail: email, password: pass) { result, error in
             if let error = error {
                 completion(error.localizedDescription)
@@ -119,16 +123,20 @@ class AuthManager: ObservableObject {
             // Obtenemos token pendiente si existe
             let currentToken = UserDefaults.standard.string(forKey: self.fcmTokenKey) ?? ""
             
-            let userData: [String: Any] = [
+            var userData: [String: Any] = [
                 "uid": uid,
                 "firstName": firstName,
                 "lastName": lastName,
                 "email": email,
-                "gender": gender,
-                "role": role,
                 "fcmToken": currentToken, // Guardamos el token al crear el usuario
                 "createdAt": ServerValue.timestamp()
             ]
+            if let gender = gender, !gender.isEmpty {
+                userData["gender"] = gender
+            }
+            if let role = role, !role.isEmpty {
+                userData["role"] = role
+            }
             
             self.ref.child("users").child(uid).setValue(userData) { error, _ in
                 if let error = error {
@@ -137,7 +145,7 @@ class AuthManager: ObservableObject {
                     DispatchQueue.main.async {
                         self.currentUserName = firstName
                         self.currentUserLastName = lastName
-                        self.userRole = role
+                        self.userRole = role ?? ""
                     }
                     completion(nil)
                 }
@@ -215,6 +223,117 @@ class AuthManager: ObservableObject {
         DispatchQueue.main.async {
             self.totalUnreadChats = 0
             self.unreadChatsById = [:]
+        }
+    }
+
+    // MARK: - Eliminar Cuenta (Requisito App Store)
+
+    /// Re-autentica al usuario antes de operaciones sensibles como eliminar cuenta
+    func reauthenticate(password: String, completion: @escaping (Bool, String?) -> Void) {
+        guard let user = Auth.auth().currentUser,
+              let email = user.email else {
+            completion(false, "No hay usuario autenticado")
+            return
+        }
+
+        let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+
+        user.reauthenticate(with: credential) { _, error in
+            if let error = error {
+                completion(false, error.localizedDescription)
+            } else {
+                completion(true, nil)
+            }
+        }
+    }
+
+    /// Elimina completamente la cuenta del usuario
+    /// 1. Elimina datos de Realtime Database
+    /// 2. Elimina chats del usuario
+    /// 3. Elimina el usuario de Firebase Auth
+    func deleteAccount(password: String, completion: @escaping (Bool, String?) -> Void) {
+        guard let user = Auth.auth().currentUser else {
+            completion(false, "No hay usuario autenticado")
+            return
+        }
+
+        let uid = user.uid
+
+        // Primero re-autenticar (Firebase lo requiere para operaciones sensibles)
+        reauthenticate(password: password) { [weak self] success, error in
+            guard let self = self else { return }
+
+            if !success {
+                completion(false, error ?? "Error de autenticación")
+                return
+            }
+
+            // Eliminar datos del usuario de la base de datos
+            self.deleteUserData(uid: uid) { dataDeleted, dataError in
+                if !dataDeleted {
+                    AppLogger.debug("Advertencia: No se pudieron eliminar todos los datos: \(dataError ?? "")")
+                    // Continuamos con la eliminación de la cuenta aunque falle la BD
+                }
+
+                // Eliminar la cuenta de Firebase Auth
+                user.delete { authError in
+                    if let authError = authError {
+                        completion(false, authError.localizedDescription)
+                    } else {
+                        // Limpiar sesión local
+                        DispatchQueue.main.async {
+                            self.stopListeningUnreadChats()
+                            self.cleanSession()
+                            // Limpiar token guardado
+                            UserDefaults.standard.removeObject(forKey: self.fcmTokenKey)
+                        }
+                        completion(true, nil)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Elimina todos los datos del usuario de Firebase Realtime Database
+    private func deleteUserData(uid: String, completion: @escaping (Bool, String?) -> Void) {
+        let group = DispatchGroup()
+        var errors: [String] = []
+
+        // 1. Eliminar perfil del usuario
+        group.enter()
+        ref.child("users").child(uid).removeValue { error, _ in
+            if let error = error {
+                errors.append("Perfil: \(error.localizedDescription)")
+            }
+            group.leave()
+        }
+
+        // 2. Eliminar chats directos del usuario
+        group.enter()
+        ref.child("user_direct_chats").child(uid).removeValue { error, _ in
+            if let error = error {
+                errors.append("Chats: \(error.localizedDescription)")
+            }
+            group.leave()
+        }
+
+        // 3. Si el usuario tiene planta asignada, eliminar su referencia en la planta
+        if !userPlantId.isEmpty {
+            group.enter()
+            ref.child("plants").child(userPlantId).child("userPlants").child(uid).removeValue { error, _ in
+                if let error = error {
+                    errors.append("Planta: \(error.localizedDescription)")
+                }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) {
+            if errors.isEmpty {
+                completion(true, nil)
+            } else {
+                completion(false, errors.joined(separator: ", "))
+            }
         }
     }
 

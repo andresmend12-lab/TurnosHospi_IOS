@@ -144,7 +144,8 @@ struct EditProfileView: View {
         isLoading = true
         errorMessage = nil
         
-        authManager.updateUserProfile(firstName: firstName, lastName: lastName, role: selectedRole) { success, error in
+        let roleValue = selectedRole.isEmpty ? nil : selectedRole
+        authManager.updateUserProfile(firstName: firstName, lastName: lastName, role: roleValue) { success, error in
             isLoading = false
             if success {
                 showSuccessAlert = true

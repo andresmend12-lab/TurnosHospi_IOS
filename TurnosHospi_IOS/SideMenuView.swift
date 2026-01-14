@@ -11,6 +11,9 @@ struct SideMenuView: View {
     @State private var showCreatePlantSheet = false
     @State private var showSettingsSheet = false
     @State private var showImportShiftsSheet = false // <--- NUEVO
+    @State private var showDeleteAccountSheet = false
+    @State private var showPrivacyPolicy = false
+    @State private var showTermsOfService = false
     
     var body: some View {
         ZStack {
@@ -70,6 +73,48 @@ struct SideMenuView: View {
                 .padding(.leading, 10)
                 
                 Spacer()
+
+                VStack(alignment: .leading, spacing: 15) {
+                    Text("Legal")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.4))
+                        .padding(.bottom, 5)
+
+                    Button(action: { showPrivacyPolicy = true }) {
+                        HStack(spacing: 15) {
+                            Image(systemName: "hand.raised.fill")
+                                .font(.subheadline)
+                            Text("Política de Privacidad")
+                                .font(.subheadline)
+                        }
+                        .foregroundColor(.white.opacity(0.6))
+                    }
+
+                    Button(action: { showTermsOfService = true }) {
+                        HStack(spacing: 15) {
+                            Image(systemName: "doc.text.fill")
+                                .font(.subheadline)
+                            Text("Términos de Servicio")
+                                .font(.subheadline)
+                        }
+                        .foregroundColor(.white.opacity(0.6))
+                    }
+
+                    Divider()
+                        .background(Color.white.opacity(0.2))
+                        .padding(.vertical, 5)
+
+                    Button(action: { showDeleteAccountSheet = true }) {
+                        HStack(spacing: 15) {
+                            Image(systemName: "person.crop.circle.badge.minus")
+                                .font(.subheadline)
+                            Text("Eliminar cuenta")
+                                .font(.subheadline)
+                        }
+                        .foregroundColor(.white.opacity(0.5))
+                    }
+                }
+                .padding(.leading, 10)
                 
                 Button(action: {
                     authManager.signOut()
@@ -101,6 +146,9 @@ struct SideMenuView: View {
         .sheet(isPresented: $showCreatePlantSheet) { CreatePlantView() }
         .sheet(isPresented: $showSettingsSheet) { SettingsView() }
         .sheet(isPresented: $showImportShiftsSheet) { ImportShiftsView() } // <--- MODAL IMPORTAR
+        .sheet(isPresented: $showDeleteAccountSheet) { DeleteAccountView() }
+        .sheet(isPresented: $showPrivacyPolicy) { PrivacyPolicyView() }
+        .sheet(isPresented: $showTermsOfService) { TermsOfServiceView() }
     }
 }
 

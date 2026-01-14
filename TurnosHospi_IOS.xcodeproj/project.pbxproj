@@ -57,6 +57,8 @@
 		97FC10012FF0D00100ABCDEF /* VacationDaysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC10002FF0D00100ABCDEF /* VacationDaysView.swift */; };
 		97FC10032FF0D00100ABCDEF /* VacationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC10022FF0D00100ABCDEF /* VacationManager.swift */; };
 		97FC10052FF0D00300ABCDEF /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC10062FF0D00300ABCDEF /* AppLogger.swift */; };
+		AA98511084654273B9AEA6E4 /* DeleteAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A225DA835349F88260FFAC /* DeleteAccountView.swift */; };
+		587F4B4CE12448559B1854D2 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF91F9DA859C472A897AEE9C /* PrivacyPolicyView.swift */; };
 		97FC20012FF0D10100ABCDEF /* OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20002FF0D10100ABCDEF /* OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift */; };
 		97FC20122FF0D10100ABCDEF /* OfflineCalendar/Models/OfflineCalendarModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20022FF0D10100ABCDEF /* OfflineCalendar/Models/OfflineCalendarModels.swift */; };
 		97FC20132FF0D10100ABCDEF /* OfflineCalendar/Helpers/OfflineCalendarHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FC20032FF0D10100ABCDEF /* OfflineCalendar/Helpers/OfflineCalendarHelpers.swift */; };
@@ -152,6 +154,8 @@
 		97FC10022FF0D00100ABCDEF /* VacationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VacationManager.swift; sourceTree = "<group>"; };
 		97FC10042FF0D00200ABCDEF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		97FC10062FF0D00300ABCDEF /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		70A225DA835349F88260FFAC /* DeleteAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccountView.swift; sourceTree = "<group>"; };
+		DF91F9DA859C472A897AEE9C /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyView.swift; sourceTree = "<group>"; };
 		97FC20002FF0D10100ABCDEF /* OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift; sourceTree = "<group>"; };
 		97FC20022FF0D10100ABCDEF /* OfflineCalendar/Models/OfflineCalendarModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Models/OfflineCalendarModels.swift; sourceTree = "<group>"; };
 		97FC20032FF0D10100ABCDEF /* OfflineCalendar/Helpers/OfflineCalendarHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCalendar/Helpers/OfflineCalendarHelpers.swift; sourceTree = "<group>"; };
@@ -242,6 +246,8 @@
 				97E962CB2EE18976006E7707 /* Assets.xcassets */,
 				97F8A5032F5E1BB100ABCDEF /* InfoPlist.strings */,
 				97FC10062FF0D00300ABCDEF /* AppLogger.swift */,
+				70A225DA835349F88260FFAC /* DeleteAccountView.swift */,
+				DF91F9DA859C472A897AEE9C /* PrivacyPolicyView.swift */,
 				97FB936B2EE1D6FE00F5490F /* AuthManager.swift */,
 				97E962C92EE18973006E7707 /* ContentView.swift */,
 				97FB93902EE212C400F5490F /* CreatePlantView.swift */,
@@ -479,6 +485,8 @@
 				97FB936E2EE1DAF300F5490F /* MainMenuView.swift in Sources */,
 				97C4F0042F2A5A6A00ABCDEF /* NotificationCenterView.swift in Sources */,
 				97FB937D2EE1EF6B00F5490F /* SideMenuView.swift in Sources */,
+				AA98511084654273B9AEA6E4 /* DeleteAccountView.swift in Sources */,
+				587F4B4CE12448559B1854D2 /* PrivacyPolicyView.swift in Sources */,
 				97FB938D2EE20B7600F5490F /* ShiftManager.swift in Sources */,
 				97FB93832EE1F29F00F5490F /* JoinPlantView.swift in Sources */,
 				97FB936A2EE1D55700F5490F /* LoginView.swift in Sources */,

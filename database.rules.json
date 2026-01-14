@@ -27,7 +27,7 @@
           ".validate": "newData.isString() && newData.val().matches(/^[^@]+@[^@]+\\.[^@]+$/)"
         },
         "role": {
-          ".validate": "newData.isString() && (newData.val() == 'Supervisor' || newData.val() == 'Enfermero' || newData.val() == 'Auxiliar')"
+          ".validate": "!newData.exists() || (newData.isString() && (newData.val() == 'Supervisor' || newData.val() == 'Enfermero' || newData.val() == 'Auxiliar'))"
         }
       }
     },

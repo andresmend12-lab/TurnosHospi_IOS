@@ -18,6 +18,134 @@
             endingLineNumber = "8"
             landmarkName = "OfflineCalendarViewModel"
             landmarkType = "3">
+            <Locations>
+               <Location
+                  uuid = "A39CD9D8-31B0-401E-8C0C-7C6748D6189A - 466922ac56102be2"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "property wrapper backing initializer of TurnosHospi_IOS.OfflineCalendarViewModel.localShifts : Swift.Dictionary&lt;Swift.String, TurnosHospi_IOS.UserShift&gt;"
+                  moduleName = "TurnosHospi_IOS.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/andresmendozadominguez/Documents/GitHub/TurnosHospi_IOS/TurnosHospi_IOS/OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "A39CD9D8-31B0-401E-8C0C-7C6748D6189A - a30e9ba559399724"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "TurnosHospi_IOS.OfflineCalendarViewModel.localShifts.getter : Swift.Dictionary&lt;Swift.String, TurnosHospi_IOS.UserShift&gt;"
+                  moduleName = "TurnosHospi_IOS.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/andresmendozadominguez/Documents/GitHub/TurnosHospi_IOS/TurnosHospi_IOS/OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "A39CD9D8-31B0-401E-8C0C-7C6748D6189A - 31160a42f8c31449"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "TurnosHospi_IOS.OfflineCalendarViewModel.localShifts.setter : Swift.Dictionary&lt;Swift.String, TurnosHospi_IOS.UserShift&gt;"
+                  moduleName = "TurnosHospi_IOS.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/andresmendozadominguez/Documents/GitHub/TurnosHospi_IOS/TurnosHospi_IOS/OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "9"
+                  endingLineNumber = "9">
+               </Location>
+               <Location
+                  uuid = "A39CD9D8-31B0-401E-8C0C-7C6748D6189A - 6baab03f6bede958"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "TurnosHospi_IOS.OfflineCalendarViewModel.localShifts.modify : Swift.Dictionary&lt;Swift.String, TurnosHospi_IOS.UserShift&gt;"
+                  moduleName = "TurnosHospi_IOS.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/andresmendozadominguez/Documents/GitHub/TurnosHospi_IOS/TurnosHospi_IOS/OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "9"
+                  endingLineNumber = "9">
+               </Location>
+               <Location
+                  uuid = "A39CD9D8-31B0-401E-8C0C-7C6748D6189A - 768df8fb5fa3a06b"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "TurnosHospi_IOS.OfflineCalendarViewModel.localShifts.modify : Swift.Dictionary&lt;Swift.String, TurnosHospi_IOS.UserShift&gt; with unmangled suffix &quot;.resume.0&quot;"
+                  moduleName = "TurnosHospi_IOS.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///%3Ccompiler-generated%3E"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "A39CD9D8-31B0-401E-8C0C-7C6748D6189A - cbf3cef1a9240056"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "TurnosHospi_IOS.OfflineCalendarViewModel.$localShifts.getter : Combine.Published&lt;Swift.Dictionary&lt;Swift.String, TurnosHospi_IOS.UserShift&gt;&gt;.Publisher"
+                  moduleName = "TurnosHospi_IOS.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/andresmendozadominguez/Documents/GitHub/TurnosHospi_IOS/TurnosHospi_IOS/OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+               <Location
+                  uuid = "A39CD9D8-31B0-401E-8C0C-7C6748D6189A - cbf3cef1a9240f2f"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "TurnosHospi_IOS.OfflineCalendarViewModel.$localShifts.setter : Combine.Published&lt;Swift.Dictionary&lt;Swift.String, TurnosHospi_IOS.UserShift&gt;&gt;.Publisher"
+                  moduleName = "TurnosHospi_IOS.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/andresmendozadominguez/Documents/GitHub/TurnosHospi_IOS/TurnosHospi_IOS/OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "9"
+                  endingLineNumber = "9">
+               </Location>
+               <Location
+                  uuid = "A39CD9D8-31B0-401E-8C0C-7C6748D6189A - 2298ef00098c1c27"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "TurnosHospi_IOS.OfflineCalendarViewModel.$localShifts.modify : Combine.Published&lt;Swift.Dictionary&lt;Swift.String, TurnosHospi_IOS.UserShift&gt;&gt;.Publisher"
+                  moduleName = "TurnosHospi_IOS.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/andresmendozadominguez/Documents/GitHub/TurnosHospi_IOS/TurnosHospi_IOS/OfflineCalendar/ViewModels/OfflineCalendarViewModel.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "9"
+                  endingLineNumber = "9">
+               </Location>
+               <Location
+                  uuid = "A39CD9D8-31B0-401E-8C0C-7C6748D6189A - ff340d5a09e2e616"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "TurnosHospi_IOS.OfflineCalendarViewModel.$localShifts.modify : Combine.Published&lt;Swift.Dictionary&lt;Swift.String, TurnosHospi_IOS.UserShift&gt;&gt;.Publisher with unmangled suffix &quot;.resume.0&quot;"
+                  moduleName = "TurnosHospi_IOS.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///%3Ccompiler-generated%3E"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "0"
+                  endingLineNumber = "0">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

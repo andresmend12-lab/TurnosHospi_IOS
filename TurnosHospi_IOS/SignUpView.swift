@@ -12,11 +12,11 @@ struct SignUpView: View {
     @State private var lastName = ""
     
     // Selectores
-    @State private var selectedGender = "Masculino"
-    let genders = ["Masculino", "Femenino", "Otro"]
+    @State private var selectedGender = ""
+    let genders = ["Masculino", "Femenino", "Otro", "Prefiero no decirlo"]
     
-    @State private var selectedRole = "Enfermero"
-    let roles = ["Supervisor", "Enfermero", "Auxiliar"]
+    @State private var selectedRole = ""
+    let roles = ["Supervisor", "Enfermero", "Auxiliar", "No especificado"]
     
     @State private var errorMessage: String?
     @State private var isLoading = false
@@ -50,10 +50,10 @@ struct SignUpView: View {
                         GlassTextField(icon: "person.text.rectangle", placeholder: "Apellido", text: $lastName)
                         
                         // Género (Selector estilo Glass)
-                        GlassPicker(title: "Género", selection: $selectedGender, options: genders)
+                        GlassPicker(title: "Género (opcional)", selection: $selectedGender, options: genders)
                         
                         // Puesto (Selector estilo Glass)
-                        GlassPicker(title: "Puesto", selection: $selectedRole, options: roles)
+                        GlassPicker(title: "Puesto (opcional)", selection: $selectedRole, options: roles)
                         
                         Divider().background(Color.white.opacity(0.3)).padding(.vertical)
                         
@@ -103,7 +103,7 @@ struct SignUpView: View {
     func registerUser() {
         // Validaciones básicas
         guard !email.isEmpty, !password.isEmpty, !firstName.isEmpty else {
-            errorMessage = "Por favor, rellena todos los campos."
+            errorMessage = "Por favor, rellena los campos obligatorios."
             return
         }
         
@@ -121,7 +121,19 @@ struct SignUpView: View {
         errorMessage = nil
         
         // Mapeo de género a inglés para la base de datos (según tu ejemplo "female")
-        let genderDbValue = selectedGender == "Femenino" ? "female" : (selectedGender == "Masculino" ? "male" : "other")
+        let genderDbValue: String?
+        switch selectedGender {
+        case "Femenino":
+            genderDbValue = "female"
+        case "Masculino":
+            genderDbValue = "male"
+        case "Otro":
+            genderDbValue = "other"
+        default:
+            genderDbValue = nil
+        }
+
+        let roleValue = (selectedRole.isEmpty || selectedRole == "No especificado") ? nil : selectedRole
         
         authManager.register(
             email: email,
@@ -129,7 +141,7 @@ struct SignUpView: View {
             firstName: firstName,
             lastName: lastName,
             gender: genderDbValue,
-            role: selectedRole
+            role: roleValue
         ) { error in
             isLoading = false
             if let error = error {
@@ -164,7 +176,7 @@ struct GlassPicker: View {
                 }
             } label: {
                 HStack {
-                    Text(selection)
+                    Text(selection.isEmpty ? "Opcional" : selection)
                         .foregroundColor(.white)
                     Spacer()
                     Image(systemName: "chevron.down")

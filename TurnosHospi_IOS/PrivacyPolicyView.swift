@@ -50,7 +50,7 @@ struct PrivacyPolicyView: View {
                             content: """
                             Recopilamos la siguiente información:
 
-                            • Información de cuenta: nombre, apellido, correo electrónico, género y rol profesional.
+                            • Información de cuenta: nombre, apellido, correo electrónico, género (opcional) y rol profesional (opcional).
 
                             • Información laboral: turnos asignados, cambios de turno, días de vacaciones y asociación con plantas/unidades hospitalarias.
 
