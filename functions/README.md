@@ -40,13 +40,7 @@ Este directorio contiene las Firebase Cloud Functions necesarias para el backend
 - **Función**: Valida que solo supervisores puedan aprobar/rechazar solicitudes
 - **Seguridad**: Revierte cambios no autorizados y registra eventos de seguridad
 
-### 7. `validateShiftWrite`
-**Validación de seguridad para turnos**
-- **Trigger**: `/plants/{plantId}/turnos/{dateKey}/{shiftName}` onWrite
-- **Función**: Valida que solo supervisores puedan modificar turnos
-- **Seguridad**: Revierte cambios no autorizados con auditoría completa
-
-### 8. `logSecurityEvent`
+### 7. `logSecurityEvent`
 **Registro de eventos de seguridad**
 - **Función auxiliar**: Registra eventos de seguridad en `/security_logs`
 - **Uso**: Auditoría de intentos de acceso no autorizado
@@ -133,7 +127,6 @@ functions/
 ## Seguridad
 
 Las funciones implementan validación del lado del servidor para:
-- ✅ Prevenir modificaciones no autorizadas de turnos
 - ✅ Validar permisos de supervisor para aprobaciones
 - ✅ Registrar eventos de seguridad
 - ✅ Revertir cambios no autorizados automáticamente
